@@ -6,6 +6,23 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.3 (retours de jeu)
+
+- **Rythme** : à vitesse normale, un mois de jeu dure une minute (rapide ×3, très rapide ×9). Pendant une crise, le
+  temps reste à vitesse normale.
+- **Jour et nuit calés sur le calendrier** : un cycle par mois de jeu, 70 % de journée, 30 % de nuit.
+- **Délais de construction réels** pour les bâtiments de zone : maison 15 jours, commerce 20 jours, immeuble,
+  bureaux et industrie 1 mois. Chaque montée de niveau se fait en travaux, 1,25 fois plus longs que le niveau
+  précédent ; le bâtiment reste occupé pendant les travaux. Un bâtiment neuf n'a ni habitants ni emplois avant sa
+  livraison, ne consomme rien et ne déclenche aucune alerte « sans électricité » ou « sans eau » au moment où il est
+  livré. L'inspecteur affiche l'avancement et la date de livraison.
+- **Événements espacés** : au plus un événement aléatoire tous les trois mois (crises, épisodes climatiques ou
+  économiques, incidents techniques confondus) ; les notifications météo ne reviennent pas avant deux mois.
+- **Crues visibles** : pendant une inondation, la rivière monte d'un cran sur toute la carte.
+- **Arbres** : plus d'arbres collés aux façades des grands bâtiments (ils passaient derrière ou flottaient), arbres
+  clairsemés sur les parcelles zonées, redessin des arbres voisins quand un bâtiment apparaît ou disparaît.
+- **Réglages du son** : le bouton haut-parleur de la barre du haut ouvre un menu dédié (coupure, volumes, essai).
+
 ## Nouveautés de la version 0.2
 
 | Fonction | En bref |
@@ -77,12 +94,12 @@ coûts que le joueur) puis le simule pendant un an.
 | Échap | Annuler le tracé / fermer / revenir à la sélection |
 | Suppr | Outil de démolition |
 | Ctrl+Z | Annuler la dernière action (30 jours de jeu, si rien n'a changé depuis) |
-| Espace, 1, 2, 3 | Pause, vitesse normale, rapide, très rapide |
+| Espace, 1, 2, 3 | Pause, vitesse normale (un mois par minute), rapide (×3), très rapide (×9) |
 | B, C, I | Finances, tableau de bord de la ville, IA et politiques |
 | L | Couche de données suivante |
 | X | Rendre translucides les bâtiments devant le curseur |
 | Ctrl+S | Sauvegarde rapide |
-| N | Couper ou rétablir le son |
+| N | Couper ou rétablir le son (le bouton haut-parleur ouvre les réglages du son) |
 | M, H | Menu, aide |
 | F | Plein écran (ou mode immersif) |
 | F3 | Outils de débogage |
@@ -177,10 +194,10 @@ thème mineur pendant une crise. Le son démarre au premier geste (règle des na
 
 ### Effets visuels
 
-Cycle jour/nuit décoratif (environ 4 minutes à vitesse normale, accéléré avec le jeu) : la scène se teinte au
-crépuscule, les fenêtres occupées, les lampadaires (bleutés dès l'ère 2) et les phares s'allument. Les bâtiments
-neufs passent quelques jours en chantier (palissade, structure qui monte, échafaudages, grue animée pour les
-immeubles), comme les bâtiments qui montent de niveau. Les cheminées fument quand l'usine tourne. Pluie, neige,
+Cycle jour/nuit calé sur le calendrier (un cycle par mois de jeu : 70 % de jour, 30 % de nuit) : la scène se teinte au
+crépuscule, les fenêtres occupées, les lampadaires (bleutés dès l'ère 2) et les phares s'allument. Les chantiers
+(palissade, structure qui monte, échafaudages, grue animée pour les immeubles) correspondent aux délais de
+construction simulés des bâtiments de zone ; les équipements posés par le joueur ont un court chantier décoratif. Les cheminées fument quand l'usine tourne. Pluie, neige,
 brouillard et éclairs se superposent à la scène. Tout se désactive dans les paramètres (« réduire les animations »
 du système est respecté pour les éclairs).
 
@@ -434,7 +451,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 230 tests Vitest (23 fichiers, dont le chargement de chacun des 92 modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 233 tests Vitest (23 fichiers, dont le chargement de chacun des 92 modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 82 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -467,7 +484,7 @@ s'en approche : les tronçons hors écran sont masqués et seuls les tronçons m
 ## Limites connues et suites
 
 - Lignes de transport implicites (desserte par rayon et par réseau) : pas de tracé manuel de lignes ni d'horaires.
-- Le cycle jour/nuit est décoratif (un tick = un jour) ; les chantiers sont visuels (le bâtiment fonctionne déjà).
+- Le cycle jour/nuit est visuel (un tick = un jour) ; les chantiers des équipements posés par le joueur sont décoratifs.
 - Les e2e Playwright ne couvrent pas l'installation hors ligne : elle a été vérifiée sur le build de production
   (`vite preview`, rechargement sans réseau).
 - Ponts droits uniquement ; pas de tunnels ni de ponts au-dessus des routes.

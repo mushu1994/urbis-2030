@@ -1,6 +1,7 @@
 import { SIM } from './config.js';
 import { ROAD_REACH } from '../world/Grid.js';
 import { createBuilding, removeBuilding, changeBuildingDef } from '../systems/BuildingFactory.js';
+import { constructionDaysFor, isUnderConstruction } from './Construction.js';
 import { findAccess } from '../world/PlacementSystem.js';
 
 const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I' };
@@ -153,6 +154,9 @@ export class BuildingSystem {
         if (!state.rng.chance((demand / 100) * 0.9 * lvFactor * growth)) continue;
         const b = createBuilding(state, def, g.xOf(i), g.yOf(i), 0, 'growth');
         b.access = BuildingSystem.accessOf(state, b);
+        // Chantier : le bâtiment n'est livré qu'après son délai de construction
+        b.constructionStart = state.time.tick;
+        b.constructionUntil = state.time.tick + constructionDaysFor(def);
         this.bus?.emit('building:added', { building: b });
         this.bus?.emit('world:changed', { tiles: [i], reason: 'growth' });
       }
@@ -170,6 +174,13 @@ export class BuildingSystem {
       const c = b.counters;
       const i = g.idx(b.x, b.y);
       const zoneKey = ZONE_KEYS[def.zoneCode];
+
+      // Chantier en cours : rien n'évolue ; à la livraison, le bâtiment (ou son nouveau niveau) entre en service
+      if (b.constructionUntil !== undefined) {
+        if (isUnderConstruction(state, b) && g.zone[i] === def.zoneCode) continue;
+        this.#deliver(state, b);
+        continue;
+      }
       const needsPower = true;
       const needsWater = def.level >= 2;
 
@@ -231,9 +242,12 @@ export class BuildingSystem {
         let growth = mods['growth.all'] ?? 1;
         if (def.capacity.residents) growth *= mods['growth.R'] ?? 1;
         if (c.upgrade >= SIM.UPGRADE_STABLE_DAYS && state.rng.chance(0.25 * growth)) {
-          changeBuildingDef(state, b, next);
+          // Travaux de montée de niveau : 1,25 fois le délai du niveau précédent
+          b.upgradeTo = next.id;
+          b.constructionStart = state.time.tick;
+          b.constructionUntil = state.time.tick + constructionDaysFor(next);
+          c.upgrade = 0;
           this.bus?.emit('building:changed', { building: b });
-          if (next.level >= 3) this.bus?.emit('notify', { level: 'success', message: `Nouveau : ${next.name} (niveau ${next.level})`, x: b.x, y: b.y, key: `upgrade${next.level}` });
         }
       }
     }
@@ -242,6 +256,23 @@ export class BuildingSystem {
       this.bus?.emit('building:removed', { building: b });
       this.bus?.emit('world:changed', { tiles: [g.idx(b.x, b.y)], reason: 'collapse' });
     }
+  }
+
+  /** Fin de chantier : construction neuve livrée ou nouveau niveau atteint. */
+  #deliver(state, b) {
+    const next = b.upgradeTo ? this.catalog.buildings.get(b.upgradeTo) : null;
+    delete b.constructionUntil;
+    delete b.constructionStart;
+    delete b.upgradeTo;
+    b.deliveredTick = state.time.tick;
+    b.counters = {};
+    if (next) {
+      changeBuildingDef(state, b, next);
+      if (next.level >= 3) this.bus?.emit('notify', { level: 'success', message: `Nouveau : ${next.name} (niveau ${next.level})`, x: b.x, y: b.y, key: `upgrade${next.level}` });
+    }
+    // Les réseaux sont recalculés tout de suite : pas de fausse alerte « sans électricité » à la livraison
+    state.dirty.utilities = true;
+    this.bus?.emit('building:changed', { building: b });
   }
 
   #levelDef(def, level) {

@@ -43,7 +43,7 @@ export class PopulationSystem {
     f.pollution = -Math.min(25, g.pollution[i] * 0.55);
     f.noise = -Math.min(12, g.noise[i] * 0.3);
     f.heat = -Math.min(10, Math.max(0, g.heat[i] - 22) * 0.35);
-    const age = state.time.tick - b.builtTick;
+    const age = state.time.tick - (b.deliveredTick ?? b.builtTick);
     f.power = !b.powered && age > 6 ? -25 : 0;
     f.water = !b.watered && age > 6 ? -18 : 0;
     f.commute = -Math.min(14, Math.max(0, b.commute - 14) * 0.45);
@@ -92,7 +92,8 @@ export class PopulationSystem {
       b.satisfaction += (sat - b.satisfaction) * 0.35;
 
       let target = 0;
-      if (!b.abandoned && b.access >= 0) {
+      const building = b.constructionUntil !== undefined && !b.upgradeTo;
+      if (!b.abandoned && b.access >= 0 && !building) {
         const attract = clamp((b.satisfaction - 15) / 45, 0.05, 1);
         target = cap * attract;
         if (!net.isConnectedToOutside(b.access)) target *= 0.25;
@@ -144,7 +145,7 @@ export class PopulationSystem {
     for (const { b, def } of workplaces) {
       const k = poolOf(b);
       b._jb = jobBracket(def.capacity.qualification);
-      const slots = b.abandoned ? 0 : def.capacity.jobs * (b.powered ? 1 : 0.6) * (b.disasterUntil > state.time.tick ? 0.2 : 1);
+      const slots = b.abandoned || (b.constructionUntil !== undefined && !b.upgradeTo) ? 0 : def.capacity.jobs * (b.powered ? 1 : 0.6) * (b.disasterUntil > state.time.tick ? 0.2 : 1);
       b._slots = slots;
       if (k) getPool(k).jobs[b._jb] += slots;
       st.jobs += slots;

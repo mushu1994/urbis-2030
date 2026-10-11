@@ -1,5 +1,6 @@
 import { dateOfTick } from '../simulation/config.js';
 import { isInOutage } from '../simulation/Modifiers.js';
+import { MIN_EVENT_GAP_DAYS, lastRandomEvent } from '../simulation/CrisisSystem.js';
 
 const MILESTONES = [100, 500, 1000, 2500, 5000, 10000, 25000, 50000];
 
@@ -64,12 +65,17 @@ export class EventSystem {
     const rng = state.rng;
     const t = state.time.tick;
     const { month } = dateOfTick(t);
+    // Au plus un événement aléatoire tous les 3 mois (incidents, épisodes et crises confondus).
+    // Les tirages ont toujours lieu : la suite aléatoire de la partie ne dépend pas de ce délai.
+    let quiet = t - lastRandomEvent(state) < MIN_EVENT_GAP_DAYS;
 
     for (const id of Object.keys(state.tech.researched).sort()) {
       if (isInOutage(state, id)) continue;
       const tech = this.catalog.techById.get(id);
       for (const r of tech?.risks ?? []) {
-        if (r.type === 'outage' && rng.chance(r.monthlyChance)) {
+        if (r.type === 'outage' && rng.chance(r.monthlyChance) && !quiet) {
+          quiet = true;
+          state.events.lastRandom = t;
           state.tech.outages[id] = t + r.durationDays;
           state.dirty.modifiers = true;
           this.#notify(state, 'danger', `Incident — ${tech.name} : ${r.label} (${r.durationDays} j)`, { kind: 'outage', techId: id });
@@ -82,7 +88,9 @@ export class EventSystem {
       const def = (this.catalog.buildings.has(b.defId) ? this.catalog.buildingFor(b) : undefined);
       const risk = def?.risk;
       if (!risk || b.abandoned || b.disabledUntil > t) continue;
-      if (rng.chance(risk.monthlyChance)) {
+      if (rng.chance(risk.monthlyChance) && !quiet) {
+        quiet = true;
+        state.events.lastRandom = t;
         b.disabledUntil = t + risk.durationDays;
         state.dirty.utilities = true;
         if (risk.effects) state.events.active.push({ id: `risk-${b.id}`, label: risk.label, until: t + risk.durationDays, effects: risk.effects });
@@ -93,6 +101,9 @@ export class EventSystem {
 
     const has = (id) => state.events.active.some((e) => e.id === id);
     const add = (e) => {
+      if (quiet) return;
+      quiet = true;
+      state.events.lastRandom = t;
       state.events.active.push(e);
       state.dirty.modifiers = true;
       this.#notify(state, e.level ?? 'warning', `${e.label}`, { kind: 'event', eventId: e.id });

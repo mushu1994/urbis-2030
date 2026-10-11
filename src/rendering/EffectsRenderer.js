@@ -12,9 +12,8 @@ import { mix } from './art/color.js';
  * - crises : eau des inondations, flammes et fumée noire des incendies.
  */
 
-/** Durée d'un cycle jour/nuit complet à vitesse normale (ms). */
-export const DAY_CYCLE_MS = 240000;
-const SPEED_FACTOR = [0, 1, 1.7, 2.6];
+/** Part du cycle passée en journée (le reste est la nuit). */
+export const DAYLIGHT_SHARE = 0.7;
 const MAX_PARTICLES = 320;
 
 const smooth = (a, b, x) => {
@@ -22,11 +21,15 @@ const smooth = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Nuit (0 = plein jour, 1 = pleine nuit) selon la phase du jour (0 = minuit, 0,5 = midi). */
+/**
+ * Nuit (0 = plein jour, 1 = pleine nuit) selon la phase du cycle, calé sur le mois de jeu :
+ * phase 0 = début du mois (aube), 70 % du mois en journée, 30 % de nuit, avec crépuscule et aube progressifs.
+ */
 export function nightAt(phase) {
   const p = ((phase % 1) + 1) % 1;
-  if (p < 0.5) return 1 - smooth(0.2, 0.3, p);
-  return smooth(0.74, 0.84, p);
+  const dusk = smooth(DAYLIGHT_SHARE - 0.04, DAYLIGHT_SHARE + 0.03, p);
+  const dawn = smooth(0.97, 1, p);
+  return Math.max(0, dusk - dawn);
 }
 
 const WEATHER_TINT = { clear: 0xffffff, cloudy: 0xe4e8ee, rain: 0xc8d0db, storm: 0x98a2b4, snow: 0xeef2f8, fog: 0xe9ebee, heat: 0xfff0d6 };
@@ -42,6 +45,11 @@ export class EffectsRenderer {
     // Monde, sous les bâtiments : eau des crues
     this.flood = new Graphics();
     layers.world.addChildAt(this.flood, layers.world.getChildIndex(layers.ground) + 1);
+    // Montée des eaux : la rivière s'élève d'un cran pendant une inondation (sous les routes et les ponts)
+    this.river = new Graphics();
+    layers.world.addChildAt(this.river, layers.world.getChildIndex(layers.ground));
+    this.riverLevel = 0;
+    this.riverDrawn = -1;
     // Monde, au-dessus des bâtiments : fumées et flammes
     this.smoke = new Graphics();
     this.fire = new Graphics();
@@ -111,6 +119,9 @@ export class EffectsRenderer {
     this.emittersDirty = true;
     this.streetDirty = true;
     this.flood.clear();
+    this.river.clear();
+    this.riverLevel = 0;
+    this.riverDrawn = -1;
     this.smoke.clear();
     this.fire.clear();
     this.streetLights.clear();
@@ -121,7 +132,7 @@ export class EffectsRenderer {
 
   /** Jour de fin de chantier, ou 0 si le bâtiment est terminé. */
   constructionEnd(def, b, tick) {
-    const days = constructionDays(def);
+    const days = def.kind === 'growable' ? 0 : constructionDays(def);
     if (!days || !this.options.effects) return 0;
     const end = b.builtTick + days;
     return tick < end && tick >= b.builtTick ? end : 0;
@@ -197,7 +208,14 @@ export class EffectsRenderer {
     const running = !paused;
     if (running) this.time += dt;
     // Horloge visuelle du jour (ralentie en pause, accélérée avec la vitesse du jeu)
-    if (running) this.phase = (this.phase + (dt * (SPEED_FACTOR[ctx.speedIndex] ?? 1)) / DAY_CYCLE_MS) % 1;
+    // Cycle jour/nuit calé sur le calendrier : un cycle par mois de jeu, interpolé entre deux jours
+    const target = (state.time.tick % 30) / 30;
+    if (running) this.phase = (this.phase + (dt / 1000) * ((ctx.ticksPerSecond ?? 0.5) / 30)) % 1;
+    let err = target + 1 / 60 - this.phase;
+    if (err > 0.5) err -= 1;
+    if (err < -0.5) err += 1;
+    if (Math.abs(err) > 0.08) this.phase = (target + 1) % 1;
+    else this.phase = (this.phase + err * 0.04 + 1) % 1;
     this.night = this.options.dayNight ? nightAt(this.phase) : 0;
 
     // Les lumières suivent la transformation de la caméra
@@ -221,6 +239,7 @@ export class EffectsRenderer {
       this.#drawFlood(state);
       this.floodTimer = 180;
     }
+    this.#updateRiver(state, dt);
     if (this.options.weather) this.#updateWeather(state, dt, running, ctx.view);
   }
 
@@ -356,6 +375,44 @@ export class EffectsRenderer {
         g.poly([f.x + ox - wbase * 0.5, f.y, f.x + ox + wbase * 0.5, f.y, f.x + ox, f.y - h * 0.6]).fill({ color: 0xffd34d, alpha: 0.95 });
       }
       g.circle(f.x, f.y - 4, f.w * 0.35).fill({ color: 0xff8a2a, alpha: 0.12 });
+    }
+  }
+
+  /** La rivière monte d'un cran (une hauteur de terrasse) en 3 secondes au début d'une crue, puis redescend. */
+  #updateRiver(state, dt) {
+    const flooding = (state.crises?.active ?? []).some((c) => c.kind === 'flood');
+    const goal = flooding ? 1 : 0;
+    if (this.riverLevel !== goal) {
+      const step = dt / 3000;
+      this.riverLevel = goal > this.riverLevel ? Math.min(goal, this.riverLevel + step) : Math.max(goal, this.riverLevel - step);
+    }
+    const level = Math.round(this.riverLevel * 40) / 40;
+    if (level === this.riverDrawn) {
+      if (level > 0) this.river.alpha = 0.82 + 0.06 * Math.sin(this.time / 600);
+      return;
+    }
+    this.riverDrawn = level;
+    const g = this.river;
+    g.clear();
+    if (level <= 0) return;
+    const grid = state.grid;
+    const surface = 0x4a87bd;
+    for (let i = 0; i < grid.size; i++) {
+      if (grid.terrain[i] !== 1) continue;
+      const x = grid.xOf(i);
+      const y = grid.yOf(i);
+      const alt = grid.altitude[i] + level;
+      const [T, R, B, L] = corners(x, y, alt);
+      g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).fill(surface);
+      // Faces visibles côté sud et est quand la case voisine est plus basse (bord de carte)
+      const dh = level * 12;
+      if (y + 1 >= grid.height) g.poly([L.x, L.y, B.x, B.y, B.x, B.y + dh, L.x, L.y + dh]).fill(0x3a6f9e);
+      if (x + 1 >= grid.width) g.poly([B.x, B.y, R.x, R.y, R.x, R.y + dh, B.x, B.y + dh]).fill(0x2f5f8a);
+      if ((x * 5 + y * 11) % 7 === 0) {
+        const cx = (T.x + B.x) / 2;
+        const cy = (T.y + B.y) / 2;
+        g.moveTo(cx - 9, cy + 1).lineTo(cx + 6, cy - 1).stroke({ width: 1.2, color: 0xd6ecfb, alpha: 0.6 });
+      }
     }
   }
 

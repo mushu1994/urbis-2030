@@ -19,6 +19,15 @@ import { removeBuilding } from '../systems/BuildingFactory.js';
 export const DISASTER_LEVELS = Object.freeze({ off: 0, rare: 0.3, normal: 1, frequent: 2.2 });
 export const DISASTER_LEVEL_LABELS = { off: 'Désactivées', rare: 'Rares', normal: 'Normales', frequent: 'Fréquentes' };
 
+/** Écart minimal entre deux événements aléatoires, crises et épisodes confondus (3 mois). */
+export const MIN_EVENT_GAP_DAYS = 90;
+
+/** Jour du dernier événement aléatoire (crise ou épisode climatique ou économique). */
+export function lastRandomEvent(state) {
+  const crises = Object.values(state.crises?.last ?? {});
+  return Math.max(-1e9, state.events?.lastRandom ?? -1e9, ...crises);
+}
+
 /** Intervalle des tirages (jours). */
 const CHECK_EVERY = 5;
 /** Aucune crise aléatoire avant ce jour (sauf scénario). */
@@ -180,9 +189,8 @@ export class CrisisSystem {
     // Période de grâce : la première année d'une ville, ou quelques mois après le début d'une partie préparée
     if (t < (cr.graceUntil ?? GRACE_DAYS)) return;
     if ((state.stats.peakPopulation ?? 0) < 250) return;
-    // Répit d'au moins 20 jours entre deux crises aléatoires
-    const lastAny = Math.max(-1e9, ...Object.values(cr.last));
-    if (t - lastAny < 20) return;
+    // Au plus un événement aléatoire (crise ou épisode) tous les 3 mois
+    if (t - lastRandomEvent(state) < MIN_EVENT_GAP_DAYS) return;
     let k = 0;
     for (const kind of CRISIS_KINDS) {
       k++;
@@ -192,7 +200,10 @@ export class CrisisSystem {
       // Pas deux crises du même type à moins de 60 jours d'intervalle
       if (t - (cr.last[kind] ?? -1e9) < 60) continue;
       const p = this.probability(state, kind) * mult;
-      if (p > 0 && CrisisSystem.roll(state, 100 + k) < p && this.trigger(state, kind).ok) break;
+      if (p > 0 && CrisisSystem.roll(state, 100 + k) < p && this.trigger(state, kind).ok) {
+        state.events.lastRandom = t;
+        break;
+      }
     }
   }
 

@@ -46,7 +46,7 @@ export class HUD {
     );
     this.alerts = h('button.hud-alerts', { on: { click: () => actions.onOpenPanel('city') }, title: 'Alertes — ouvrir le tableau de bord de la ville' });
     this.undo = h('button.hud-icon', { title: 'Annuler la dernière action (Ctrl+Z)', 'aria-label': 'Annuler', on: { click: actions.onUndo } }, icon('undo', 17));
-    this.mute = h('button.hud-icon.hud-mute', { title: 'Couper le son (N)', 'aria-label': 'Couper le son', 'aria-pressed': 'false', on: { click: () => actions.onMute?.() } }, icon('sound', 17));
+    this.mute = h('button.hud-icon.hud-mute', { title: 'Réglages du son (N : couper)', 'aria-label': 'Réglages du son', 'aria-pressed': 'false', on: { click: () => actions.onMute?.() } }, icon('sound', 17));
     this.fullscreen = h('button.hud-icon.hud-fullscreen', { title: 'Plein écran (F)', 'aria-label': 'Plein écran', 'aria-pressed': 'false', on: { click: actions.onFullscreen } }, icon('expand', 17));
 
     root.append(
@@ -67,8 +67,7 @@ export class HUD {
   setMuted(muted) {
     this.mute.replaceChildren(icon(muted ? 'mute' : 'sound', 17));
     this.mute.setAttribute('aria-pressed', String(muted));
-    this.mute.title = muted ? 'Rétablir le son (N)' : 'Couper le son (N)';
-    this.mute.setAttribute('aria-label', this.mute.title);
+    this.mute.title = muted ? 'Réglages du son — son coupé (N : rétablir)' : 'Réglages du son (N : couper)';
   }
 
   /** Met à jour l'icône du bouton plein écran. */

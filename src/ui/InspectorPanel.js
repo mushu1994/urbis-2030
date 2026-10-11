@@ -110,6 +110,8 @@ export class InspectorPanel {
     const halted = b.disabledUntil > state.time.tick;
     const status = b.abandoned
       ? ['Abandonné', 'neg']
+      : b.constructionUntil > state.time.tick && !b.upgradeTo
+        ? ['En construction', 'warn']
       : halted
         ? [`À l'arrêt jusqu'au ${formatDate(b.disabledUntil)}`, 'neg']
         : !b.powered
@@ -234,6 +236,19 @@ export class InspectorPanel {
       } else {
         blocks.push(h('section', h('h3', 'Évolution'), h('p.small', `Niveau maximal atteint (${def.level}).`)));
       }
+    }
+
+    // Chantier en cours (bâtiment de zone neuf ou travaux de montée de niveau)
+    if (b.constructionUntil > state.time.tick) {
+      const target = b.upgradeTo ? session.catalog.building(b.upgradeTo) : def;
+      const total = Math.max(1, b.constructionUntil - (b.constructionStart ?? b.builtTick));
+      const done = Math.min(1, (state.time.tick - (b.constructionStart ?? b.builtTick)) / total);
+      blocks.splice(2, 0, h('section.insp-works',
+        h('h3', b.upgradeTo ? `Travaux : passage à ${target.name}` : 'En construction'),
+        meter(done, { color: 'var(--sign)' }),
+        row('Livraison prévue', `${formatDate(b.constructionUntil)} (${b.constructionUntil - state.time.tick} j)`),
+        b.upgradeTo ? null : h('p.hint', 'Pas encore d\'habitants ni d\'emplois : le bâtiment sera raccordé à sa livraison.')
+      ));
     }
 
     if (def.kind === 'plop') {

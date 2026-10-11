@@ -6,9 +6,10 @@
  */
 export const SPEEDS = Object.freeze([
   { id: 'pause', label: 'Pause', ticksPerSecond: 0 },
-  { id: 'normal', label: 'Normale', ticksPerSecond: 1.5 },
-  { id: 'fast', label: 'Rapide', ticksPerSecond: 5 },
-  { id: 'ultra', label: 'Très rapide', ticksPerSecond: 15 }
+  // Vitesse normale : un mois (30 jours) par minute de temps réel
+  { id: 'normal', label: 'Normale', ticksPerSecond: 0.5 },
+  { id: 'fast', label: 'Rapide', ticksPerSecond: 1.5 },
+  { id: 'ultra', label: 'Très rapide', ticksPerSecond: 4.5 }
 ]);
 
 export class SimulationClock {

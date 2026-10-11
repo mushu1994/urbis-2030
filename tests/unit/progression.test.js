@@ -68,11 +68,12 @@ describe('Ères et niveaux d\'habitation', () => {
     s.execute({ type: 'road', roadId: 'road_street', from: { x: 10, y: 15 }, to: { x: 10, y: 11 } });
     s.sim.attach(s.state);
     const seen = [];
-    for (let k = 0; k < 400 && b.defId !== 'res_high_5'; k++) {
+    for (let k = 0; k < 600 && b.defId !== 'res_high_5'; k++) {
       const def = s.catalog.building(b.defId);
       b.residents = def.capacity.residents;
       idealTile(s, b);
       s.sim.buildingSystem.update(s.state, 2);
+      s.state.time.tick += 2; // les montées de niveau se font en travaux, sur plusieurs jours
       if (!seen.includes(b.defId)) seen.push(b.defId);
     }
     expect(seen).toEqual(['res_high_3', 'res_high_4', 'res_high_5']);

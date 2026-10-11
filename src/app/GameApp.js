@@ -17,7 +17,7 @@ import { TechPanel } from '../ui/TechPanel.js';
 import { CityPanel } from '../ui/CityPanel.js';
 import { OverlayManager } from '../ui/OverlayManager.js';
 import { Notifications } from '../ui/Notifications.js';
-import { HelpPanel, SavesPanel, SettingsPanel, StartMenu } from '../ui/MenuPanels.js';
+import { HelpPanel, SavesPanel, SettingsPanel, SoundPanel, StartMenu } from '../ui/MenuPanels.js';
 import { ObjectivesCard } from '../ui/ObjectivesCard.js';
 import { DebugPanel } from '../ui/DebugPanel.js';
 import { formatMoney } from '../util/money.js';
@@ -69,7 +69,7 @@ export class GameApp {
       onUndo: () => this.undo(),
       onOpenPanel: (id) => this.togglePanel(id),
       onFullscreen: () => this.fullscreen.toggle(),
-      onMute: () => this.toggleMute(),
+      onMute: () => this.togglePanel('sound'),
       onWeather: () => this.openPanel('city', 'risks')
     });
     this.toolbar = new Toolbar(this.$('#toolbar'), {
@@ -103,9 +103,11 @@ export class GameApp {
         execute,
         getSession: () => this.session,
         audio: this.audio,
+        onSound: () => this.openPanel('sound'),
         onShowObjectives: () => this.objectives.show(),
         onDebug: () => this.togglePanel('debug')
       }),
+      sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
       help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
       debug: new DebugPanel({ getRenderer: () => this.renderer, getLoop: () => this.loop, settings: this.settings, apply: () => this.applySettings(), notify })
     };
@@ -352,8 +354,11 @@ export class GameApp {
       this.audio.play(crisis.kind === 'fire' || crisis.kind === 'flood' ? 'siren' : 'danger');
       this.crisisPanel.update(this.session, { force: true });
       if (this.settings.get('pauseOnCrisis') !== false && !crisis.manual && !this.clock.paused) {
-        this.speedBeforeCrisis = this.clock.speedIndex;
+        this.speedBeforeCrisis = Math.min(1, this.clock.speedIndex);
         this.setSpeed(0);
+      } else if (this.clock.speedIndex > 1) {
+        // Le temps ralentit pendant un événement
+        this.setSpeed(1);
       }
     });
     this.bus.on('crisis:ended', () => this.crisisPanel.update(this.session, { force: true }));
@@ -479,7 +484,16 @@ export class GameApp {
     }
   }
 
+  /** Une crise est-elle en cours ? (le temps est alors ralenti à la vitesse normale) */
+  get crisisActive() {
+    return (this.session?.state.crises?.active ?? []).length > 0;
+  }
+
   setSpeed(i) {
+    if (i > 1 && this.crisisActive) {
+      i = 1;
+      this.notifications?.push({ level: 'info', message: 'Crise en cours : le temps reste à vitesse normale jusqu\'à la fin de l\'événement', key: 'crisis-speed' });
+    }
     if (i === 0 && !this.clock.paused) this.prevSpeed = this.clock.speedIndex;
     this.clock.setSpeed(i);
     this.root.classList.toggle('paused', this.clock.paused);

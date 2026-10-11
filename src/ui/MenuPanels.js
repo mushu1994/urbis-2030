@@ -139,7 +139,8 @@ export class SavesPanel {
 }
 
 export class SettingsPanel {
-  constructor({ settings, apply, onShowObjectives, onDebug, execute, getSession, audio }) {
+  constructor({ settings, apply, onShowObjectives, onDebug, execute, getSession, audio, onSound }) {
+    this.onSound = onSound;
     this.onShowObjectives = onShowObjectives;
     this.onDebug = onDebug;
     this.execute = execute;
@@ -173,12 +174,7 @@ export class SettingsPanel {
           options.map(([v, l]) => h('option', { value: v, selected: String(this.settings.get(key)) === String(v) }, l))));
     return h('div.settings',
       h('h3', 'Son'),
-      toggle('muted', 'Couper tout le son (N)'),
-      slider('volumeMaster', 'Volume général', 0.8),
-      slider('volumeMusic', 'Musique', 0.5),
-      slider('volumeSfx', 'Effets sonores', 0.7),
-      slider('volumeAmbience', 'Ambiance de la ville', 0.6),
-      this.audio && !this.audio.supported ? h('p.hint', 'Ce navigateur ne permet pas de jouer du son.') : null,
+      this.onSound ? h('p', h('button.btn', { type: 'button', on: { click: () => this.onSound() } }, 'Réglages du son…')) : null,
       h('h3', 'Partie'),
       disasters,
       toggle('pauseOnCrisis', 'Mettre en pause quand une crise exige une décision', true),
@@ -203,6 +199,47 @@ export class SettingsPanel {
         this.onShowObjectives ? h('button.btn', { on: { click: () => this.onShowObjectives() } }, 'Afficher les objectifs guidés') : null,
         this.onDebug ? h('button.btn', { on: { click: () => this.onDebug() } }, 'Outils de débogage (F3)') : null
       )
+    );
+  }
+}
+
+/**
+ * Réglages du son (bouton haut-parleur de la barre du haut) : coupure, volumes, essai.
+ */
+export class SoundPanel {
+  constructor({ settings, apply, audio }) {
+    this.id = 'sound';
+    this.title = 'Réglages du son';
+    this.static = true;
+    this.settings = settings;
+    this.apply = apply;
+    this.audio = audio;
+  }
+
+  render() {
+    const set = (key, value) => {
+      this.settings.set(key, value);
+      this.apply();
+    };
+    const slider = (key, label, def, hint) => {
+      const v = Number(this.settings.get(key) ?? def);
+      const out = h('output', `${Math.round(v * 100)} %`);
+      return h('div.sound-row',
+        h('label.setting.slider', h('span', label),
+          h('input', { type: 'range', id: `sound-${key}`, min: 0, max: 1, step: 0.05, value: v, 'aria-label': label, on: { input: (e) => { set(key, Number(e.target.value)); out.textContent = `${Math.round(Number(e.target.value) * 100)} %`; } } }),
+          out),
+        hint ? h('small.hint', hint) : null);
+    };
+    const muted = !!this.settings.get('muted');
+    return h('div.settings.sound-panel',
+      h('label.check', h('input', { type: 'checkbox', id: 'sound-muted', checked: muted, on: { change: (e) => { set('muted', e.target.checked); this.audio?.unlock(); } } }), 'Couper tout le son (touche N)'),
+      slider('volumeMaster', 'Volume général', 0.8),
+      slider('volumeMusic', 'Musique', 0.5, 'Thème différent à chaque ère, plus tendu pendant une crise.'),
+      slider('volumeSfx', 'Effets sonores', 0.7, 'Construction, routes, zonage, démolition, notifications, sirènes.'),
+      slider('volumeAmbience', 'Ambiance de la ville', 0.6, 'Rumeur, circulation, oiseaux, pluie et vent selon ce que montre la caméra.'),
+      h('div.debug-actions',
+        h('button.btn', { type: 'button', on: { click: () => { this.audio?.unlock(); setTimeout(() => this.audio?.play('success'), 60); } } }, 'Tester le son')),
+      this.audio && !this.audio.supported ? h('p.hint', 'Ce navigateur ne permet pas de jouer du son.') : h('p.hint', 'Le son démarre au premier appui ou clic (règle des navigateurs, iPhone compris).')
     );
   }
 }

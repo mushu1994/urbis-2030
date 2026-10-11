@@ -188,7 +188,10 @@ export class WeatherSystem {
     if (w.kind !== before) {
       state.dirty.modifiers = true;
       this.bus?.emit('weather:changed', { weather: { ...w }, previous: before });
-      if (!forced && t > 0) {
+      w.notified ??= {};
+      const fresh = t - (w.notified[w.kind] ?? -1e9) >= 60;
+      if (fresh) w.notified[w.kind] = t;
+      if (!forced && t > 0 && fresh && (w.kind === 'snow' || w.kind === 'heat')) {
         if (w.kind === 'snow') this.bus?.emit('notify', { level: 'info', message: 'Neige : routes ralenties, déneigement en cours (entretien des routes en hausse)', key: 'weather-snow' });
         else if (w.kind === 'fog') this.bus?.emit('notify', { level: 'info', message: 'Brouillard : circulation ralentie', key: 'weather-fog' });
         else if (w.kind === 'storm') this.bus?.emit('notify', { level: 'info', message: 'Orages : production solaire en berne', key: 'weather-storm' });

@@ -8,6 +8,7 @@ import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDelive
 import { EffectsRenderer } from './EffectsRenderer.js';
 import { drawConstructionSite } from './art/EffectsArt.js';
 import { seasonKey } from '../simulation/WeatherSystem.js';
+import { SPEEDS } from '../simulation/SimulationClock.js';
 import { drawBuilding, drawTree } from './art/BuildingArt.js';
 import { gridToWorld, screenToTile } from './IsometricProjection.js';
 import { OVERLAY_BY_ID } from './Overlays.js';
@@ -127,7 +128,10 @@ export class Renderer {
         const y = grid.yOf(i);
         this.terrainLayer.markTile(x, y);
         this.groundLayer.markTile(x, y);
+        // Les arbres des cases voisines dépendent aussi de ce qui est construit ici
         this.dirtyTrees.add(x + y);
+        this.dirtyTrees.add(x + y + 1);
+        this.dirtyTrees.add(x + y + 2);
       }
     };
     this.unsub.push(
@@ -136,9 +140,15 @@ export class Renderer {
         this.overlayDirty = true;
         this.selectionDirty = true;
       }),
-      bus.on('building:added', ({ building }) => this.dirtyBuildings.add(building.id)),
+      bus.on('building:added', ({ building }) => {
+        this.dirtyBuildings.add(building.id);
+        this.#markTreesAround(building);
+      }),
       bus.on('building:changed', ({ building }) => this.dirtyBuildings.add(building.id)),
-      bus.on('building:removed', ({ building }) => this.dirtyBuildings.add(building.id)),
+      bus.on('building:removed', ({ building }) => {
+        this.dirtyBuildings.add(building.id);
+        this.#markTreesAround(building);
+      }),
       bus.on('network:rebuilt', () => {
         this.groundLayer.markAll();
         this.effects?.markStreets();
@@ -258,6 +268,7 @@ export class Renderer {
   #redrawTrees(d) {
     const state = this.session.state;
     const grid = state.grid;
+    if (d < 0 || d > grid.width + grid.height - 2) return;
     let g = this.treeGfx.get(d);
     if (!g) {
       g = new Graphics();
@@ -271,8 +282,34 @@ export class Renderer {
       const y = d - x;
       const i = grid.idx(x, y);
       if (grid.terrain[i] !== TERRAIN.FOREST || grid.building[i] || grid.road[i]) continue;
-      for (const t of forestTrees(x, y, grid.altitude[i])) drawTree(g, t.x, t.y, t.s, tint);
+      // Pas d'arbre collé aux façades avant d'un grand bâtiment : l'ordre d'affichage par diagonale les ferait
+      // passer derrière le bâtiment alors qu'ils sont devant (arbres « coupés » ou flottants)
+      if (this.#besideLargeBuilding(state, x, y)) continue;
+      // Parcelle zonée : quelques arbres seulement, la couleur de la zone reste lisible
+      const trees = forestTrees(x, y, grid.altitude[i]);
+      for (let k = 0; k < trees.length; k++) {
+        if (grid.zone[i] && k % 2 === 1) continue;
+        const t = trees[k];
+        drawTree(g, t.x, t.y, t.s, tint);
+      }
     }
+  }
+
+  #markTreesAround(b) {
+    for (let d = b.x + b.y; d <= b.x + b.w + b.y + b.h; d++) this.dirtyTrees.add(d);
+  }
+
+  /** Case juste devant la façade gauche ou droite d'un bâtiment de plusieurs cases. */
+  #besideLargeBuilding(state, x, y) {
+    const grid = state.grid;
+    for (const [nx, ny] of [[x - 1, y], [x, y - 1], [x - 1, y - 1]]) {
+      if (nx < 0 || ny < 0) continue;
+      const id = grid.building[grid.idx(nx, ny)];
+      if (!id) continue;
+      const b = state.buildings.get(id);
+      if (b && (b.w > 1 || b.h > 1)) return true;
+    }
+    return false;
   }
 
   #redrawBuilding(id) {
@@ -298,22 +335,29 @@ export class Renderer {
     const def = this.catalog.building(b.defId);
     const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
     const tick = state.time.tick;
-    // Montée de niveau d'un bâtiment de zone : courte rénovation sous échafaudage
-    const before = this.drawnDef.get(id);
-    if (before && before !== b.defId && def.kind === 'growable' && this.effects?.options.effects) this.constructing.set(id, tick + 6);
     this.drawnDef.set(id, b.defId);
-    let end = this.effects?.constructionEnd(def, b, tick) ?? 0;
-    if (!end && this.constructing.get(id) > tick) end = this.constructing.get(id);
     g.zIndex = (b.x + b.w - 1 + b.y + b.h - 1) * 10 + 5;
+    // Chantier simulé (bâtiment de zone neuf ou en travaux de montée de niveau), sinon chantier décoratif
+    // des équipements posés par le joueur
+    let end = 0;
+    let start = b.builtTick;
+    let target = def;
+    if (b.constructionUntil > tick) {
+      end = b.constructionUntil;
+      start = b.constructionStart ?? b.builtTick;
+      if (b.upgradeTo) target = this.catalog.building(b.upgradeTo);
+    } else if (def.kind !== 'growable') {
+      end = this.effects?.constructionEnd(def, b, tick) ?? 0;
+    }
     if (end) {
-      const total = Math.max(1, end - Math.min(b.builtTick, end - 6));
-      drawConstructionSite(g, def, b, alt, Math.min(1, 1 - (end - tick) / total));
-      this.constructing.set(id, end);
+      const progress = Math.max(0, Math.min(1, (tick - start) / Math.max(1, end - start)));
+      drawConstructionSite(g, target, b, alt, progress);
+      this.constructing.set(id, { end, drawn: tick });
     } else {
       drawBuilding(g, def, b, alt);
       this.constructing.delete(id);
     }
-    this.effects?.setCrane(b, def, alt, !!end, g.zIndex);
+    this.effects?.setCrane(b, target, alt, !!end, g.zIndex);
     this.effects?.drawLights(b, def, alt);
     const L = gridToWorld(b.x, b.y + b.h, alt);
     const R = gridToWorld(b.x + b.w, b.y, alt);
@@ -350,8 +394,10 @@ export class Renderer {
     const blink = Math.floor(performance.now() / 600) % 2 === 0;
     for (const b of state.buildings.values()) {
       const def = this.catalog.building(b.defId);
-      const needPower = (b.powerNeed ?? def.networks.power) > 0 && !b.powered;
-      const needWater = (b.waterNeed ?? 0) > 0 && !b.watered && state.time.tick - b.builtTick > 5;
+      // Pas d'alerte pendant le chantier ni dans les jours qui suivent la livraison (raccordement en cours)
+      const settling = b.constructionUntil > state.time.tick && !b.upgradeTo ? true : state.time.tick - (b.deliveredTick ?? b.builtTick) < 10;
+      const needPower = !settling && (b.powerNeed ?? def.networks.power) > 0 && !b.powered;
+      const needWater = !settling && (b.waterNeed ?? 0) > 0 && !b.watered;
       if (!needPower && !needWater && !b.abandoned) continue;
       const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
       const top = gridToWorld(b.x + b.w / 2, b.y + b.h / 2, alt);
@@ -541,12 +587,13 @@ export class Renderer {
     }
     // Chantiers livrés : le bâtiment définitif remplace l'échafaudage
     if (this.constructing.size) {
-      for (const [id, end] of this.constructing) if (state.time.tick >= end) this.dirtyBuildings.add(id);
+      // Livraison, ou avancement visible de la structure tous les 3 jours
+      for (const [id, c] of this.constructing) if (state.time.tick >= c.end || state.time.tick - c.drawn >= 3) this.dirtyBuildings.add(id);
     }
     this.vehicles.night = this.effects?.night ?? 0;
     this.vehicles.update(state, dtMs, rect, paused);
     this.trains.update(state, this.catalog, rect, dtMs, paused);
-    this.effects?.update({ state, catalog: this.catalog, camera: cam, view: this.view, rect, dtMs, paused, speedIndex: this.speedIndex ?? 1, buildingGfx: this.buildingGfx });
+    this.effects?.update({ state, catalog: this.catalog, camera: cam, view: this.view, rect, dtMs, paused, speedIndex: this.speedIndex ?? 1, ticksPerSecond: SPEEDS[this.speedIndex ?? 1]?.ticksPerSecond ?? 0.5, buildingGfx: this.buildingGfx });
     this.app.renderer.render(this.app.stage);
     const frame = performance.now() - t0;
     this.stats.frameMs = this.stats.frameMs * 0.9 + frame * 0.1;

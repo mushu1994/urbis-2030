@@ -47,6 +47,6 @@ describe('Boucle de jeu', () => {
     expect(results[0]).toBe(0);
     expect(results[1]).toBeLessThan(results[2]);
     expect(results[2]).toBeLessThan(results[3]);
-    expect(results[1]).toBe(15); // 1,5 jour par seconde pendant 10 s
+    expect(results[1]).toBe(5); // un mois par minute : 0,5 jour par seconde pendant 10 s
   });
 });

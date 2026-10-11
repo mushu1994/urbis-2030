@@ -18,7 +18,7 @@ describe('Horloge de simulation', () => {
     for (let k = 0; k < 600; k++) ta += a.advance(1000 / 60); // 60 images/s pendant 10 s
     for (let k = 0; k < 300; k++) tb += b.advance(1000 / 30); // 30 images/s pendant 10 s
     expect(ta).toBe(tb);
-    expect(ta).toBe(50); // 5 ticks/s
+    expect(ta).toBe(15); // vitesse rapide : 1,5 jour par seconde
   });
 
   it('borne le rattrapage après un onglet inactif et limite les ticks par image', () => {

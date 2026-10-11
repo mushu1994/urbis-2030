@@ -183,3 +183,41 @@ describe('Sauvegardes v5', () => {
     expect(back.weather.kind).toBe('cloudy');
   });
 });
+
+describe('Rythme de jeu (v0.3)', () => {
+  it('un bâtiment de zone se construit avant d\'être occupé, une montée de niveau prend 1,25 fois plus de temps', async () => {
+    const { constructionDaysFor } = await import('../../src/simulation/Construction.js');
+    const c = getCatalog();
+    expect(constructionDaysFor(c.building('res_low_1'))).toBe(15);
+    expect(constructionDaysFor(c.building('ind_1'))).toBe(30);
+    expect(constructionDaysFor(c.building('res_low_2'))).toBe(Math.round(15 * 1.25));
+    expect(constructionDaysFor(c.building('res_low_3'))).toBe(Math.round(15 * 1.25 * 1.25));
+
+    const s = newSession();
+    buildStarterTown(s);
+    s.run(40);
+    const fresh = [...s.state.buildings.values()].filter((b) => b.constructionUntil > s.state.time.tick && !b.upgradeTo);
+    expect(fresh.length).toBeGreaterThan(0);
+    for (const b of fresh) {
+      expect(b.residents).toBe(0);
+      expect(b.jobsFilled).toBe(0);
+    }
+    const b = fresh[0];
+    s.run(b.constructionUntil - s.state.time.tick + 6);
+    expect(b.constructionUntil).toBeUndefined();
+    expect(b.deliveredTick).toBeGreaterThan(0);
+  });
+
+  it('au plus un événement aléatoire tous les trois mois', () => {
+    const s = newSession();
+    buildStarterTown(s, { size: 'large' });
+    s.state.options.disasters = 'frequent';
+    s.state.crises.graceUntil = 0;
+    s.run(360 * 3);
+    const ticks = [
+      ...s.state.crises.history.filter((c) => !c.manual).map((c) => c.start),
+      ...s.state.events.history.filter((e) => e.kind === 'event' || e.kind === 'outage' || e.kind === 'risk').map((e) => e.tick)
+    ].sort((a, z) => a - z);
+    for (let k = 1; k < ticks.length; k++) expect(ticks[k] - ticks[k - 1]).toBeGreaterThanOrEqual(89);
+  });
+});

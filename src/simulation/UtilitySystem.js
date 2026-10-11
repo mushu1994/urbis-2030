@@ -39,6 +39,8 @@ export class UtilitySystem {
   /** Activité d'un bâtiment (0..1) : module la consommation des ressources. */
   activity(b, def) {
     if (b.abandoned) return 0;
+    // Chantier d'un bâtiment neuf : pas encore raccordé
+    if (b.constructionUntil !== undefined && !b.upgradeTo) return 0;
     if (def.capacity.residents) return Math.max(0.25, b.residents / def.capacity.residents);
     if (def.capacity.jobs) return Math.max(0.35, b.jobsFilled / def.capacity.jobs);
     return 1;
