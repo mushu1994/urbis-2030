@@ -9,7 +9,18 @@ export default defineConfig({
     viewport: { width: 1100, height: 720 },
     actionTimeout: 60_000,
     // PW_CHROMIUM : chemin d'un Chromium déjà installé (sinon `npx playwright install chromium`)
-    launchOptions: { args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}) }
+    launchOptions: { args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--js-flags=--expose-gc'], ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}) },
+    // Rendu logiciel sans GPU : son coupé et effets décoratifs désactivés pour que les parcours restent rapides
+    // (ils testent l'interface et les règles ; les effets ont leurs propres vérifications).
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://localhost:5173',
+          localStorage: [{ name: 'urbis2030.settings', value: JSON.stringify({ muted: true, dayNight: false, weatherFx: false, effects: false }) }]
+        }
+      ]
+    }
   },
   webServer: {
     command: 'npx vite --port 5173 --strictPort',

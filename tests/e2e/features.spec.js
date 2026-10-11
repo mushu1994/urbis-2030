@@ -203,6 +203,8 @@ test('pas de duplication d\'objets graphiques ni de fuite mémoire importante', 
       if (s.preview({ type: 'building', defId: 'park_small', x, y }).ok) spots.push({ x, y });
     }
     const counts = [];
+    // Mémoire retenue (après ramasse-miettes, si Chromium l'expose) plutôt que déchets pas encore collectés
+    window.gc?.();
     const heap0 = performance.memory?.usedJSHeapSize ?? 0;
     for (let round = 0; round < 8; round++) {
       for (const p of spots) s.execute({ type: 'building', defId: 'park_small', x: p.x, y: p.y });
@@ -215,6 +217,7 @@ test('pas de duplication d\'objets graphiques ni de fuite mémoire importante', 
     await s.run(360);
     await frame();
     await frame();
+    window.gc?.();
     const heap1 = performance.memory?.usedJSHeapSize ?? 0;
     return { spots: spots.length, counts, final: { sim: s.state.buildings.size, gfx: app.renderer.buildingGfx.size }, heapGrowthMb: (heap1 - heap0) / 1048576 };
   });

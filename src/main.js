@@ -34,7 +34,15 @@ async function boot() {
 boot();
 
 // Application installable hors ligne : le service worker met le jeu en cache (production uniquement).
-if ('serviceWorker' in navigator && import.meta.env.PROD && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+const framed = (() => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
+// Pas de service worker dans une page intégrée (aperçu, portail de jeux) : il ne s'y enregistre pas.
+if ('serviceWorker' in navigator && import.meta.env.PROD && !framed && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Service worker non enregistré :', err));
   });

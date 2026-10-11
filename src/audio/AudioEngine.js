@@ -42,7 +42,7 @@ export class AudioEngine {
     if (!this.supported) return;
     try {
       if (!this.ctx) this.#create();
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      if (this.ctx.state === 'suspended' && !this.#muted()) this.ctx.resume().catch(() => {});
     } catch {
       /* audio indisponible : le jeu reste muet */
     }
@@ -62,13 +62,23 @@ export class AudioEngine {
     this.busSfx = ctx.createGain();
     this.busAmb = ctx.createGain();
     for (const b of [this.busMusic, this.busSfx, this.busAmb]) b.connect(this.master);
-    // Réverbération légère commune (impulsion synthétique)
-    this.reverb = ctx.createConvolver();
-    this.reverb.buffer = this.#impulse(2.4, 2.2);
+    // Réverbération légère et économe : deux lignes à retard bouclées et filtrées (pas de convolution)
     this.reverbSend = ctx.createGain();
     this.reverbSend.gain.value = 0.28;
-    this.reverbSend.connect(this.reverb);
-    this.reverb.connect(this.master);
+    for (const [time, fb] of [[0.113, 0.42], [0.171, 0.36]]) {
+      const delay = ctx.createDelay(0.5);
+      delay.delayTime.value = time;
+      const feedback = ctx.createGain();
+      feedback.gain.value = fb;
+      const tone = ctx.createBiquadFilter();
+      tone.type = 'lowpass';
+      tone.frequency.value = 2400;
+      this.reverbSend.connect(delay);
+      delay.connect(tone);
+      tone.connect(feedback);
+      feedback.connect(delay);
+      tone.connect(this.master);
+    }
     this.noise = this.#noiseBuffer('white', 3);
     this.brown = this.#noiseBuffer('brown', 4);
     this.applyVolumes();
@@ -95,6 +105,9 @@ export class AudioEngine {
     };
     const master = this.#muted() ? 0 : v('volumeMaster', 0.8);
     this.master.gain.setTargetAtTime(master * master, t, 0.05);
+    // Silence complet : le moteur audio est mis en veille (aucun calcul, économie de batterie)
+    if (master === 0 && this.ctx.state === 'running') this.ctx.suspend().catch(() => {});
+    else if (master > 0 && this.ctx.state === 'suspended' && !document.hidden) this.ctx.resume().catch(() => {});
     this.busMusic.gain.setTargetAtTime(v('volumeMusic', 0.5) * 0.55, t, 0.1);
     this.busSfx.gain.setTargetAtTime(v('volumeSfx', 0.7), t, 0.05);
     this.busAmb.gain.setTargetAtTime(v('volumeAmbience', 0.6) * 0.9, t, 0.1);
@@ -117,21 +130,6 @@ export class AudioEngine {
         last = (last + 0.02 * w) / 1.02;
         d[i] = last * 3.5;
       } else d[i] = w;
-    }
-    return buf;
-  }
-
-  #impulse(seconds, decay) {
-    const ctx = this.ctx;
-    const len = Math.floor(ctx.sampleRate * seconds);
-    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
-    let seed = 99;
-    for (let c = 0; c < 2; c++) {
-      const d = buf.getChannelData(c);
-      for (let i = 0; i < len; i++) {
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        d[i] = (seed / 4294967296 * 2 - 1) * Math.pow(1 - i / len, decay);
-      }
     }
     return buf;
   }
@@ -298,22 +296,40 @@ export class AudioEngine {
 
   // ───────────────────────────── Ambiance ─────────────────────────────
 
+  /**
+   * Boucle d'ambiance (bruit filtré) démarrée seulement quand elle doit s'entendre et arrêtée après
+   * quelques secondes de silence : rien n'est calculé pour un son inaudible.
+   */
   #loop(buffer, filterType, freq, q = 0.7) {
     const ctx = this.ctx;
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    src.loop = true;
     const f = ctx.createBiquadFilter();
     f.type = filterType;
     f.frequency.value = freq;
     f.Q.value = q;
     const g = ctx.createGain();
     g.gain.value = 0;
-    src.connect(f);
     f.connect(g);
     g.connect(this.busAmb);
-    src.start(0, Math.random() * 2);
-    return { src, f, g };
+    const loop = { src: null, f, g, quiet: 0 };
+    loop.set = (target, t, tc) => {
+      if (target > 0.002) {
+        loop.quiet = 0;
+        if (!loop.src) {
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.loop = true;
+          src.connect(f);
+          src.start(0, Math.random() * 2);
+          loop.src = src;
+        }
+      } else if (loop.src && ++loop.quiet > 12) {
+        loop.src.stop();
+        loop.src.disconnect();
+        loop.src = null;
+      }
+      g.gain.setTargetAtTime(target, t, tc);
+    };
+    return loop;
   }
 
   #startAmbience() {
@@ -342,13 +358,13 @@ export class AudioEngine {
     const near = Math.max(0, Math.min(1, (e.zoom - 0.45) / 1.2));
     const active = e.inMenu ? 0 : 1;
     const level = active * (e.paused ? 0.45 : 1);
-    a.hum.g.gain.setTargetAtTime(level * (0.05 + 0.22 * e.density) * (0.6 + 0.4 * (1 - near)), t, 0.6);
-    a.traffic.g.gain.setTargetAtTime(level * e.traffic * (0.06 + 0.2 * near), t, 0.5);
+    a.hum.set(level * (e.density > 0.02 ? 0.05 + 0.22 * e.density : 0) * (0.6 + 0.4 * (1 - near)), t, 0.6);
+    a.traffic.set(level * e.traffic * (0.06 + 0.2 * near), t, 0.5);
     a.traffic.f.frequency.setTargetAtTime(700 + 500 * Math.random(), t, 0.8);
     const wet = e.weather === 'rain' ? 0.12 + 0.18 * e.intensity : e.weather === 'storm' ? 0.34 : 0;
-    a.rain.g.gain.setTargetAtTime(active * wet, t, 0.8);
-    const windy = e.weather === 'storm' ? 0.35 : e.weather === 'snow' ? 0.12 : e.weather === 'fog' ? 0.03 : 0.025;
-    a.wind.g.gain.setTargetAtTime(active * windy * (0.6 + 0.4 * Math.sin(t * 0.3) ** 2), t, 1.2);
+    a.rain.set(active * wet, t, 0.8);
+    const windy = e.weather === 'storm' ? 0.35 : e.weather === 'snow' ? 0.12 : e.weather === 'fog' ? 0.03 : 0;
+    a.wind.set(active * windy * (0.6 + 0.4 * Math.sin(t * 0.3) ** 2), t, 1.2);
     a.wind.f.frequency.setTargetAtTime(380 + 260 * Math.sin(t * 0.23) ** 2, t, 1);
     if (!active || e.paused) return;
     // Oiseaux : le jour, beau temps, quartiers peu denses ou verts, caméra proche
