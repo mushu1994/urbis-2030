@@ -1,0 +1,141 @@
+import { SIM } from './config.js';
+
+/**
+ * Modificateurs globaux appliqués par les technologies, les politiques et les événements.
+ * Convention : un effet "mul" de valeur v multiplie par (1 + v) ; un effet "add" ajoute v.
+ */
+export const DEFAULT_MODIFIERS = Object.freeze({
+  roadCapacityMult: 1,
+  travelTimeMult: 1,
+  tripGenerationMult: 1,
+  emptyTripShare: 0,
+  carModeShare: 0,
+  'upkeep.roads': 1,
+  'upkeep.utilities': 1,
+  'upkeep.services': 1,
+  'pollution.traffic': 1,
+  'pollution.buildings': 1,
+  'noise.traffic': 1,
+  'satisfaction.all': 0,
+  'satisfaction.low': 0,
+  'satisfaction.mid': 0,
+  'satisfaction.high': 0,
+  'landValue.add': 0,
+  taxEfficiency: 1,
+  deliveryTimeMult: 1,
+  'demand.R': 0,
+  'demand.C': 0,
+  'demand.O': 0,
+  'demand.I': 0,
+  rentMult: 1,
+  'growth.R': 1,
+  'growth.all': 1,
+  powerDemandMult: 1,
+  heatMult: 1,
+  freightPeakMult: 1,
+  windFactor: 1,
+  solarFactor: 1,
+  'upkeep.transport': 1,
+  'waste.collectMult': 1,
+  'waste.generationMult': 1,
+  'waste.recycleMult': 1,
+  'transit.ridershipMult': 1,
+  'transit.busCapacityMult': 1,
+  'transit.fareMult': 1
+});
+
+/** Un bâtiment est-il en état de fonctionner (ni abandonné, ni arrêté par un incident) ? */
+export function isOperational(state, b) {
+  return !b.abandoned && !(b.disabledUntil > state.time.tick);
+}
+
+/**
+ * Applique une liste d'effets à un objet de modificateurs.
+ * @param {Record<string, number>} mods
+ * @param {{key:string, op:'add'|'mul', value:number}[]} effects
+ * @param {number} scale 0..1 (efficacité, ex. ressources de calcul insuffisantes)
+ */
+export function applyEffects(mods, effects, scale = 1) {
+  for (const e of effects) {
+    if (!(e.key in mods)) mods[e.key] = DEFAULT_MODIFIERS[e.key] ?? (e.op === 'mul' ? 1 : 0);
+    if (e.op === 'mul') mods[e.key] *= 1 + e.value * scale;
+    else mods[e.key] += e.value * scale;
+  }
+}
+
+/** Offre de calcul (data centers alimentés et pourvus en personnel) et demande des technologies actives. */
+export function computeBalance(state, catalog) {
+  let supply = SIM.BASE_COMPUTE;
+  for (const b of state.buildings.values()) {
+    const def = catalog.buildingFor(b);
+    if (!def.capacity.compute || b.abandoned) continue;
+    const staffing = def.capacity.jobs ? Math.min(1, 0.3 + b.jobsFilled / def.capacity.jobs) : 1;
+    supply += def.capacity.compute * (b.powered ? 1 : 0) * staffing;
+  }
+  let demand = 0;
+  for (const id of Object.keys(state.tech.researched)) {
+    if (isInOutage(state, id)) continue;
+    demand += catalog.techById.get(id)?.compute ?? 0;
+  }
+  return { supply, demand, ratio: demand > 0 ? Math.min(1, supply / demand) : 1 };
+}
+
+export function isInOutage(state, techId) {
+  const until = state.tech.outages[techId];
+  return until !== undefined && until > state.time.tick;
+}
+
+/**
+ * Recalcule les modificateurs effectifs à partir des technologies, politiques et événements actifs.
+ * @returns {Record<string, number> & {disabledModes: Record<string, boolean>, compute: {supply:number, demand:number, ratio:number}}}
+ */
+export function computeModifiers(state, catalog) {
+  const mods = { ...DEFAULT_MODIFIERS };
+  const disabledModes = {};
+  const compute = computeBalance(state, catalog);
+
+  for (const id of Object.keys(state.tech.researched)) {
+    const tech = catalog.techById.get(id);
+    if (!tech) continue;
+    if (isInOutage(state, id)) {
+      // Pendant un incident : les gains disparaissent, les effets secondaires demeurent,
+      // et l'incident peut ajouter ses propres effets.
+      applyEffects(mods, tech.effects.filter((e) => e.side));
+      for (const r of tech.risks) {
+        if (r.type === 'outage') {
+          if (r.effects) applyEffects(mods, r.effects);
+          if (r.disablesMode) disabledModes[r.disablesMode] = true;
+        }
+      }
+      continue;
+    }
+    applyEffects(mods, tech.effects.filter((e) => !e.side), compute.ratio);
+    applyEffects(mods, tech.effects.filter((e) => e.side));
+  }
+
+  for (const id of Object.keys(state.policies.active)) {
+    const pol = catalog.policyById.get(id);
+    if (pol) applyEffects(mods, pol.effects);
+  }
+
+  for (const ev of state.events.active) {
+    if (ev.effects) applyEffects(mods, ev.effects);
+  }
+
+  // Effets à l'échelle de la ville de certains équipements (port, aéroport, stade, musée…)
+  for (const b of state.buildings.values()) {
+    const def = catalog.buildings.get(b.defId);
+    if (!def?.cityEffects?.length || !isOperational(state, b)) continue;
+    const staffing = def.capacity.jobs ? Math.min(1, 0.3 + b.jobsFilled / def.capacity.jobs) : 1;
+    const powered = def.networks.power > 0 && !b.powered ? 0.3 : 1;
+    applyEffects(mods, def.cityEffects, staffing * powered);
+  }
+
+  // Saisonnalité du solaire (déterministe selon le mois)
+  const month = Math.floor(state.time.tick / SIM.DAYS_PER_MONTH) % 12;
+  mods.solarFactor *= [0.45, 0.55, 0.75, 0.9, 1.05, 1.15, 1.2, 1.1, 0.95, 0.75, 0.55, 0.45][month];
+
+  mods.disabledModes = disabledModes;
+  mods.compute = compute;
+  return mods;
+}

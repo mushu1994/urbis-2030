@@ -1,0 +1,443 @@
+{
+  "formatVersion": 1,
+  "technologies": [
+    {
+      "id": "predictive_maintenance",
+      "name": "Maintenance prédictive des réseaux",
+      "family": "municipal",
+      "description": "Capteurs et modèles prédictifs sur la voirie et les réseaux : on intervient avant la panne.",
+      "unlock": {
+        "population": 600
+      },
+      "cost": 60000,
+      "upkeep": 1500,
+      "compute": 15,
+      "effects": [
+        {
+          "key": "upkeep.roads",
+          "op": "mul",
+          "value": -0.18,
+          "label": "Entretien des routes −18 %"
+        },
+        {
+          "key": "upkeep.utilities",
+          "op": "mul",
+          "value": -0.12,
+          "label": "Entretien énergie/eau −12 %"
+        }
+      ],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.02,
+          "durationDays": 20,
+          "label": "Vague de faux positifs : le système est suspendu"
+        }
+      ],
+      "kpis": [
+        "upkeepSavings"
+      ]
+    },
+    {
+      "id": "ai_traffic_lights",
+      "name": "Feux de circulation prédictifs",
+      "family": "mobility",
+      "description": "Les carrefours anticipent les flux et coordonnent les cycles de feux.",
+      "unlock": {
+        "population": 1200
+      },
+      "cost": 90000,
+      "upkeep": 2500,
+      "compute": 20,
+      "effects": [
+        {
+          "key": "roadCapacityMult",
+          "op": "mul",
+          "value": 0.15,
+          "label": "Capacité routière +15 %"
+        },
+        {
+          "key": "noise.traffic",
+          "op": "mul",
+          "value": -0.05,
+          "label": "Bruit routier −5 %"
+        }
+      ],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.015,
+          "durationDays": 7,
+          "label": "Cyberattaque sur les contrôleurs de feux",
+          "effects": [
+            {
+              "key": "roadCapacityMult",
+              "op": "mul",
+              "value": -0.12,
+              "label": "Capacité routière −12 % pendant l'incident"
+            }
+          ]
+        }
+      ],
+      "kpis": [
+        "congestion"
+      ]
+    },
+    {
+      "id": "ai_waste",
+      "name": "Collecte des déchets optimisée",
+      "family": "municipal",
+      "description": "Bennes connectées et tournées recalculées chaque nuit : la collecte gagne en capacité.",
+      "unlock": {
+        "population": 900
+      },
+      "cost": 45000,
+      "upkeep": 1200,
+      "compute": 10,
+      "effects": [
+        {
+          "key": "waste.collectMult",
+          "op": "mul",
+          "value": 0.25,
+          "label": "Capacité de collecte +25 %"
+        },
+        {
+          "key": "upkeep.services",
+          "op": "mul",
+          "value": -0.06,
+          "label": "Coût des services −6 %"
+        },
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 1,
+          "label": "Satisfaction +1"
+        },
+        {
+          "key": "satisfaction.high",
+          "op": "add",
+          "value": -1,
+          "side": true,
+          "label": "Capteurs dans l'espace public : débat sur la vie privée"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "waste"
+      ]
+    },
+    {
+      "id": "ground_robots",
+      "name": "Robots de livraison terrestres",
+      "family": "logistics",
+      "description": "Robots autonomes circulant sur les trottoirs depuis des dépôts de quartier.",
+      "unlock": {
+        "population": 1200
+      },
+      "cost": 50000,
+      "upkeep": 1200,
+      "compute": 10,
+      "unlocksBuildings": [
+        "robot_depot"
+      ],
+      "effects": [
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": -0.5,
+          "side": true,
+          "label": "Encombrement des trottoirs"
+        }
+      ],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.01,
+          "durationDays": 10,
+          "label": "Mise à jour défectueuse : robots immobilisés",
+          "disablesMode": "robot"
+        }
+      ],
+      "kpis": [
+        "deliveries"
+      ]
+    },
+    {
+      "id": "drone_delivery",
+      "name": "Livraison par drones",
+      "family": "logistics",
+      "description": "Hubs de drones desservant les zones de desserte autorisées par la municipalité.",
+      "unlock": {
+        "population": 2000
+      },
+      "cost": 80000,
+      "upkeep": 2000,
+      "compute": 15,
+      "unlocksBuildings": [
+        "drone_hub"
+      ],
+      "unlocksTools": [
+        "delivery_zone"
+      ],
+      "effects": [],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.02,
+          "durationDays": 30,
+          "label": "Incident de drone : vols suspendus par la préfecture",
+          "disablesMode": "drone"
+        }
+      ],
+      "kpis": [
+        "deliveries"
+      ]
+    },
+    {
+      "id": "automated_warehouses",
+      "name": "Entrepôts automatisés",
+      "family": "logistics",
+      "description": "Préparation de commandes robotisée. Capacité accrue, très peu d'emplois.",
+      "unlock": {
+        "population": 2500,
+        "tech": "ground_robots"
+      },
+      "cost": 100000,
+      "upkeep": 1500,
+      "compute": 20,
+      "unlocksBuildings": [
+        "warehouse_auto"
+      ],
+      "effects": [],
+      "risks": [],
+      "kpis": [
+        "deliveries"
+      ]
+    },
+    {
+      "id": "ai_mobility_optimization",
+      "name": "Optimisation IA des trajets",
+      "family": "mobility",
+      "description": "Guidage en temps réel des usagers et des livreurs pour lisser les pointes.",
+      "unlock": {
+        "population": 2000,
+        "tech": "ai_traffic_lights"
+      },
+      "cost": 70000,
+      "upkeep": 2000,
+      "compute": 25,
+      "effects": [
+        {
+          "key": "travelTimeMult",
+          "op": "mul",
+          "value": -0.08,
+          "label": "Temps de trajet −8 %"
+        },
+        {
+          "key": "deliveryTimeMult",
+          "op": "mul",
+          "value": -0.15,
+          "label": "Délais de livraison −15 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "commute"
+      ]
+    },
+    {
+      "id": "autonomous_vehicles",
+      "name": "Véhicules autonomes",
+      "family": "mobility",
+      "description": "Autorisation des flottes autonomes : moins de stationnement, mais plus de déplacements.",
+      "unlock": {
+        "population": 3500,
+        "tech": "ai_traffic_lights"
+      },
+      "cost": 250000,
+      "upkeep": 5000,
+      "compute": 30,
+      "effects": [
+        {
+          "key": "roadCapacityMult",
+          "op": "mul",
+          "value": 0.2,
+          "label": "Capacité routière +20 % (circulation en peloton)"
+        },
+        {
+          "key": "landValue.add",
+          "op": "add",
+          "value": 4,
+          "label": "Valeur foncière +4 (stationnement libéré)"
+        },
+        {
+          "key": "tripGenerationMult",
+          "op": "mul",
+          "value": 0.18,
+          "side": true,
+          "label": "Demande induite : +18 % de déplacements"
+        },
+        {
+          "key": "emptyTripShare",
+          "op": "add",
+          "value": 0.12,
+          "side": true,
+          "label": "12 % de trajets à vide"
+        },
+        {
+          "key": "carModeShare",
+          "op": "add",
+          "value": 0.08,
+          "side": true,
+          "label": "Report modal vers la voiture +8 pts"
+        },
+        {
+          "key": "satisfaction.low",
+          "op": "add",
+          "value": -2,
+          "side": true,
+          "label": "Emplois de chauffeurs menacés"
+        }
+      ],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.01,
+          "durationDays": 5,
+          "label": "Défaut logiciel : flotte autonome immobilisée"
+        }
+      ],
+      "kpis": [
+        "congestion",
+        "commute"
+      ]
+    },
+    {
+      "id": "municipal_copilot",
+      "name": "Copilote budgétaire municipal",
+      "family": "municipal",
+      "description": "Détection des anomalies fiscales et pilotage prédictif des dépenses.",
+      "unlock": {
+        "population": 3000
+      },
+      "cost": 60000,
+      "upkeep": 1800,
+      "compute": 25,
+      "effects": [
+        {
+          "key": "taxEfficiency",
+          "op": "mul",
+          "value": 0.03,
+          "label": "Recouvrement fiscal +3 %"
+        },
+        {
+          "key": "upkeep.services",
+          "op": "mul",
+          "value": -0.05,
+          "label": "Coût des services −5 %"
+        },
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": -1,
+          "side": true,
+          "label": "Défiance envers la décision algorithmique"
+        }
+      ],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.02,
+          "durationDays": 15,
+          "label": "Modèle dérivé : copilote désactivé pour audit"
+        }
+      ],
+      "kpis": [
+        "taxes"
+      ]
+    },
+    {
+      "id": "autonomous_shuttles",
+      "name": "Navettes autonomes",
+      "family": "mobility",
+      "description": "Les bus deviennent des navettes sans chauffeur, plus fréquentes.",
+      "unlock": {
+        "population": 2500,
+        "tech": "ai_traffic_lights"
+      },
+      "cost": 120000,
+      "upkeep": 2500,
+      "compute": 20,
+      "effects": [
+        {
+          "key": "transit.busCapacityMult",
+          "op": "mul",
+          "value": 0.6,
+          "label": "Capacité des bus +60 %"
+        },
+        {
+          "key": "upkeep.transport",
+          "op": "mul",
+          "value": -0.25,
+          "label": "Coût des transports −25 %"
+        },
+        {
+          "key": "satisfaction.low",
+          "op": "add",
+          "value": -1,
+          "side": true,
+          "label": "Postes de conducteurs supprimés"
+        }
+      ],
+      "risks": [
+        {
+          "type": "outage",
+          "monthlyChance": 0.015,
+          "durationDays": 7,
+          "label": "Mise à jour défaillante : navettes à l'arrêt"
+        }
+      ],
+      "kpis": [
+        "transit"
+      ]
+    },
+    {
+      "id": "maas",
+      "name": "Mobilité intégrée (MaaS)",
+      "family": "mobility",
+      "description": "Une application unique pour combiner bus, métro, train et vélos, avec tarification au trajet.",
+      "unlock": {
+        "population": 4000,
+        "tech": "ai_mobility_optimization"
+      },
+      "cost": 90000,
+      "upkeep": 2200,
+      "compute": 25,
+      "effects": [
+        {
+          "key": "transit.ridershipMult",
+          "op": "mul",
+          "value": 0.15,
+          "label": "Fréquentation des transports +15 %"
+        },
+        {
+          "key": "carModeShare",
+          "op": "add",
+          "value": -0.05,
+          "label": "Part de la voiture −5 pts"
+        },
+        {
+          "key": "satisfaction.high",
+          "op": "add",
+          "value": -0.5,
+          "side": true,
+          "label": "Collecte de données de déplacement"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "transit"
+      ]
+    }
+  ]
+}

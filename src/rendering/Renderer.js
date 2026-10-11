@@ -1,0 +1,487 @@
+import { Application, Graphics } from 'pixi.js';
+import { LayerManager, ChunkedLayer } from './LayerManager.js';
+import { Camera } from './Camera.js';
+import { SelectionRenderer } from './SelectionRenderer.js';
+import { VehicleRenderer } from './VehicleRenderer.js';
+import { TrainRenderer } from './TrainRenderer.js';
+import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners } from './art/GroundArt.js';
+import { drawBuilding, drawTree } from './art/BuildingArt.js';
+import { gridToWorld, screenToTile } from './IsometricProjection.js';
+import { OVERLAY_BY_ID } from './Overlays.js';
+import { TERRAIN } from '../world/Terrain.js';
+import { ROAD_REACH } from '../world/Grid.js';
+
+/**
+ * Moteur de rendu isométrique (PixiJS / WebGL).
+ * Il lit l'état du jeu et réagit aux événements du bus ; il ne décide d'aucune règle et ne modifie pas le monde.
+ */
+export class Renderer {
+  /** @param {{catalog: import('../data/Catalog.js').Catalog}} deps */
+  constructor({ catalog }) {
+    this.catalog = catalog;
+    this.app = null;
+    this.layers = new LayerManager();
+    this.camera = new Camera();
+    this.view = { width: 800, height: 600 };
+    this.selection = new SelectionRenderer(this.layers.selection, this.layers.ghost);
+    this.vehicles = new VehicleRenderer(this.layers.vehicles);
+    this.trains = new TrainRenderer(this.layers.objects);
+    this.buildingGfx = new Map();
+    this.treeGfx = new Map();
+    this.overlayId = null;
+    this.hover = null;
+    this.preview = null;
+    this.selectedId = 0;
+    this.xray = false;
+    this.gridLines = false;
+    this.unsub = [];
+    this.dirtyTrees = new Set();
+    this.dirtyBuildings = new Set();
+    this.overlayDirty = false;
+    this.selectionDirty = true;
+    this.lastCameraVersion = -1;
+    this.alertTimer = 0;
+    this.stats = { fps: 0, frameMs: 0, drawCalls: 0 };
+  }
+
+  async init(parent) {
+    this.app = new Application();
+    await this.app.init({
+      resizeTo: parent,
+      antialias: true,
+      background: 0x7aa6c9,
+      autoDensity: true,
+      resolution: Math.min(2, window.devicePixelRatio || 1),
+      preference: 'webgl',
+      powerPreference: 'high-performance'
+    });
+    parent.appendChild(this.app.canvas);
+    this.app.canvas.setAttribute('aria-label', 'Carte de la ville');
+    this.app.stage.addChild(this.layers.world);
+    this.app.ticker.stop(); // la boucle est pilotée par GameLoop
+    this.#resize();
+    window.addEventListener('resize', () => this.#resize());
+    // Le conteneur change de taille sans redimensionnement de fenêtre (mode immersif, rotation, plein écran).
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        this.app?.resize();
+        this.#resize();
+      }).observe(parent);
+    }
+  }
+
+  #resize() {
+    if (!this.app) return;
+    this.view.width = this.app.screen.width;
+    this.view.height = this.app.screen.height;
+    this.camera.version++;
+  }
+
+  get canvas() {
+    return this.app?.canvas;
+  }
+
+  /** Associe une partie : construit toutes les couches et s'abonne aux événements. */
+  attach(session) {
+    this.detach();
+    this.session = session;
+    const state = session.state;
+    const grid = state.grid;
+    const bus = session.bus;
+    this.layers.clear();
+    this.trains.reset();
+    this.buildingGfx.clear();
+    this.treeGfx.clear();
+
+    this.terrainLayer = new ChunkedLayer(this.layers.terrain, grid.width, grid.height, (g, x0, y0, x1, y1) => this.#drawTerrainChunk(g, x0, y0, x1, y1));
+    this.groundLayer = new ChunkedLayer(this.layers.ground, grid.width, grid.height, (g, x0, y0, x1, y1) => this.#drawGroundChunk(g, x0, y0, x1, y1));
+    this.terrainLayer.flush();
+    this.groundLayer.flush();
+
+    for (let d = 0; d <= grid.width + grid.height - 2; d++) this.dirtyTrees.add(d);
+    for (const b of state.buildings.values()) this.dirtyBuildings.add(b.id);
+
+    this.camera.setWorldSize(grid.width, grid.height);
+    const entry = state.entries[0];
+    if (entry !== undefined) this.camera.centerOnTile(grid.xOf(entry) + 7, grid.yOf(entry) - 3);
+    else this.camera.centerOnTile(grid.width / 2, grid.height / 2);
+
+    const markTiles = (tiles) => {
+      for (const i of tiles) {
+        const x = grid.xOf(i);
+        const y = grid.yOf(i);
+        this.terrainLayer.markTile(x, y);
+        this.groundLayer.markTile(x, y);
+        this.dirtyTrees.add(x + y);
+      }
+    };
+    this.unsub.push(
+      bus.on('world:changed', ({ tiles }) => {
+        if (tiles) markTiles(tiles);
+        this.overlayDirty = true;
+        this.selectionDirty = true;
+      }),
+      bus.on('building:added', ({ building }) => this.dirtyBuildings.add(building.id)),
+      bus.on('building:changed', ({ building }) => this.dirtyBuildings.add(building.id)),
+      bus.on('building:removed', ({ building }) => this.dirtyBuildings.add(building.id)),
+      bus.on('network:rebuilt', () => this.groundLayer.markAll()),
+      bus.on('era:changed', () => {
+        this.groundLayer.markAll();
+        this.#applyEraTheme();
+      }),
+      bus.on('fields:updated', ({ fields }) => {
+        if (fields.includes('traffic')) this.vehicles.refresh(this.session.state);
+        this.overlayDirty = true;
+      })
+    );
+    this.vehicles.refresh(state);
+    this.overlayDirty = true;
+    this.#applyEraTheme();
+  }
+
+  /** Ambiance de l'ère : ciel légèrement plus bleuté à mesure que la ville se transforme. */
+  #applyEraTheme() {
+    const era = this.session?.state.progression?.era ?? 1;
+    const sky = { 1: 0x7aa6c9, 2: 0x76a2cf, 3: 0x7b9ad6 }[era] ?? 0x7aa6c9;
+    if (this.app?.renderer?.background) this.app.renderer.background.color = sky;
+  }
+
+  detach() {
+    for (const off of this.unsub) off();
+    this.unsub = [];
+    this.session = null;
+  }
+
+  // ───────────────────────────── Dessin des couches ─────────────────────────────
+
+  #forEachDiagonal(x0, y0, x1, y1, fn) {
+    for (let d = x0 + y0; d <= x1 - 1 + y1 - 1; d++) {
+      for (let x = Math.max(x0, d - (y1 - 1)); x <= Math.min(x1 - 1, d - y0); x++) fn(x, d - x);
+    }
+  }
+
+  #drawTerrainChunk(g, x0, y0, x1, y1) {
+    const grid = this.session.state.grid;
+    this.#forEachDiagonal(x0, y0, x1, y1, (x, y) => drawTerrainTile(g, grid, x, y, { gridLines: this.gridLines }));
+  }
+
+  #drawGroundChunk(g, x0, y0, x1, y1) {
+    const state = this.session.state;
+    const grid = state.grid;
+    const cat = this.catalog;
+    this.#forEachDiagonal(x0, y0, x1, y1, (x, y) => {
+      const i = grid.idx(x, y);
+      const alt = grid.surfaceAlt(i);
+      if (grid.road[i]) {
+        const road = cat.roadByCode(grid.road[i]);
+        let conn = 0;
+        const linked = (n) => grid.road[n] && Math.abs(grid.surfaceAlt(n) - alt) <= 1;
+        if (y > 0 && linked(i - grid.width)) conn |= 1;
+        if (x < grid.width - 1 && linked(i + 1)) conn |= 2;
+        if (y < grid.height - 1 && linked(i + grid.width)) conn |= 4;
+        if (x > 0 && linked(i - 1)) conn |= 8;
+        if (x === 0 && road.id === 'road_highway') conn |= 8;
+        if (grid.bridge[i]) drawBridgeTile(g, x, y, alt, conn, road.visual);
+        else drawRoadTile(g, x, y, alt, conn, road.visual, { era: state.progression?.era ?? 1 });
+      } else if (grid.zone[i] && !grid.building[i]) {
+        const z = cat.zoneByCode.get(grid.zone[i]);
+        drawZoneTile(g, x, y, alt, z.color, { reachable: grid.roadDist[i] <= ROAD_REACH });
+      }
+      if (grid.deliveryZone[i]) drawDeliveryZoneTile(g, x, y, alt);
+    });
+  }
+
+  #redrawTrees(d) {
+    const state = this.session.state;
+    const grid = state.grid;
+    let g = this.treeGfx.get(d);
+    if (!g) {
+      g = new Graphics();
+      g.zIndex = d * 10 + 6;
+      this.treeGfx.set(d, g);
+      this.layers.objects.addChild(g);
+    }
+    g.clear();
+    for (let x = Math.max(0, d - (grid.height - 1)); x <= Math.min(grid.width - 1, d); x++) {
+      const y = d - x;
+      const i = grid.idx(x, y);
+      if (grid.terrain[i] !== TERRAIN.FOREST || grid.building[i] || grid.road[i]) continue;
+      for (const t of forestTrees(x, y, grid.altitude[i])) drawTree(g, t.x, t.y, t.s, 0x3a7f37);
+    }
+  }
+
+  #redrawBuilding(id) {
+    const state = this.session.state;
+    const b = state.buildings.get(id);
+    let g = this.buildingGfx.get(id);
+    if (!b) {
+      if (g) {
+        g.destroy();
+        this.buildingGfx.delete(id);
+      }
+      return;
+    }
+    if (!g) {
+      g = new Graphics();
+      this.buildingGfx.set(id, g);
+      this.layers.objects.addChild(g);
+    }
+    g.clear();
+    const def = this.catalog.building(b.defId);
+    const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
+    drawBuilding(g, def, b, alt);
+    g.zIndex = (b.x + b.w - 1 + b.y + b.h - 1) * 10 + 5;
+    const L = gridToWorld(b.x, b.y + b.h, alt);
+    const R = gridToWorld(b.x + b.w, b.y, alt);
+    const B = gridToWorld(b.x + b.w, b.y + b.h, alt);
+    const T = gridToWorld(b.x, b.y, alt);
+    g.__bounds = { x0: L.x, x1: R.x, y0: T.y - def.visual.height - 40, y1: B.y };
+    g.__depth = b.x + b.w - 1 + b.y + b.h - 1;
+  }
+
+  #drawOverlay() {
+    const g = this.layers.overlay;
+    g.clear();
+    const ov = this.overlayId ? OVERLAY_BY_ID.get(this.overlayId) : null;
+    this.layers.objects.alpha = ov ? 0.28 : 1;
+    if (!ov) return;
+    const state = this.session.state;
+    const grid = state.grid;
+    for (let y = 0; y < grid.height; y++) {
+      for (let x = 0; x < grid.width; x++) {
+        const i = grid.idx(x, y);
+        const c = ov.color(state, i);
+        if (c < 0) continue;
+        const [T, R, B, L] = corners(x, y, grid.surfaceAlt(i));
+        g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).fill({ color: c, alpha: 0.78 });
+      }
+    }
+  }
+
+  /** Icônes d'alerte : bâtiments sans électricité, sans eau ou abandonnés. */
+  #drawAlerts() {
+    const g = this.layers.alerts;
+    g.clear();
+    const state = this.session.state;
+    const blink = Math.floor(performance.now() / 600) % 2 === 0;
+    for (const b of state.buildings.values()) {
+      const def = this.catalog.building(b.defId);
+      const needPower = (b.powerNeed ?? def.networks.power) > 0 && !b.powered;
+      const needWater = (b.waterNeed ?? 0) > 0 && !b.watered && state.time.tick - b.builtTick > 5;
+      if (!needPower && !needWater && !b.abandoned) continue;
+      const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
+      const top = gridToWorld(b.x + b.w / 2, b.y + b.h / 2, alt);
+      const y = top.y - def.visual.height - 16;
+      if (needPower && blink) {
+        g.circle(top.x, y, 7).fill({ color: 0x222222, alpha: 0.75 });
+        g.poly([top.x + 1, y - 5, top.x - 3, y + 1, top.x, y + 1, top.x - 1, y + 5, top.x + 3, y - 1, top.x, y - 1]).fill(0xffd23f);
+      } else if (needWater && blink) {
+        g.circle(top.x, y, 7).fill({ color: 0x222222, alpha: 0.75 });
+        g.poly([top.x, y - 5, top.x + 3.5, y + 1, top.x, y + 4.5, top.x - 3.5, y + 1]).fill(0x5cb7ff);
+      } else if (b.abandoned) {
+        g.circle(top.x, y, 5).fill({ color: 0x444444, alpha: 0.7 });
+        g.rect(top.x - 3, y - 0.8, 6, 1.6).fill(0xdddddd);
+      }
+    }
+  }
+
+  // ───────────────────────────── Interaction ─────────────────────────────
+
+  /** Position écran (pixels CSS relatifs au canevas) du centre d'une case. */
+  tileToScreen(x, y) {
+    const grid = this.session.state.grid;
+    const w = gridToWorld(x + 0.5, y + 0.5, grid.surfaceAlt(grid.idx(x, y)));
+    return { x: (w.x - this.camera.x) * this.camera.zoom + this.view.width / 2, y: (w.y - this.camera.y) * this.camera.zoom + this.view.height / 2 };
+  }
+
+  /**
+   * Bâtiment dont la silhouette (volume dessiné) contient le point écran, le plus en avant d'abord.
+   * Permet de cliquer sur une tour même si sa base est masquée. Désactivé en mode transparence.
+   * @returns {number} identifiant, ou 0
+   */
+  buildingAtScreen(sx, sy) {
+    if (!this.session || this.xray || this.overlayId) return 0;
+    const state = this.session.state;
+    const wx = (sx - this.view.width / 2) / this.camera.zoom + this.camera.x;
+    const wy = (sy - this.view.height / 2) / this.camera.zoom + this.camera.y;
+    let best = 0;
+    let bestDepth = -1;
+    for (const [id, g] of this.buildingGfx) {
+      const bb = g.__bounds;
+      if (!bb || wx < bb.x0 || wx > bb.x1 || wy < bb.y0 || wy > bb.y1 || g.__depth <= bestDepth) continue;
+      const b = state.buildings.get(id);
+      if (!b) continue;
+      const def = this.catalog.building(b.defId);
+      const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
+      const H = def.visual.height;
+      const T = gridToWorld(b.x, b.y, alt);
+      const R = gridToWorld(b.x + b.w, b.y, alt);
+      const B = gridToWorld(b.x + b.w, b.y + b.h, alt);
+      const L = gridToWorld(b.x, b.y + b.h, alt);
+      const poly = [T.x, T.y - H, R.x, R.y - H, R.x, R.y, B.x, B.y, L.x, L.y, L.x, L.y - H];
+      if (pointInPolygon(wx, wy, poly)) {
+        best = id;
+        bestDepth = g.__depth;
+      }
+    }
+    return best;
+  }
+
+  tileAtScreen(sx, sy) {
+    if (!this.session) return null;
+    return screenToTile(this.session.state.grid, sx, sy, this.camera, this.view);
+  }
+
+  setHover(tile) {
+    const same = tile && this.hover && tile.x === this.hover.x && tile.y === this.hover.y;
+    if (same || (!tile && !this.hover)) return;
+    this.hover = tile;
+    this.selectionDirty = true;
+    if (this.xray) this.#applyXray();
+  }
+
+  setPreview(preview) {
+    this.preview = preview;
+    this.selectionDirty = true;
+  }
+
+  setSelected(id) {
+    this.selectedId = id || 0;
+    this.selectionDirty = true;
+  }
+
+  setOverlay(id) {
+    this.overlayId = id;
+    this.overlayDirty = true;
+  }
+
+  setXray(on) {
+    this.xray = on;
+    if (!on) for (const g of this.buildingGfx.values()) g.alpha = 1;
+    else this.#applyXray();
+  }
+
+  setGridLines(on) {
+    this.gridLines = on;
+    this.terrainLayer?.markAll();
+  }
+
+  setVehicles(on) {
+    this.vehicles.enabled = on;
+  }
+
+  /**
+   * Résolution de rendu (qualité graphique) : 'auto' suit l'écran (plafonné à 2), sinon facteur 0..1.
+   */
+  setRenderScale(scale) {
+    if (!this.app) return;
+    const base = Math.min(2, window.devicePixelRatio || 1);
+    const res = scale === 'auto' || !scale ? base : Math.max(0.5, base * Number(scale));
+    try {
+      this.app.renderer.resize(this.app.screen.width, this.app.screen.height, res);
+    } catch {
+      /* certaines implémentations n'acceptent pas le changement à chaud */
+    }
+    this.camera.version++;
+  }
+
+  /** Bâtiments situés devant le point survolé et le masquant : rendus translucides. */
+  #applyXray() {
+    if (!this.session) return;
+    const h = this.hover;
+    if (!h) {
+      for (const g of this.buildingGfx.values()) g.alpha = 1;
+      return;
+    }
+    const grid = this.session.state.grid;
+    const p = gridToWorld(h.x + 0.5, h.y + 0.5, grid.altitude[grid.idx(h.x, h.y)]);
+    const depth = h.x + h.y;
+    for (const g of this.buildingGfx.values()) {
+      const b = g.__bounds;
+      const occludes = g.__depth > depth && p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1;
+      g.alpha = occludes ? 0.25 : 1;
+    }
+  }
+
+  // ───────────────────────────── Boucle d'affichage ─────────────────────────────
+
+  /**
+   * Met à jour les éléments modifiés et dessine une image.
+   * @param {number} dtMs
+   * @param {{paused:boolean}} opts
+   */
+  render(dtMs, { paused = false } = {}) {
+    if (!this.app || !this.session) return;
+    const t0 = performance.now();
+    const state = this.session.state;
+
+    this.terrainLayer.flush(8);
+    this.groundLayer.flush(8);
+    for (const d of this.dirtyTrees) this.#redrawTrees(d);
+    this.dirtyTrees.clear();
+    if (this.dirtyBuildings.size) {
+      for (const id of this.dirtyBuildings) this.#redrawBuilding(id);
+      this.dirtyBuildings.clear();
+      if (this.xray) this.#applyXray();
+    }
+    if (this.overlayDirty) {
+      this.#drawOverlay();
+      this.overlayDirty = false;
+    }
+    this.alertTimer -= dtMs;
+    if (this.alertTimer <= 0) {
+      this.#drawAlerts();
+      this.alertTimer = 300;
+    }
+    if (this.selectionDirty) {
+      const selected = this.selectedId ? state.buildings.get(this.selectedId) : null;
+      this.selection.draw(state, { hover: this.hover, preview: this.preview, selected, catalog: this.catalog });
+      this.selectionDirty = false;
+    }
+
+    // Caméra et masquage hors champ
+    const cam = this.camera;
+    const w = this.layers.world;
+    w.scale.set(cam.zoom);
+    w.position.set(this.view.width / 2 - cam.x * cam.zoom, this.view.height / 2 - cam.y * cam.zoom);
+    const rect = cam.viewRect(this.view, 80);
+    if (cam.version !== this.lastCameraVersion) {
+      this.terrainLayer.cull(rect);
+      this.groundLayer.cull(rect);
+      for (const g of this.buildingGfx.values()) {
+        const b = g.__bounds;
+        g.visible = !(b.x1 < rect.x0 || b.x0 > rect.x1 || b.y1 < rect.y0 || b.y0 > rect.y1);
+      }
+      this.lastCameraVersion = cam.version;
+    }
+    this.vehicles.update(state, dtMs, rect, paused);
+    this.trains.update(state, this.catalog, rect, dtMs, paused);
+    this.app.renderer.render(this.app.stage);
+    const frame = performance.now() - t0;
+    this.stats.frameMs = this.stats.frameMs * 0.9 + frame * 0.1;
+    this.stats.fps = this.stats.fps * 0.9 + (dtMs > 0 ? 1000 / dtMs : 0) * 0.1;
+  }
+
+  /** Centre la vue sur une case. */
+  focus(x, y) {
+    this.camera.centerOnTile(x, y);
+  }
+
+  destroy() {
+    this.detach();
+    this.app?.destroy(true, { children: true });
+    this.app = null;
+  }
+}
+
+function pointInPolygon(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 2; i < pts.length; j = i, i += 2) {
+    const xi = pts[i];
+    const yi = pts[i + 1];
+    const xj = pts[j];
+    const yj = pts[j + 1];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}

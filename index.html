@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <!-- Ajout à l'écran d'accueil (iPhone, Android) : le jeu s'ouvre alors sans barre de navigateur. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="URBIS 2030" />
+    <meta name="theme-color" content="#1d2730" />
+    <meta name="description" content="URBIS 2030 — construisez et administrez une ville transformée par l'intelligence artificielle." />
+    <title>URBIS 2030</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="hud" aria-label="Indicateurs de la ville"></header>
+      <main id="stage">
+        <div id="viewport"></div>
+        <nav id="toolbar" aria-label="Outils de construction"></nav>
+        <aside id="inspector" aria-label="Inspecteur"></aside>
+        <div id="overlays"></div>
+        <div id="panel-host"></div>
+        <div id="toasts"></div>
+        <div id="paused-badge" aria-hidden="true">Pause</div>
+        <div id="tool-chip" role="status" hidden></div>
+        <section id="objectives" aria-label="Objectifs" hidden></section>
+        <div id="fps-meter" aria-hidden="true" hidden></div>
+      </main>
+      <div id="cursor-tip" hidden></div>
+      <div id="menu"></div>
+      <div id="busy" hidden></div>
+      <noscript>URBIS 2030 nécessite JavaScript.</noscript>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

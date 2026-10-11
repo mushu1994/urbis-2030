@@ -1,0 +1,3900 @@
+{
+  "formatVersion": 2,
+  "currency": "€",
+  "roads": [
+    {
+      "id": "road_street",
+      "name": "Rue",
+      "category": "roads",
+      "cost": 40,
+      "upkeep": 0.6,
+      "bridgeCost": 650,
+      "bridgeUpkeep": 4,
+      "capacity": 650,
+      "speedKmh": 30,
+      "lanes": 2,
+      "buildable": true,
+      "visual": {
+        "color": "#5b5f66",
+        "edge": "#7d8088",
+        "marking": "#d8d2b0",
+        "width": 0.62
+      },
+      "description": "Voie de desserte à double sens. Tracée sur l'eau en ligne droite, elle devient un pont."
+    },
+    {
+      "id": "road_avenue",
+      "name": "Avenue",
+      "category": "roads",
+      "cost": 120,
+      "upkeep": 1.6,
+      "bridgeCost": 1600,
+      "bridgeUpkeep": 10,
+      "capacity": 1800,
+      "speedKmh": 50,
+      "lanes": 4,
+      "buildable": true,
+      "unlock": {
+        "population": 400
+      },
+      "visual": {
+        "color": "#4c5057",
+        "edge": "#9aa0a8",
+        "marking": "#f2f2f2",
+        "width": 0.86,
+        "median": "#6f9a57"
+      },
+      "description": "Axe structurant à 2×2 voies avec terre-plein végétalisé."
+    },
+    {
+      "id": "road_highway",
+      "name": "Accès autoroutier",
+      "category": "roads",
+      "cost": 0,
+      "upkeep": 0,
+      "capacity": 5000,
+      "speedKmh": 90,
+      "lanes": 4,
+      "buildable": false,
+      "visual": {
+        "color": "#3f434a",
+        "edge": "#c9a227",
+        "marking": "#ffffff",
+        "width": 0.92
+      },
+      "description": "Connexion au réseau régional. Permet l'arrivée d'habitants, les navettes et le fret."
+    }
+  ],
+  "zones": [
+    {
+      "id": "R_LOW",
+      "code": 1,
+      "name": "Résidentiel faible densité",
+      "short": "R",
+      "cost": 10,
+      "color": "#7fc96b",
+      "description": "Maisons et petits immeubles. Les habitants s'installent selon la demande résidentielle (jauge R), puis les logements montent en gamme quand les services et la satisfaction suivent."
+    },
+    {
+      "id": "R_HIGH",
+      "code": 2,
+      "name": "Résidentiel collectif",
+      "short": "R+",
+      "cost": 20,
+      "color": "#2f9e5a",
+      "description": "Immeubles collectifs : beaucoup plus d'habitants par case, mais plus exigeants en services, en transports en commun et en calme."
+    },
+    {
+      "id": "C",
+      "code": 3,
+      "name": "Commerce",
+      "short": "C",
+      "cost": 15,
+      "color": "#4f9ad8",
+      "description": "Commerces de proximité puis grands magasins : des emplois et de la fiscalité commerciale. Ils ont besoin de clients à proximité et d'être livrés."
+    },
+    {
+      "id": "O",
+      "code": 4,
+      "name": "Bureaux",
+      "short": "B",
+      "cost": 20,
+      "color": "#9a7fd8",
+      "description": "Bureaux : emplois qualifiés et forte valeur ajoutée. Ils s'installent là où les habitants sont éduqués et les quartiers attractifs."
+    },
+    {
+      "id": "I",
+      "code": 5,
+      "name": "Industrie",
+      "short": "I",
+      "cost": 15,
+      "color": "#e0b43c",
+      "description": "Usines et ateliers : beaucoup d'emplois peu qualifiés, mais de la pollution, du bruit et des camions. Tenez-les à l'écart des logements."
+    }
+  ],
+  "buildings": [
+    {
+      "id": "res_low_1",
+      "name": "Maison individuelle",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 2,
+        "water": 4
+      },
+      "capacity": {
+        "residents": 4,
+        "incomeClass": "mid"
+      },
+      "environment": {
+        "heat": 1
+      },
+      "growth": {
+        "next": "res_low_2",
+        "minLandValue": 35,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 10,
+        "color": "#efe3c8",
+        "roof": "gable",
+        "roofColor": "#c0573e",
+        "detail": "garden"
+      }
+    },
+    {
+      "id": "res_low_2",
+      "name": "Maison contemporaine",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 3,
+        "water": 6
+      },
+      "capacity": {
+        "residents": 6,
+        "incomeClass": "mid"
+      },
+      "environment": {
+        "heat": 1
+      },
+      "growth": {
+        "next": "res_low_3",
+        "minLandValue": 55,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 14,
+        "color": "#f4f1ea",
+        "roof": "flat",
+        "roofColor": "#8a8f96",
+        "detail": "solar"
+      }
+    },
+    {
+      "id": "res_low_3",
+      "name": "Villa connectée",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 4,
+        "water": 8
+      },
+      "capacity": {
+        "residents": 7,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 1
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "health",
+          "era2"
+        ],
+        "next": "res_low_4",
+        "minLandValue": 62,
+        "minSatisfaction": 60
+      },
+      "visual": {
+        "height": 16,
+        "color": "#ffffff",
+        "roof": "flat",
+        "roofColor": "#5f8f6a",
+        "detail": "pool"
+      }
+    },
+    {
+      "id": "res_low_4",
+      "name": "Maison bioclimatique",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 4,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 3,
+        "water": 6
+      },
+      "capacity": {
+        "residents": 8,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 0
+      },
+      "growth": {
+        "next": "res_low_5",
+        "minLandValue": 72,
+        "minSatisfaction": 70,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "health",
+          "transit",
+          "era3"
+        ]
+      },
+      "visual": {
+        "height": 16,
+        "color": "#eef3ea",
+        "roof": "green",
+        "roofColor": "#6fa85a",
+        "detail": "bioHouse",
+        "era": 2
+      }
+    },
+    {
+      "id": "res_low_5",
+      "name": "Habitat modulaire autonome",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 5,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 2,
+        "water": 5
+      },
+      "capacity": {
+        "residents": 10,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 0
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 24,
+        "color": "#f4f7fb",
+        "roof": "flat",
+        "roofColor": "#9fd8e8",
+        "detail": "modular",
+        "era": 3
+      }
+    },
+    {
+      "id": "res_high_1",
+      "name": "Petit collectif",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 10,
+        "water": 22
+      },
+      "capacity": {
+        "residents": 24,
+        "incomeClass": "low"
+      },
+      "environment": {
+        "heat": 2,
+        "noise": 1
+      },
+      "growth": {
+        "next": "res_high_2",
+        "minLandValue": 40,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 26,
+        "color": "#e4cfa8",
+        "roof": "flat",
+        "roofColor": "#9b8a72",
+        "detail": "windows"
+      }
+    },
+    {
+      "id": "res_high_2",
+      "name": "Résidence urbaine",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 22,
+        "water": 50
+      },
+      "capacity": {
+        "residents": 60,
+        "incomeClass": "mid"
+      },
+      "environment": {
+        "heat": 3,
+        "noise": 1
+      },
+      "growth": {
+        "next": "res_high_3",
+        "minLandValue": 60,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 44,
+        "color": "#d9dde3",
+        "roof": "flat",
+        "roofColor": "#7c8794",
+        "detail": "windows"
+      }
+    },
+    {
+      "id": "res_high_3",
+      "name": "Tour résidentielle",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 45,
+        "water": 110
+      },
+      "capacity": {
+        "residents": 140,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 4,
+        "noise": 1
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "health",
+          "transit",
+          "era2"
+        ],
+        "next": "res_high_4",
+        "minLandValue": 66,
+        "minSatisfaction": 60
+      },
+      "visual": {
+        "height": 78,
+        "color": "#c9d8e6",
+        "roof": "flat",
+        "roofColor": "#55708a",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "res_high_4",
+      "name": "Tour végétalisée",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 4,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 60,
+        "water": 150
+      },
+      "capacity": {
+        "residents": 220,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 2,
+        "green": 6,
+        "radius": 2
+      },
+      "growth": {
+        "next": "res_high_5",
+        "minLandValue": 80,
+        "minSatisfaction": 70,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "health",
+          "transit",
+          "era3"
+        ]
+      },
+      "visual": {
+        "height": 96,
+        "color": "#dfe8dc",
+        "roof": "green",
+        "roofColor": "#5c9a4c",
+        "detail": "greenTower",
+        "era": 2
+      }
+    },
+    {
+      "id": "res_high_5",
+      "name": "Arcologie verticale",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 5,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 80,
+        "water": 200
+      },
+      "capacity": {
+        "residents": 360,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 1,
+        "green": 10,
+        "radius": 3
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 124,
+        "color": "#e6eef5",
+        "roof": "flat",
+        "roofColor": "#7fd6e6",
+        "detail": "arcology",
+        "era": 3
+      }
+    },
+    {
+      "id": "com_1",
+      "name": "Supérette",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 5,
+        "water": 4
+      },
+      "capacity": {
+        "jobs": 6,
+        "qualification": 0.3,
+        "sales": 6
+      },
+      "environment": {
+        "noise": 2,
+        "heat": 1
+      },
+      "growth": {
+        "next": "com_2",
+        "minLandValue": 40,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 12,
+        "color": "#f0d9a0",
+        "roof": "flat",
+        "roofColor": "#d06a4e",
+        "detail": "awning"
+      }
+    },
+    {
+      "id": "com_2",
+      "name": "Commerces de quartier",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 14,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 16,
+        "qualification": 0.4,
+        "sales": 16
+      },
+      "environment": {
+        "noise": 3,
+        "heat": 2
+      },
+      "growth": {
+        "next": "com_3",
+        "minLandValue": 60,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 22,
+        "color": "#c6e1f2",
+        "roof": "flat",
+        "roofColor": "#4f7ea8",
+        "detail": "awning"
+      }
+    },
+    {
+      "id": "com_3",
+      "name": "Galerie commerciale",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 32,
+        "water": 24
+      },
+      "capacity": {
+        "jobs": 40,
+        "qualification": 0.45,
+        "sales": 40
+      },
+      "environment": {
+        "noise": 5,
+        "heat": 3
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "transit",
+          "era2"
+        ],
+        "next": "com_4",
+        "minLandValue": 64,
+        "minSatisfaction": 56
+      },
+      "visual": {
+        "height": 34,
+        "color": "#a7d3ee",
+        "roof": "flat",
+        "roofColor": "#2f6e9c",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "com_4",
+      "name": "Centre commercial connecté",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 4,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 50,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 70,
+        "qualification": 0.5,
+        "sales": 70
+      },
+      "environment": {
+        "noise": 5,
+        "heat": 3
+      },
+      "growth": {
+        "next": "com_5",
+        "minLandValue": 76,
+        "minSatisfaction": 66,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "transit",
+          "era3"
+        ]
+      },
+      "visual": {
+        "height": 42,
+        "color": "#cfe7f5",
+        "roof": "flat",
+        "roofColor": "#2c86b8",
+        "detail": "hologram",
+        "era": 2
+      }
+    },
+    {
+      "id": "com_5",
+      "name": "Galerie holographique",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 5,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 70,
+        "water": 40
+      },
+      "capacity": {
+        "jobs": 110,
+        "qualification": 0.55,
+        "sales": 110
+      },
+      "environment": {
+        "noise": 4,
+        "heat": 3
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 58,
+        "color": "#d9f2ff",
+        "roof": "flat",
+        "roofColor": "#5be0f0",
+        "detail": "hologram",
+        "era": 3
+      }
+    },
+    {
+      "id": "off_1",
+      "name": "Bureaux de proximité",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 8,
+        "water": 5
+      },
+      "capacity": {
+        "jobs": 10,
+        "qualification": 0.6
+      },
+      "environment": {
+        "heat": 1
+      },
+      "growth": {
+        "next": "off_2",
+        "minLandValue": 45,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 20,
+        "color": "#dcd6ee",
+        "roof": "flat",
+        "roofColor": "#7e72a8",
+        "detail": "windows"
+      }
+    },
+    {
+      "id": "off_2",
+      "name": "Immeuble tertiaire",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 26,
+        "water": 14
+      },
+      "capacity": {
+        "jobs": 35,
+        "qualification": 0.65
+      },
+      "environment": {
+        "heat": 2
+      },
+      "growth": {
+        "next": "off_3",
+        "minLandValue": 65,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 48,
+        "color": "#b9b2d9",
+        "roof": "flat",
+        "roofColor": "#5b4f8c",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "off_3",
+      "name": "Tour de bureaux",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 70,
+        "water": 34
+      },
+      "capacity": {
+        "jobs": 90,
+        "qualification": 0.72
+      },
+      "environment": {
+        "heat": 4
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "transit",
+          "era2"
+        ],
+        "next": "off_4",
+        "minLandValue": 68,
+        "minSatisfaction": 56
+      },
+      "visual": {
+        "height": 92,
+        "color": "#9fb6d6",
+        "roof": "flat",
+        "roofColor": "#3d5a85",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "off_4",
+      "name": "Campus d'innovation",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 4,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 90,
+        "water": 45
+      },
+      "capacity": {
+        "jobs": 140,
+        "qualification": 0.78
+      },
+      "environment": {
+        "heat": 3,
+        "green": 4,
+        "radius": 2
+      },
+      "growth": {
+        "next": "off_5",
+        "minLandValue": 78,
+        "minSatisfaction": 66,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "transit",
+          "era3"
+        ]
+      },
+      "visual": {
+        "height": 66,
+        "color": "#e2e8f2",
+        "roof": "flat",
+        "roofColor": "#4c6fae",
+        "detail": "solarGlass",
+        "era": 2
+      }
+    },
+    {
+      "id": "off_5",
+      "name": "Tour IA",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 5,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 130,
+        "water": 60
+      },
+      "capacity": {
+        "jobs": 200,
+        "qualification": 0.86
+      },
+      "environment": {
+        "heat": 4
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 132,
+        "color": "#b9d3ee",
+        "roof": "flat",
+        "roofColor": "#2a4f80",
+        "detail": "aiTower",
+        "era": 3
+      }
+    },
+    {
+      "id": "ind_1",
+      "name": "Atelier",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 12,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 15,
+        "qualification": 0.25,
+        "goods": 15
+      },
+      "environment": {
+        "pollution": 10,
+        "noise": 6,
+        "heat": 2,
+        "radius": 4
+      },
+      "growth": {
+        "next": "ind_2",
+        "minLandValue": 15,
+        "requires": [
+          "power"
+        ]
+      },
+      "visual": {
+        "height": 14,
+        "color": "#c9b79a",
+        "roof": "saw",
+        "roofColor": "#8d7c63",
+        "detail": "chimney"
+      }
+    },
+    {
+      "id": "ind_2",
+      "name": "Usine",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 35,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 40,
+        "qualification": 0.3,
+        "goods": 45
+      },
+      "environment": {
+        "pollution": 22,
+        "noise": 10,
+        "heat": 3,
+        "radius": 5
+      },
+      "growth": {
+        "next": "ind_3",
+        "minLandValue": 25,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 22,
+        "color": "#b0a491",
+        "roof": "saw",
+        "roofColor": "#6f6352",
+        "detail": "chimney"
+      }
+    },
+    {
+      "id": "ind_3",
+      "name": "Usine automatisée",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 70,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 28,
+        "qualification": 0.55,
+        "goods": 90
+      },
+      "environment": {
+        "pollution": 14,
+        "noise": 8,
+        "heat": 3,
+        "radius": 5
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "era2"
+        ],
+        "next": "ind_4",
+        "minLandValue": 28,
+        "minSatisfaction": 50
+      },
+      "visual": {
+        "height": 26,
+        "color": "#9aa6ad",
+        "roof": "flat",
+        "roofColor": "#56636b",
+        "detail": "solar"
+      }
+    },
+    {
+      "id": "ind_4",
+      "name": "Usine robotisée",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 4,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 90,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 24,
+        "qualification": 0.65,
+        "goods": 140
+      },
+      "environment": {
+        "pollution": 8,
+        "noise": 6,
+        "heat": 3,
+        "radius": 4
+      },
+      "growth": {
+        "next": "ind_5",
+        "minLandValue": 38,
+        "minSatisfaction": 58,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "era3"
+        ]
+      },
+      "visual": {
+        "height": 24,
+        "color": "#c7d2d8",
+        "roof": "flat",
+        "roofColor": "#4b6070",
+        "detail": "robotarm",
+        "era": 2
+      }
+    },
+    {
+      "id": "ind_5",
+      "name": "Fabrique de nanomatériaux",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 5,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 120,
+        "water": 40
+      },
+      "capacity": {
+        "jobs": 32,
+        "qualification": 0.82,
+        "goods": 210
+      },
+      "environment": {
+        "pollution": 3,
+        "noise": 3,
+        "heat": 2,
+        "radius": 3
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 30,
+        "color": "#e4ecf2",
+        "roof": "flat",
+        "roofColor": "#6ac3d6",
+        "detail": "cleanroom",
+        "era": 3
+      }
+    },
+    {
+      "id": "power_gas",
+      "name": "Centrale à gaz",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 55000,
+      "upkeep": 1800,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.45,
+        "powerOutput": 1200,
+        "powerSource": "conventional"
+      },
+      "environment": {
+        "pollution": 45,
+        "noise": 18,
+        "heat": 8,
+        "radius": 9
+      },
+      "visual": {
+        "height": 30,
+        "color": "#a9aeb4",
+        "roof": "flat",
+        "roofColor": "#6d737a",
+        "detail": "stacks"
+      },
+      "description": "Production puissante et pilotable, disponible dès le départ. Très polluante : construisez-la à l'écart des quartiers résidentiels, sous le vent de l'industrie."
+    },
+    {
+      "id": "power_solar",
+      "name": "Ferme solaire",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 30000,
+      "upkeep": 300,
+      "lifeYears": 25,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0
+      },
+      "capacity": {
+        "jobs": 2,
+        "qualification": 0.5,
+        "powerOutput": 220,
+        "powerSource": "solar"
+      },
+      "environment": {
+        "heat": 1
+      },
+      "visual": {
+        "height": 3,
+        "color": "#2c3e66",
+        "roof": "panels",
+        "roofColor": "#3f5e9a",
+        "detail": "panels"
+      },
+      "description": "Énergie propre et silencieuse, sans personnel. Sa production baisse en hiver : prévoyez une batterie ou une autre source en appoint."
+    },
+    {
+      "id": "power_wind",
+      "name": "Éolienne",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 9000,
+      "upkeep": 150,
+      "lifeYears": 25,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "rock"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "networks": {
+        "power": 0,
+        "conductsPower": true
+      },
+      "capacity": {
+        "powerOutput": 90,
+        "powerSource": "wind"
+      },
+      "environment": {
+        "noise": 12,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 200
+      },
+      "visual": {
+        "height": 56,
+        "color": "#f2f4f6",
+        "roof": "none",
+        "roofColor": "#f2f4f6",
+        "detail": "turbine"
+      },
+      "description": "Petite production propre, plus forte en altitude. Le bruit des pales gêne les habitants proches : placez les éoliennes sur les hauteurs ou en bordure de ville."
+    },
+    {
+      "id": "power_battery",
+      "name": "Stockage par batteries",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 14000,
+      "upkeep": 200,
+      "lifeYears": 15,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0
+      },
+      "capacity": {
+        "powerStorage": 2400,
+        "powerDischarge": 160,
+        "powerSource": "storage"
+      },
+      "unlock": {
+        "population": 800
+      },
+      "visual": {
+        "height": 10,
+        "color": "#e8ecef",
+        "roof": "flat",
+        "roofColor": "#5bbf7a",
+        "detail": "battery"
+      },
+      "description": "Stocke les excédents d'électricité et les restitue lors des pics de demande ou quand le solaire faiblit."
+    },
+    {
+      "id": "power_line",
+      "name": "Ligne électrique",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 25,
+      "upkeep": 0.3,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest",
+          "rock"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "networks": {
+        "power": 0,
+        "conductsPower": true
+      },
+      "capacity": {
+        "powerSource": "grid"
+      },
+      "visual": {
+        "height": 22,
+        "color": "#6b6f75",
+        "roof": "none",
+        "roofColor": "#6b6f75",
+        "detail": "pylon"
+      },
+      "description": "Relie deux réseaux électriques séparés. Inutile en ville : routes et bâtiments contigus conduisent déjà le courant."
+    },
+    {
+      "id": "data_center",
+      "name": "Centre de données",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 3
+      },
+      "rotatable": true,
+      "cost": 120000,
+      "upkeep": 2500,
+      "lifeYears": 20,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 600,
+        "water": 120
+      },
+      "capacity": {
+        "jobs": 15,
+        "qualification": 0.8,
+        "compute": 100
+      },
+      "environment": {
+        "heat": 18,
+        "noise": 6,
+        "radius": 5
+      },
+      "revenue": {
+        "perMonth": 6500,
+        "label": "Hébergement de données",
+        "category": "hosting"
+      },
+      "unlock": {
+        "population": 1500
+      },
+      "visual": {
+        "height": 18,
+        "color": "#d7dde3",
+        "roof": "flat",
+        "roofColor": "#39a0b5",
+        "detail": "cooling"
+      },
+      "description": "Fournit la puissance de calcul dont l'IA municipale et les technologies de 2030 ont besoin, et loue des serveurs. Très gourmand en électricité, il réchauffe le quartier."
+    },
+    {
+      "id": "water_pump",
+      "name": "Station de pompage",
+      "category": "water",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 6000,
+      "upkeep": 250,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "adjacentToTerrain": "water"
+      },
+      "networks": {
+        "power": 20
+      },
+      "capacity": {
+        "jobs": 3,
+        "qualification": 0.4,
+        "waterOutput": 900
+      },
+      "visual": {
+        "height": 12,
+        "color": "#d6e6ef",
+        "roof": "dome",
+        "roofColor": "#4f8fc0",
+        "detail": "pipe"
+      },
+      "description": "Pompe l'eau d'une rivière ou d'un lac : à construire au bord de l'eau. Elle a besoin d'électricité. Les canalisations suivent les routes."
+    },
+    {
+      "id": "water_tower",
+      "name": "Forage et château d'eau",
+      "category": "water",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 9000,
+      "upkeep": 320,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 30
+      },
+      "capacity": {
+        "jobs": 2,
+        "qualification": 0.4,
+        "waterOutput": 450
+      },
+      "visual": {
+        "height": 34,
+        "color": "#dfe3e6",
+        "roof": "tank",
+        "roofColor": "#6aa7cf",
+        "detail": "tank"
+      },
+      "description": "Produit de l'eau sans rivière à proximité, mais coûte plus cher qu'une station de pompage pour un débit deux fois plus faible."
+    },
+    {
+      "id": "sewage_plant",
+      "name": "Station d'épuration",
+      "category": "water",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 25000,
+      "upkeep": 900,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 40
+      },
+      "capacity": {
+        "jobs": 10,
+        "qualification": 0.4,
+        "sewageTreatment": 1800
+      },
+      "environment": {
+        "pollution": 6,
+        "noise": 4,
+        "radius": 4
+      },
+      "visual": {
+        "height": 6,
+        "color": "#c8d3c1",
+        "roof": "basins",
+        "roofColor": "#6d9db3",
+        "detail": "basins"
+      },
+      "description": "Traite les eaux usées de la ville. Sans elle, la santé publique se dégrade et la satisfaction baisse dès quelques centaines d'habitants."
+    },
+    {
+      "id": "park_small",
+      "name": "Square",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 1500,
+      "upkeep": 40,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "green": 14,
+        "pollution": -3,
+        "radius": 3
+      },
+      "visual": {
+        "height": 2,
+        "color": "#6dbb59",
+        "roof": "park",
+        "roofColor": "#4f9a43",
+        "detail": "trees"
+      },
+      "description": "Un petit coin de verdure entre les immeubles : un peu de fraîcheur et de bien-être pour les voisins immédiats."
+    },
+    {
+      "id": "park",
+      "name": "Parc urbain",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 8000,
+      "upkeep": 200,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "green": 32,
+        "pollution": -6,
+        "radius": 6
+      },
+      "visual": {
+        "height": 2,
+        "color": "#63b354",
+        "roof": "park",
+        "roofColor": "#3f8a3a",
+        "detail": "pond"
+      },
+      "description": "Pelouses, arbres et bassin : rafraîchit et dépollue le quartier, fait monter la valeur foncière et la satisfaction."
+    },
+    {
+      "id": "forest_urban",
+      "name": "Forêt urbaine",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 14000,
+      "upkeep": 150,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "green": 45,
+        "pollution": -14,
+        "heat": -6,
+        "radius": 8
+      },
+      "unlock": {
+        "population": 800
+      },
+      "visual": {
+        "height": 2,
+        "color": "#4f9c46",
+        "roof": "park",
+        "roofColor": "#2e6e2f",
+        "detail": "forest"
+      },
+      "description": "Une véritable forêt en ville : absorbe beaucoup de pollution et réduit les îlots de chaleur sur un large rayon."
+    },
+    {
+      "id": "city_hall",
+      "name": "Hôtel de ville",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 30000,
+      "upkeep": 500,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "unique": true
+      },
+      "networks": {
+        "power": 20,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.55,
+        "service": {
+          "type": "admin",
+          "radius": 12,
+          "strength": 1
+        }
+      },
+      "environment": {
+        "landValue": 10,
+        "radius": 10
+      },
+      "visual": {
+        "height": 32,
+        "color": "#efe7d5",
+        "roof": "dome",
+        "roofColor": "#5d7aa8",
+        "detail": "flag"
+      },
+      "description": "Le cœur administratif de la ville : services aux habitants et forte hausse de la valeur foncière alentour. Un seul par ville."
+    },
+    {
+      "id": "police",
+      "name": "Commissariat",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 22000,
+      "upkeep": 1100,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 20,
+        "water": 12
+      },
+      "capacity": {
+        "jobs": 25,
+        "qualification": 0.5,
+        "service": {
+          "type": "police",
+          "radius": 14,
+          "strength": 1
+        }
+      },
+      "unlock": {
+        "population": 150
+      },
+      "visual": {
+        "height": 20,
+        "color": "#d9e1ee",
+        "roof": "flat",
+        "roofColor": "#2f4f8a",
+        "detail": "beacon"
+      },
+      "description": "Assure la sécurité dans un large rayon. Indispensable pour que les quartiers montent en gamme et que la satisfaction progresse."
+    },
+    {
+      "id": "fire",
+      "name": "Caserne de pompiers",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 22000,
+      "upkeep": 1000,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 18,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.45,
+        "service": {
+          "type": "fire",
+          "radius": 14,
+          "strength": 1
+        }
+      },
+      "unlock": {
+        "population": 150
+      },
+      "visual": {
+        "height": 18,
+        "color": "#efd2c8",
+        "roof": "flat",
+        "roofColor": "#b8392f",
+        "detail": "tower"
+      },
+      "description": "Protège les bâtiments contre les incendies dans son rayon d'action. Les quartiers non couverts attirent moins d'habitants."
+    },
+    {
+      "id": "clinic",
+      "name": "Centre de santé",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 12000,
+      "upkeep": 600,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 12,
+        "water": 14
+      },
+      "capacity": {
+        "jobs": 12,
+        "qualification": 0.65,
+        "service": {
+          "type": "health",
+          "radius": 9,
+          "strength": 0.7
+        }
+      },
+      "visual": {
+        "height": 16,
+        "color": "#f4f6f8",
+        "roof": "flat",
+        "roofColor": "#d64a4a",
+        "detail": "cross"
+      },
+      "description": "Soins de proximité pour un quartier. Plus petite et moins efficace qu'un hôpital, mais disponible dès le début."
+    },
+    {
+      "id": "hospital",
+      "name": "Hôpital",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 80000,
+      "upkeep": 3500,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 90,
+        "water": 120
+      },
+      "capacity": {
+        "jobs": 120,
+        "qualification": 0.7,
+        "service": {
+          "type": "health",
+          "radius": 24,
+          "strength": 1
+        }
+      },
+      "unlock": {
+        "population": 2500
+      },
+      "visual": {
+        "height": 40,
+        "color": "#f6f7f9",
+        "roof": "flat",
+        "roofColor": "#d64a4a",
+        "detail": "helipad"
+      },
+      "description": "Soins complets sur un très large rayon. Nécessaire aux niveaux d'habitation élevés."
+    },
+    {
+      "id": "school",
+      "name": "École",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 20000,
+      "upkeep": 900,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 15,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 25,
+        "qualification": 0.65,
+        "service": {
+          "type": "education",
+          "radius": 11,
+          "strength": 0.7
+        }
+      },
+      "unlock": {
+        "population": 100
+      },
+      "visual": {
+        "height": 16,
+        "color": "#f2e2b8",
+        "roof": "gable",
+        "roofColor": "#a5523d",
+        "detail": "playground"
+      },
+      "description": "Éduque les enfants du quartier : la qualification des habitants progresse, ce qui attire bureaux et emplois qualifiés."
+    },
+    {
+      "id": "university",
+      "name": "Université",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 120000,
+      "upkeep": 4000,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 70,
+        "water": 80
+      },
+      "capacity": {
+        "jobs": 90,
+        "qualification": 0.8,
+        "service": {
+          "type": "education",
+          "radius": 30,
+          "strength": 1.2
+        }
+      },
+      "environment": {
+        "landValue": 6,
+        "radius": 10
+      },
+      "unlock": {
+        "population": 4000
+      },
+      "visual": {
+        "height": 30,
+        "color": "#eadfca",
+        "roof": "dome",
+        "roofColor": "#6b8f5a",
+        "detail": "campus"
+      },
+      "description": "Forme des actifs très qualifiés sur un immense rayon et fait monter la valeur foncière. Indispensable aux bureaux haut de gamme."
+    },
+    {
+      "id": "warehouse",
+      "name": "Plateforme logistique",
+      "category": "logistics",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 35000,
+      "upkeep": 600,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 25,
+        "water": 8
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.25,
+        "logistics": {
+          "role": "supply",
+          "throughput": 3000
+        }
+      },
+      "environment": {
+        "noise": 10,
+        "pollution": 4,
+        "radius": 4
+      },
+      "revenue": {
+        "perMonth": 0,
+        "perUnit": 0.15,
+        "label": "Redevances logistiques"
+      },
+      "unlock": {
+        "population": 300
+      },
+      "visual": {
+        "height": 16,
+        "color": "#d8cdb8",
+        "roof": "flat",
+        "roofColor": "#9c8a6a",
+        "detail": "docks"
+      },
+      "description": "Approvisionne commerces et habitants depuis la ville plutôt que depuis l'extérieur : moins de camions venant de la région."
+    },
+    {
+      "id": "warehouse_auto",
+      "name": "Entrepôt automatisé",
+      "category": "logistics",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 70000,
+      "upkeep": 900,
+      "lifeYears": 25,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 140,
+        "water": 6
+      },
+      "capacity": {
+        "jobs": 6,
+        "qualification": 0.7,
+        "logistics": {
+          "role": "supply",
+          "throughput": 9000
+        }
+      },
+      "environment": {
+        "noise": 8,
+        "pollution": 2,
+        "radius": 4
+      },
+      "revenue": {
+        "perMonth": 0,
+        "perUnit": 0.15,
+        "label": "Redevances logistiques"
+      },
+      "unlock": {
+        "tech": "automated_warehouses"
+      },
+      "visual": {
+        "height": 20,
+        "color": "#e5e9ec",
+        "roof": "flat",
+        "roofColor": "#3fa0b8",
+        "detail": "robotarm"
+      },
+      "description": "Entrepôt robotisé : trois fois plus de capacité qu'un entrepôt classique, mais cinq fois moins d'emplois et une forte consommation électrique."
+    },
+    {
+      "id": "micro_hub",
+      "name": "Micro-hub logistique",
+      "category": "logistics",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 8000,
+      "upkeep": 250,
+      "lifeYears": 20,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 10
+      },
+      "capacity": {
+        "jobs": 4,
+        "qualification": 0.3,
+        "logistics": {
+          "role": "lastmile",
+          "mode": "cargo",
+          "radius": 6,
+          "capacity": 260
+        }
+      },
+      "environment": {
+        "noise": 3,
+        "radius": 2
+      },
+      "unlock": {
+        "population": 500
+      },
+      "visual": {
+        "height": 9,
+        "color": "#f1e4c4",
+        "roof": "flat",
+        "roofColor": "#e08a2e",
+        "detail": "boxes"
+      },
+      "description": "Mutualise le dernier kilomètre en vélos-cargos : moins de camionnettes dans les rues résidentielles."
+    },
+    {
+      "id": "robot_depot",
+      "name": "Dépôt de robots livreurs",
+      "category": "logistics",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 15000,
+      "upkeep": 400,
+      "lifeYears": 12,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 45
+      },
+      "capacity": {
+        "jobs": 3,
+        "qualification": 0.6,
+        "logistics": {
+          "role": "lastmile",
+          "mode": "robot",
+          "radius": 7,
+          "capacity": 450
+        }
+      },
+      "environment": {
+        "noise": 2,
+        "radius": 2
+      },
+      "unlock": {
+        "tech": "ground_robots"
+      },
+      "visual": {
+        "height": 10,
+        "color": "#e9eef2",
+        "roof": "flat",
+        "roofColor": "#46b07a",
+        "detail": "robots"
+      },
+      "description": "Des robots livrent les colis sur les trottoirs : délais courts, capacité moyenne, peu de bruit."
+    },
+    {
+      "id": "drone_hub",
+      "name": "Hub de drones",
+      "category": "logistics",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 25000,
+      "upkeep": 700,
+      "lifeYears": 10,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 90
+      },
+      "capacity": {
+        "jobs": 5,
+        "qualification": 0.7,
+        "logistics": {
+          "role": "lastmile",
+          "mode": "drone",
+          "radius": 11,
+          "capacity": 800,
+          "requiresDeliveryZone": true
+        }
+      },
+      "environment": {
+        "noise": 22,
+        "radius": 5
+      },
+      "unlock": {
+        "tech": "drone_delivery"
+      },
+      "visual": {
+        "height": 14,
+        "color": "#eef1f4",
+        "roof": "pad",
+        "roofColor": "#f0b429",
+        "detail": "dronepad"
+      },
+      "description": "Livraison aérienne très rapide, limitée aux zones de desserte autorisées par la ville. Bruyant au décollage."
+    },
+    {
+      "id": "power_hydro",
+      "name": "Centrale hydroélectrique",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 70000,
+      "upkeep": 700,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "adjacentToTerrain": "water"
+      },
+      "networks": {
+        "power": 0
+      },
+      "capacity": {
+        "jobs": 8,
+        "qualification": 0.5,
+        "powerOutput": 500,
+        "powerSource": "hydro"
+      },
+      "environment": {
+        "noise": 4,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 800
+      },
+      "visual": {
+        "height": 14,
+        "color": "#cfd6da",
+        "roof": "flat",
+        "roofColor": "#6c8796",
+        "detail": "dam"
+      },
+      "description": "Production propre et stable, sans combustible. À construire au bord de l'eau."
+    },
+    {
+      "id": "power_nuclear",
+      "name": "Centrale nucléaire",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 4,
+        "h": 4
+      },
+      "rotatable": false,
+      "cost": 320000,
+      "upkeep": 6500,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 200
+      },
+      "capacity": {
+        "jobs": 90,
+        "qualification": 0.72,
+        "powerOutput": 4000,
+        "powerSource": "nuclear"
+      },
+      "environment": {
+        "heat": 10,
+        "noise": 8,
+        "radius": 8
+      },
+      "unlock": {
+        "population": 4000
+      },
+      "visual": {
+        "height": 34,
+        "color": "#dfe2e4",
+        "roof": "dome",
+        "roofColor": "#b9c2c8",
+        "detail": "reactor"
+      },
+      "description": "Très forte production sans émission de CO₂ ni fumée. Un arrêt d'urgence reste possible : gardez une seconde source.",
+      "risk": {
+        "monthlyChance": 0.004,
+        "durationDays": 45,
+        "label": "Arrêt d'urgence du réacteur nucléaire : la ville s'inquiète",
+        "effects": [
+          {
+            "key": "satisfaction.all",
+            "op": "add",
+            "value": -6
+          }
+        ]
+      }
+    },
+    {
+      "id": "power_fusion",
+      "name": "Réacteur à fusion",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 650000,
+      "upkeep": 9000,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 80
+      },
+      "capacity": {
+        "jobs": 60,
+        "qualification": 0.9,
+        "powerOutput": 9000,
+        "powerSource": "fusion"
+      },
+      "environment": {
+        "heat": 4,
+        "radius": 4
+      },
+      "unlock": {
+        "era": 3
+      },
+      "visual": {
+        "height": 30,
+        "color": "#e8eef6",
+        "roof": "flat",
+        "roofColor": "#8fdcf5",
+        "detail": "fusion"
+      },
+      "description": "L'énergie de l'ère symbiotique : production colossale, propre et silencieuse. Très coûteuse à construire."
+    },
+    {
+      "id": "desalination",
+      "name": "Usine de dessalement",
+      "category": "water",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 80000,
+      "upkeep": 1800,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "adjacentToTerrain": "water"
+      },
+      "networks": {
+        "power": 140
+      },
+      "capacity": {
+        "jobs": 15,
+        "qualification": 0.5,
+        "waterOutput": 3000
+      },
+      "environment": {
+        "noise": 5,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 3000
+      },
+      "visual": {
+        "height": 12,
+        "color": "#e3ebef",
+        "roof": "flat",
+        "roofColor": "#7cb4d6",
+        "detail": "desal"
+      },
+      "description": "Transforme l'eau de mer en eau potable en grande quantité. Très énergivore. Au bord de l'eau."
+    },
+    {
+      "id": "waste_depot",
+      "name": "Centre de collecte",
+      "category": "waste",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 15000,
+      "upkeep": 600,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 10
+      },
+      "capacity": {
+        "jobs": 15,
+        "qualification": 0.25,
+        "waste": {
+          "collectRadius": 14,
+          "collect": 350
+        }
+      },
+      "environment": {
+        "noise": 6,
+        "radius": 3
+      },
+      "visual": {
+        "height": 12,
+        "color": "#d9dccf",
+        "roof": "flat",
+        "roofColor": "#4f8a4c",
+        "detail": "trucks"
+      },
+      "description": "Bennes et tournées de collecte dans un large rayon. Il ne traite rien : associez-le à une décharge, un incinérateur ou un centre de tri."
+    },
+    {
+      "id": "landfill",
+      "name": "Décharge",
+      "category": "waste",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 12000,
+      "upkeep": 400,
+      "lifeYears": 25,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest",
+          "rock"
+        ],
+        "flat": false,
+        "requiresRoadAccess": true
+      },
+      "capacity": {
+        "jobs": 8,
+        "qualification": 0.2,
+        "waste": {
+          "collectRadius": 10,
+          "collect": 200,
+          "process": 400,
+          "storage": 220000,
+          "kind": "landfill"
+        }
+      },
+      "environment": {
+        "pollution": 18,
+        "noise": 4,
+        "landValue": -15,
+        "radius": 6
+      },
+      "visual": {
+        "height": 4,
+        "color": "#8d7a55",
+        "roof": "landfill",
+        "roofColor": "#6f8a4a",
+        "detail": "landfill"
+      },
+      "description": "La solution la moins chère pour se débarrasser des déchets, mais polluante, dévalorisante pour le voisinage, et elle finit par être pleine."
+    },
+    {
+      "id": "incinerator",
+      "name": "Incinérateur à valorisation énergétique",
+      "category": "waste",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 60000,
+      "upkeep": 1500,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 25,
+        "qualification": 0.4,
+        "powerSource": "waste",
+        "waste": {
+          "collectRadius": 8,
+          "collect": 150,
+          "process": 600,
+          "kind": "incinerator",
+          "powerPerUnit": 0.3
+        }
+      },
+      "environment": {
+        "pollution": 30,
+        "noise": 8,
+        "heat": 4,
+        "radius": 8
+      },
+      "unlock": {
+        "population": 1500
+      },
+      "visual": {
+        "height": 20,
+        "color": "#c9c5bd",
+        "roof": "flat",
+        "roofColor": "#7b6f62",
+        "detail": "furnace"
+      },
+      "description": "Brûle les déchets et produit de l'électricité. Il n'a jamais besoin d'être remplacé, mais il pollue fortement sans filtres."
+    },
+    {
+      "id": "recycling",
+      "name": "Centre de tri et de recyclage",
+      "category": "waste",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 35000,
+      "upkeep": 900,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 40,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.35,
+        "waste": {
+          "process": 300,
+          "kind": "recycling",
+          "revenuePerUnit": 0.25
+        }
+      },
+      "environment": {
+        "noise": 6,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 800
+      },
+      "visual": {
+        "height": 14,
+        "color": "#e1e6d8",
+        "roof": "flat",
+        "roofColor": "#3f9a5a",
+        "detail": "recycle"
+      },
+      "description": "Trie les déchets et revend les matériaux : le traitement le plus vertueux, traité en priorité, et une source de recettes."
+    },
+    {
+      "id": "biogas",
+      "name": "Méthaniseur",
+      "category": "waste",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 55000,
+      "upkeep": 1100,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 15
+      },
+      "capacity": {
+        "jobs": 12,
+        "qualification": 0.55,
+        "powerSource": "waste",
+        "waste": {
+          "process": 250,
+          "kind": "biogas",
+          "powerPerUnit": 0.25
+        }
+      },
+      "environment": {
+        "pollution": 5,
+        "radius": 3
+      },
+      "unlock": {
+        "era": 2
+      },
+      "visual": {
+        "height": 12,
+        "color": "#d8dccb",
+        "roof": "flat",
+        "roofColor": "#7aa05a",
+        "detail": "biogas"
+      },
+      "description": "Transforme les biodéchets en biogaz et en électricité, avec peu de pollution."
+    },
+    {
+      "id": "valorisation",
+      "name": "Centre de valorisation IA",
+      "category": "waste",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 250000,
+      "upkeep": 4000,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 120,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.82,
+        "powerSource": "waste",
+        "waste": {
+          "collectRadius": 18,
+          "collect": 500,
+          "process": 1000,
+          "kind": "valorisation",
+          "powerPerUnit": 0.15,
+          "revenuePerUnit": 0.3
+        }
+      },
+      "environment": {
+        "noise": 3,
+        "radius": 3
+      },
+      "unlock": {
+        "era": 3
+      },
+      "visual": {
+        "height": 22,
+        "color": "#eef4f6",
+        "roof": "flat",
+        "roofColor": "#48c7a8",
+        "detail": "valorisation"
+      },
+      "description": "Tri robotisé, recyclage et production d'énergie sans fumée, avec sa propre flotte de bennes autonomes."
+    },
+    {
+      "id": "police_post",
+      "name": "Poste de police",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 7000,
+      "upkeep": 400,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 6,
+        "water": 4
+      },
+      "capacity": {
+        "jobs": 8,
+        "qualification": 0.5,
+        "service": {
+          "type": "police",
+          "radius": 8,
+          "strength": 0.7
+        }
+      },
+      "unlock": {
+        "population": 100
+      },
+      "visual": {
+        "height": 12,
+        "color": "#dfe6f2",
+        "roof": "flat",
+        "roofColor": "#2f4f8a",
+        "detail": "beacon"
+      },
+      "description": "Un petit poste de police de quartier, bon marché, pour couvrir les zones éloignées du commissariat."
+    },
+    {
+      "id": "library",
+      "name": "Bibliothèque",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 9000,
+      "upkeep": 350,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 6,
+        "water": 4
+      },
+      "capacity": {
+        "jobs": 6,
+        "qualification": 0.6,
+        "service": {
+          "type": "education",
+          "radius": 8,
+          "strength": 0.45
+        }
+      },
+      "environment": {
+        "landValue": 3,
+        "radius": 5
+      },
+      "visual": {
+        "height": 14,
+        "color": "#efe2c6",
+        "roof": "gable",
+        "roofColor": "#8a5a3c",
+        "detail": "columns"
+      },
+      "description": "Lecture, numérique et soutien scolaire : un peu d'éducation et de valeur foncière pour le quartier."
+    },
+    {
+      "id": "high_school",
+      "name": "Lycée",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 45000,
+      "upkeep": 1800,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 25,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 45,
+        "qualification": 0.7,
+        "service": {
+          "type": "education",
+          "radius": 18,
+          "strength": 0.9
+        }
+      },
+      "unlock": {
+        "population": 1500
+      },
+      "visual": {
+        "height": 20,
+        "color": "#efe6cf",
+        "roof": "gable",
+        "roofColor": "#a5523d",
+        "detail": "windows"
+      },
+      "description": "Prolonge la scolarité sur un rayon plus large que l'école : la qualification des actifs progresse nettement."
+    },
+    {
+      "id": "fire_drone",
+      "name": "Caserne à drones",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 60000,
+      "upkeep": 1800,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 40,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.7,
+        "service": {
+          "type": "fire",
+          "radius": 26,
+          "strength": 1.1
+        }
+      },
+      "environment": {
+        "noise": 6,
+        "radius": 4
+      },
+      "unlock": {
+        "era": 2
+      },
+      "visual": {
+        "height": 16,
+        "color": "#f2e0d9",
+        "roof": "pad",
+        "roofColor": "#d0482f",
+        "detail": "dronepad"
+      },
+      "description": "Des drones d'intervention couvrent un rayon très étendu : idéale pour les villes étalées."
+    },
+    {
+      "id": "health_ai",
+      "name": "Centre de soins prédictifs",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 140000,
+      "upkeep": 3500,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 60,
+        "water": 60
+      },
+      "capacity": {
+        "jobs": 60,
+        "qualification": 0.82,
+        "service": {
+          "type": "health",
+          "radius": 32,
+          "strength": 1.1
+        }
+      },
+      "environment": {
+        "landValue": 4,
+        "radius": 6
+      },
+      "unlock": {
+        "era": 2
+      },
+      "visual": {
+        "height": 36,
+        "color": "#f2f7fb",
+        "roof": "flat",
+        "roofColor": "#3fc1c9",
+        "detail": "hologram"
+      },
+      "description": "Télémédecine et dépistage par IA sur un très large rayon, avec une forte efficacité."
+    },
+    {
+      "id": "plaza",
+      "name": "Place piétonne",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 2500,
+      "upkeep": 50,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "green": 3,
+        "landValue": 5,
+        "radius": 3
+      },
+      "visual": {
+        "height": 2,
+        "color": "#d9cfb8",
+        "roof": "plaza",
+        "roofColor": "#c9bea4",
+        "detail": "fountain"
+      },
+      "description": "Une place piétonne pavée : un peu plus de valeur foncière pour les commerces et logements voisins."
+    },
+    {
+      "id": "playground",
+      "name": "Aire de jeux",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 2000,
+      "upkeep": 40,
+      "lifeYears": 20,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "green": 6,
+        "landValue": 2,
+        "radius": 3
+      },
+      "visual": {
+        "height": 2,
+        "color": "#7fc26a",
+        "roof": "park",
+        "roofColor": "#5aa34a",
+        "detail": "playground"
+      },
+      "description": "Une aire de jeux appréciée des familles du quartier."
+    },
+    {
+      "id": "sports_field",
+      "name": "Terrain de sport",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 9000,
+      "upkeep": 250,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "green": 10,
+        "landValue": 4,
+        "noise": 4,
+        "radius": 5
+      },
+      "visual": {
+        "height": 2,
+        "color": "#5fae4f",
+        "roof": "field",
+        "roofColor": "#3f8f3a",
+        "detail": "field"
+      },
+      "description": "Terrain de sport en plein air : verdure et valeur foncière, un peu de bruit les jours de match."
+    },
+    {
+      "id": "statue",
+      "name": "Statue",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 4000,
+      "upkeep": 20,
+      "lifeYears": 80,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "environment": {
+        "landValue": 6,
+        "radius": 4
+      },
+      "visual": {
+        "height": 2,
+        "color": "#d9cfb8",
+        "roof": "plaza",
+        "roofColor": "#c9bea4",
+        "detail": "statue"
+      },
+      "description": "Un monument qui embellit la place qu'il occupe et fait monter la valeur foncière alentour."
+    },
+    {
+      "id": "marina",
+      "name": "Port de plaisance",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 20000,
+      "upkeep": 400,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "adjacentToTerrain": "water"
+      },
+      "capacity": {
+        "jobs": 6,
+        "qualification": 0.3
+      },
+      "environment": {
+        "landValue": 14,
+        "green": 4,
+        "radius": 7
+      },
+      "unlock": {
+        "population": 1000
+      },
+      "visual": {
+        "height": 4,
+        "color": "#d8cdb3",
+        "roof": "plaza",
+        "roofColor": "#c9bea4",
+        "detail": "boats"
+      },
+      "revenue": {
+        "perMonth": 1200,
+        "label": "Anneaux du port de plaisance",
+        "category": "facilities"
+      },
+      "description": "Port de plaisance au bord de l'eau : attire les ménages aisés et rapporte la location des anneaux."
+    },
+    {
+      "id": "mayor_house",
+      "name": "Résidence du maire",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 25000,
+      "upkeep": 200,
+      "lifeYears": 80,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "unique": true
+      },
+      "networks": {
+        "power": 4,
+        "water": 6
+      },
+      "environment": {
+        "landValue": 12,
+        "radius": 8
+      },
+      "unlock": {
+        "population": 1000
+      },
+      "visual": {
+        "height": 18,
+        "color": "#f3ead6",
+        "roof": "gable",
+        "roofColor": "#7a3b2e",
+        "detail": "garden"
+      },
+      "description": "La résidence officielle du maire : un geste symbolique qui améliore la satisfaction de toute la ville. Une seule par ville.",
+      "cityEffects": [
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "museum",
+      "name": "Musée",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 50000,
+      "upkeep": 1200,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 15,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 12,
+        "qualification": 0.65
+      },
+      "environment": {
+        "landValue": 10,
+        "radius": 8
+      },
+      "unlock": {
+        "population": 1500
+      },
+      "visual": {
+        "height": 22,
+        "color": "#f0ead8",
+        "roof": "flat",
+        "roofColor": "#b9a77a",
+        "detail": "columns"
+      },
+      "cityEffects": [
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 0.5
+        }
+      ],
+      "revenue": {
+        "perMonth": 1500,
+        "label": "Billetterie du musée",
+        "category": "facilities"
+      },
+      "description": "Expositions et patrimoine : satisfaction de toute la ville, valeur foncière alentour et recettes de billetterie."
+    },
+    {
+      "id": "zoo",
+      "name": "Zoo",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 70000,
+      "upkeep": 1800,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 10,
+        "water": 40
+      },
+      "capacity": {
+        "jobs": 25,
+        "qualification": 0.45
+      },
+      "environment": {
+        "green": 25,
+        "landValue": 8,
+        "radius": 8
+      },
+      "unlock": {
+        "population": 2500
+      },
+      "visual": {
+        "height": 2,
+        "color": "#6aa955",
+        "roof": "zoo",
+        "roofColor": "#4a8a3d",
+        "detail": "zoo"
+      },
+      "cityEffects": [
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 0.7
+        }
+      ],
+      "revenue": {
+        "perMonth": 3500,
+        "label": "Entrées du zoo",
+        "category": "facilities"
+      },
+      "description": "Grand espace vert animalier : satisfaction de toute la ville, végétation et recettes d'entrée."
+    },
+    {
+      "id": "stadium",
+      "name": "Stade",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 150000,
+      "upkeep": 3000,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 40,
+        "water": 30
+      },
+      "capacity": {
+        "jobs": 40,
+        "qualification": 0.4
+      },
+      "environment": {
+        "noise": 20,
+        "landValue": 4,
+        "radius": 7
+      },
+      "unlock": {
+        "population": 4000
+      },
+      "visual": {
+        "height": 18,
+        "color": "#d7dbe0",
+        "roof": "stadium",
+        "roofColor": "#4f9a43",
+        "detail": "stadium"
+      },
+      "cityEffects": [
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 1
+        },
+        {
+          "key": "demand.C",
+          "op": "add",
+          "value": 3
+        }
+      ],
+      "revenue": {
+        "perMonth": 7000,
+        "label": "Billetterie du stade",
+        "category": "facilities"
+      },
+      "description": "Grands événements sportifs : forte satisfaction, recettes importantes et demande commerciale accrue, mais beaucoup de bruit les soirs de match."
+    },
+    {
+      "id": "vertical_garden",
+      "name": "Jardin vertical",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 18000,
+      "upkeep": 300,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "networks": {
+        "water": 10
+      },
+      "environment": {
+        "green": 24,
+        "heat": -6,
+        "pollution": -6,
+        "radius": 5
+      },
+      "unlock": {
+        "era": 2
+      },
+      "visual": {
+        "height": 48,
+        "color": "#7dbb5f",
+        "roof": "green",
+        "roofColor": "#4f9a43",
+        "detail": "verticalGarden"
+      },
+      "description": "Une tour couverte de plantes : fraîcheur, air plus sain et végétation, sur une seule case."
+    },
+    {
+      "id": "holo_park",
+      "name": "Parc holographique",
+      "category": "parks",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": false,
+      "cost": 60000,
+      "upkeep": 900,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": false,
+        "requiresRoadAccess": false
+      },
+      "networks": {
+        "power": 30
+      },
+      "environment": {
+        "green": 30,
+        "landValue": 14,
+        "radius": 9
+      },
+      "unlock": {
+        "era": 3
+      },
+      "visual": {
+        "height": 2,
+        "color": "#5fae8f",
+        "roof": "park",
+        "roofColor": "#3f8f6a",
+        "detail": "holoPark"
+      },
+      "cityEffects": [
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 0.8
+        }
+      ],
+      "description": "Parc de l'ère symbiotique, entre nature et sculptures holographiques : forte satisfaction et valeur foncière."
+    },
+    {
+      "id": "bus_stop",
+      "name": "Arrêt de bus",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 600,
+      "upkeep": 20,
+      "lifeYears": 20,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "capacity": {
+        "transit": {
+          "mode": "bus",
+          "radius": 5,
+          "stop": true
+        }
+      },
+      "unlock": {
+        "population": 150
+      },
+      "visual": {
+        "height": 6,
+        "color": "#d7dde3",
+        "roof": "busstop",
+        "roofColor": "#e2b13c",
+        "detail": "busstop"
+      },
+      "description": "Dessert les habitants et les emplois dans un rayon de 5 cases. Il faut un dépôt de bus relié par la route pour que les bus passent."
+    },
+    {
+      "id": "bus_depot",
+      "name": "Dépôt de bus",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 18000,
+      "upkeep": 900,
+      "lifeYears": 30,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 10,
+        "water": 5
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.35,
+        "transit": {
+          "mode": "bus",
+          "capacity": 1800,
+          "depot": true
+        }
+      },
+      "environment": {
+        "noise": 6,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 150
+      },
+      "visual": {
+        "height": 12,
+        "color": "#d6dde2",
+        "roof": "flat",
+        "roofColor": "#e2b13c",
+        "detail": "busdepot"
+      },
+      "description": "Remise et flotte de bus : fournit la capacité de transport aux arrêts du même réseau routier. Sans dépôt, aucun arrêt n'est desservi."
+    },
+    {
+      "id": "metro_station",
+      "name": "Station de métro",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 45000,
+      "upkeep": 1100,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 30
+      },
+      "capacity": {
+        "jobs": 6,
+        "qualification": 0.4,
+        "transit": {
+          "mode": "metro",
+          "radius": 8,
+          "capacity": 6000,
+          "stop": true
+        }
+      },
+      "environment": {
+        "landValue": 8,
+        "radius": 6
+      },
+      "unlock": {
+        "population": 2000
+      },
+      "visual": {
+        "height": 8,
+        "color": "#d8dde6",
+        "roof": "flat",
+        "roofColor": "#2f6fc0",
+        "detail": "metro"
+      },
+      "description": "Les stations sont reliées entre elles en souterrain : il en faut au moins deux. Rapide, n'encombre pas les rues et fait monter la valeur foncière."
+    },
+    {
+      "id": "train_station",
+      "name": "Gare régionale",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 70000,
+      "upkeep": 1600,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 20,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.4,
+        "transit": {
+          "mode": "rail",
+          "radius": 10,
+          "capacity": 4000,
+          "stop": true
+        }
+      },
+      "environment": {
+        "landValue": 6,
+        "noise": 6,
+        "radius": 6
+      },
+      "unlock": {
+        "population": 1200
+      },
+      "visual": {
+        "height": 16,
+        "color": "#ece4d4",
+        "roof": "gable",
+        "roofColor": "#8a5a3c",
+        "detail": "train"
+      },
+      "description": "Relie la ville à la région : navetteurs, étudiants et visiteurs prennent le train au lieu de la voiture. Avec deux gares, le train dessert aussi l'intérieur de la ville."
+    },
+    {
+      "id": "hyperloop",
+      "name": "Station d'hyperboucle",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 400000,
+      "upkeep": 6000,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 200
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.8,
+        "transit": {
+          "mode": "rail",
+          "radius": 16,
+          "capacity": 14000,
+          "stop": true
+        }
+      },
+      "environment": {
+        "landValue": 10,
+        "radius": 8
+      },
+      "unlock": {
+        "era": 3
+      },
+      "visual": {
+        "height": 20,
+        "color": "#eef2f7",
+        "roof": "flat",
+        "roofColor": "#5bd2ef",
+        "detail": "hyperloop"
+      },
+      "description": "Capsules à très grande vitesse vers les métropoles voisines : immense rayon de desserte et forte capacité."
+    },
+    {
+      "id": "seaport",
+      "name": "Port de commerce",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 160000,
+      "upkeep": 3000,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "adjacentToTerrain": "water"
+      },
+      "networks": {
+        "power": 40,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 80,
+        "qualification": 0.3,
+        "logistics": {
+          "role": "supply",
+          "throughput": 8000
+        }
+      },
+      "environment": {
+        "noise": 12,
+        "pollution": 6,
+        "radius": 6
+      },
+      "unlock": {
+        "population": 2000
+      },
+      "visual": {
+        "height": 16,
+        "color": "#c9cfd4",
+        "roof": "flat",
+        "roofColor": "#4f6a80",
+        "detail": "cranes"
+      },
+      "description": "Débouchés maritimes pour l'industrie : la demande industrielle grimpe et les marchandises arrivent sans traverser la région. Au bord de l'eau.",
+      "cityEffects": [
+        {
+          "key": "demand.I",
+          "op": "add",
+          "value": 14
+        }
+      ]
+    },
+    {
+      "id": "airport",
+      "name": "Aéroport régional",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 4,
+        "h": 4
+      },
+      "rotatable": false,
+      "cost": 400000,
+      "upkeep": 7000,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 80,
+        "water": 40
+      },
+      "capacity": {
+        "jobs": 150,
+        "qualification": 0.55
+      },
+      "environment": {
+        "noise": 32,
+        "pollution": 8,
+        "radius": 12
+      },
+      "unlock": {
+        "population": 6000
+      },
+      "visual": {
+        "height": 10,
+        "color": "#d5d9dd",
+        "roof": "runway",
+        "roofColor": "#5b6067",
+        "detail": "runway"
+      },
+      "description": "Relie la ville au monde : forte demande de bureaux et de commerces, redevances importantes. Très bruyant : loin des logements.",
+      "cityEffects": [
+        {
+          "key": "demand.C",
+          "op": "add",
+          "value": 8
+        },
+        {
+          "key": "demand.O",
+          "op": "add",
+          "value": 14
+        }
+      ],
+      "revenue": {
+        "perMonth": 15000,
+        "label": "Redevances aéroportuaires",
+        "category": "facilities"
+      }
+    }
+  ]
+}

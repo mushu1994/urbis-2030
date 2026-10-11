@@ -1,0 +1,228 @@
+{
+  "formatVersion": 1,
+  "policies": [
+    {
+      "id": "low_emission_zone",
+      "name": "Zone à faibles émissions",
+      "description": "Restreint les véhicules les plus polluants.",
+      "monthlyCost": 800,
+      "unlock": {
+        "population": 500
+      },
+      "effects": [
+        {
+          "key": "pollution.traffic",
+          "op": "mul",
+          "value": -0.25,
+          "label": "Pollution routière −25 %"
+        },
+        {
+          "key": "demand.C",
+          "op": "add",
+          "value": -4,
+          "label": "Demande commerciale −4"
+        },
+        {
+          "key": "satisfaction.low",
+          "op": "add",
+          "value": -1,
+          "label": "Contrainte pour les ménages modestes"
+        }
+      ]
+    },
+    {
+      "id": "rent_control",
+      "name": "Encadrement des loyers",
+      "description": "Plafonne la hausse des loyers dans les quartiers tendus.",
+      "monthlyCost": 500,
+      "unlock": {
+        "population": 800
+      },
+      "effects": [
+        {
+          "key": "rentMult",
+          "op": "mul",
+          "value": -0.15,
+          "label": "Loyers −15 %"
+        },
+        {
+          "key": "satisfaction.low",
+          "op": "add",
+          "value": 4,
+          "label": "Satisfaction des ménages modestes +4"
+        },
+        {
+          "key": "growth.R",
+          "op": "mul",
+          "value": -0.2,
+          "label": "Construction résidentielle −20 %"
+        }
+      ]
+    },
+    {
+      "id": "remote_work",
+      "name": "Télétravail encouragé",
+      "description": "Tiers-lieux subventionnés et horaires décalés.",
+      "monthlyCost": 300,
+      "effects": [
+        {
+          "key": "tripGenerationMult",
+          "op": "mul",
+          "value": -0.12,
+          "label": "Déplacements −12 %"
+        },
+        {
+          "key": "demand.O",
+          "op": "add",
+          "value": -6,
+          "label": "Demande de bureaux −6"
+        },
+        {
+          "key": "demand.C",
+          "op": "add",
+          "value": -2,
+          "label": "Demande commerciale −2"
+        },
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 1,
+          "label": "Satisfaction +1"
+        }
+      ]
+    },
+    {
+      "id": "solar_subsidy",
+      "name": "Prime à l'autoconsommation solaire",
+      "description": "Subvention des panneaux sur toitures privées.",
+      "monthlyCost": 1500,
+      "unlock": {
+        "population": 300
+      },
+      "effects": [
+        {
+          "key": "powerDemandMult",
+          "op": "mul",
+          "value": -0.08,
+          "label": "Demande électrique −8 %"
+        },
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": 0.5,
+          "label": "Satisfaction +0,5"
+        }
+      ]
+    },
+    {
+      "id": "green_roofs",
+      "name": "Toitures végétalisées",
+      "description": "Obligation de végétaliser les toits des constructions neuves.",
+      "monthlyCost": 600,
+      "unlock": {
+        "population": 1000
+      },
+      "effects": [
+        {
+          "key": "heatMult",
+          "op": "mul",
+          "value": -0.25,
+          "label": "Îlots de chaleur −25 %"
+        },
+        {
+          "key": "growth.all",
+          "op": "mul",
+          "value": -0.06,
+          "label": "Construction −6 % (surcoût)"
+        }
+      ]
+    },
+    {
+      "id": "night_delivery",
+      "name": "Livraisons de nuit",
+      "description": "Les livraisons aux commerces sont décalées hors des heures de pointe.",
+      "monthlyCost": 200,
+      "unlock": {
+        "population": 600
+      },
+      "effects": [
+        {
+          "key": "freightPeakMult",
+          "op": "mul",
+          "value": -0.35,
+          "label": "Fret en heure de pointe −35 %"
+        },
+        {
+          "key": "noise.traffic",
+          "op": "mul",
+          "value": 0.1,
+          "label": "Bruit nocturne +10 %"
+        },
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": -0.5,
+          "label": "Nuisances nocturnes"
+        }
+      ]
+    },
+    {
+      "id": "free_transit",
+      "name": "Gratuité des transports en commun",
+      "description": "Plus de billetterie : la fréquentation augmente, les recettes disparaissent.",
+      "monthlyCost": 0,
+      "unlock": {
+        "population": 800
+      },
+      "effects": [
+        {
+          "key": "transit.fareMult",
+          "op": "mul",
+          "value": -1,
+          "label": "Billetterie supprimée"
+        },
+        {
+          "key": "transit.ridershipMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Fréquentation +30 %"
+        },
+        {
+          "key": "satisfaction.low",
+          "op": "add",
+          "value": 2,
+          "label": "Satisfaction des ménages modestes +2"
+        }
+      ]
+    },
+    {
+      "id": "waste_sorting",
+      "name": "Tri sélectif obligatoire",
+      "description": "Les ménages et entreprises trient leurs déchets à la source.",
+      "monthlyCost": 700,
+      "unlock": {
+        "population": 500
+      },
+      "effects": [
+        {
+          "key": "waste.generationMult",
+          "op": "mul",
+          "value": -0.15,
+          "label": "Déchets produits −15 %"
+        },
+        {
+          "key": "waste.recycleMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Rendement du recyclage +30 %"
+        },
+        {
+          "key": "satisfaction.all",
+          "op": "add",
+          "value": -0.5,
+          "label": "Contrainte pour les habitants"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,268 @@
+/* URBIS 2030 — thème « bureau d'urbanisme » : ardoise, signalisation jaune, typographie de signalétique. */
+:root {
+  --font: 'Barlow', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-num: 'Barlow Semi Condensed', 'Barlow', 'Segoe UI', Arial, sans-serif;
+  --ink: #e9eef0;
+  --ink-dim: #a9b8c2;
+  --ink-faint: #7d8f9b;
+  --slate: #1d2730;
+  --panel: rgba(29, 39, 48, 0.94);
+  --panel-raised: #2a3843;
+  --panel-hover: #33444f;
+  --line: rgba(255, 255, 255, 0.09);
+  --sign: #f2c230;
+  --sign-ink: #1d2730;
+  --ok: #49b37a;
+  --warn: #f0a33a;
+  --bad: #e0553a;
+  --zone-r: #7fc96b;
+  --zone-c: #4f9ad8;
+  --zone-o: #9a7fd8;
+  --zone-i: #e0b43c;
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --shadow: 0 10px 30px rgba(8, 14, 20, 0.45);
+  --hud-h: 56px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--slate);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sign);
+  outline-offset: 2px;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: var(--hud-h) 1fr;
+}
+
+#stage {
+  position: relative;
+  overflow: hidden;
+}
+
+#viewport {
+  position: absolute;
+  inset: 0;
+}
+
+#viewport canvas {
+  display: block;
+  touch-action: none;
+}
+
+.icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.neg {
+  color: var(--bad);
+}
+
+.pos {
+  color: var(--ok);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.hint {
+  color: var(--ink-dim);
+  font-size: 13px;
+  max-width: 72ch;
+}
+
+.empty {
+  color: var(--ink-dim);
+  padding: 12px 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line);
+  background: var(--panel-raised);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+.btn.primary {
+  background: var(--sign);
+  color: var(--sign-ink);
+  border-color: transparent;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: #ffd24d;
+}
+
+.btn.danger {
+  color: #ffb4a6;
+}
+
+.btn.ghost {
+  background: transparent;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+}
+
+.btn.big {
+  padding: 11px 16px;
+  font-size: 15px;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.btn.big small {
+  font-weight: 400;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.link {
+  background: none;
+  border: 0;
+  color: var(--sign);
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  font-family: var(--font-num);
+  font-size: 13px;
+}
+
+/* Infobulle du curseur */
+#cursor-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  pointer-events: none;
+  display: grid;
+  gap: 2px;
+  min-width: 160px;
+  max-width: 300px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--panel);
+  border-left: 3px solid var(--ok);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+
+#cursor-tip.bad {
+  border-left-color: var(--bad);
+}
+
+#cursor-tip em {
+  color: #ffb4a6;
+  font-style: normal;
+}
+
+#cursor-tip small {
+  color: var(--ink-faint);
+}
+
+#cursor-tip[hidden] {
+  display: none;
+}
+
+/* Écran de chargement / erreur */
+#busy {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 22, 28, 0.82);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+#busy[hidden] {
+  display: none;
+}
+
+#paused-badge {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  border-radius: var(--radius-s);
+  background: var(--sign);
+  color: var(--sign-ink);
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#app.paused #paused-badge {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

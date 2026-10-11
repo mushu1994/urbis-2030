@@ -1,0 +1,726 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Écrans tactiles, téléphones, zones sûres (encoche), plein écran et mode immersif.
+   La requête « compacte » doit correspondre à COMPACT_QUERY (src/ui/layout.js).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --dock-h: 54px;
+}
+
+/* Zones sûres : la barre du haut passe sous l'encoche, les panneaux restent visibles. */
+#app {
+  grid-template-rows: auto 1fr;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#hud {
+  height: calc(var(--hud-h) + var(--safe-top));
+  padding-top: var(--safe-top);
+  padding-left: calc(8px + var(--safe-left));
+  padding-right: calc(8px + var(--safe-right));
+}
+
+#toolbar {
+  left: calc(12px + var(--safe-left));
+  bottom: calc(12px + var(--safe-bottom));
+}
+
+#inspector,
+#panel-host {
+  right: calc(12px + var(--safe-right));
+}
+
+#toasts {
+  bottom: calc(12px + var(--safe-bottom));
+}
+
+button,
+.flyout-item,
+.tool-btn {
+  touch-action: manipulation;
+}
+
+#hud,
+#toolbar,
+.flyout,
+#tool-chip,
+#paused-badge {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Bandeau de l'outil actif */
+#tool-chip {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 5px 5px 5px 12px;
+  border-radius: var(--radius-m);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+#tool-chip[hidden] {
+  display: none;
+}
+
+.chip-label {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.chip-label strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chip-label small {
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.chip-label .chip-summary {
+  overflow: hidden;
+  max-width: 520px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-dim);
+}
+
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-btn:hover {
+  background: var(--panel-hover);
+}
+
+/* Le badge Pause laisse sa place au bandeau d'outil quand les deux sont visibles. */
+#app.paused #paused-badge:has(~ #tool-chip:not([hidden])) {
+  top: 64px;
+}
+
+/* Infobulle : au doigt, elle ne peut pas suivre le curseur ; on la fixe sous la barre du haut. */
+@media (pointer: coarse) {
+  #cursor-tip {
+    left: 50%;
+    top: calc(var(--hud-h) + var(--safe-top) + 64px);
+    transform: translateX(-50%) !important;
+    max-width: min(420px, calc(100% - 24px));
+  }
+}
+
+/* ─────────────────────────────── Téléphone ─────────────────────────────── */
+@media (max-width: 760px), (max-height: 500px) {
+  :root {
+    --hud-h: 46px;
+  }
+
+  #hud {
+    gap: 0;
+    padding-left: calc(4px + var(--safe-left));
+    padding-right: calc(4px + var(--safe-right));
+    scrollbar-width: none;
+  }
+
+  #hud::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hud-city {
+    padding: 0 8px 0 4px;
+    font-size: 15px;
+    max-width: 130px;
+    flex: none;
+  }
+
+  .hud-group {
+    flex: none;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .hud-time {
+    min-width: 0;
+  }
+
+  .hud-date {
+    font-size: 13px;
+  }
+
+  .hud-speed {
+    width: 34px;
+    height: 24px;
+  }
+
+  .hud-label {
+    font-size: 10px;
+  }
+
+  .hud-value {
+    font-size: 16px;
+  }
+
+  .hud-sub {
+    font-size: 11px;
+  }
+
+  .hud-demand {
+    flex: none;
+    padding: 5px 8px;
+    gap: 4px;
+  }
+
+  .hud-icon {
+    flex: none;
+    width: 40px;
+    height: 36px;
+  }
+
+  .hud-spacer {
+    min-width: 4px;
+  }
+
+  /* Barre d'outils : un dock horizontal en bas de l'écran, défilable */
+  #toolbar {
+    top: auto;
+    left: calc(8px + var(--safe-left));
+    right: calc(8px + var(--safe-right));
+    bottom: calc(8px + var(--safe-bottom));
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 4px;
+    border-radius: var(--radius-m);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    pointer-events: auto;
+    scrollbar-width: none;
+  }
+
+  #toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar-group {
+    grid-auto-flow: column;
+    gap: 2px;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .toolbar-group + .toolbar-group {
+    margin-left: 6px;
+    padding-left: 6px;
+    border-left: 1px solid var(--line);
+  }
+
+  .tool-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Menus de construction : feuille au-dessus du dock */
+  .flyout {
+    left: calc(8px + var(--safe-left));
+    right: calc(8px + var(--safe-right));
+    top: auto;
+    bottom: calc(var(--dock-h) + 16px + var(--safe-bottom));
+    width: auto;
+    max-height: min(60%, 420px);
+  }
+
+  .flyout-item {
+    min-height: 48px;
+  }
+
+  /* Au doigt : liste seule, fiche dépliable sous chaque élément (bouton « i ») */
+  .flyout-body {
+    grid-template-columns: 1fr;
+  }
+
+  .fi-info {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .fi-sheet .sheet {
+    padding: 8px 10px;
+    border-radius: var(--radius-s);
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  /* Inspecteur : feuille en bas, au-dessus du dock */
+  #inspector {
+    top: auto;
+    left: calc(8px + var(--safe-left));
+    right: calc(8px + var(--safe-right));
+    bottom: calc(var(--dock-h) + 16px + var(--safe-bottom));
+    width: auto;
+    max-height: 48%;
+    padding: 12px 14px;
+  }
+
+  /* Fenêtres de gestion : occupent toute la zone de jeu */
+  #panel-host {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+  }
+
+  .win {
+    background: var(--slate);
+    border-radius: 0;
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .win-head {
+    padding: 10px 52px 4px 14px;
+  }
+
+  .win-title {
+    font-size: 19px;
+  }
+
+  .win-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 8px;
+    scrollbar-width: none;
+  }
+
+  .win-tab {
+    flex: none;
+    min-height: 44px;
+  }
+
+  .win-body {
+    padding: 10px 14px 24px;
+  }
+
+  .panel-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .kpi strong {
+    font-size: 18px;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .slider-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+  }
+
+  .slider-row label {
+    grid-column: 1 / -1;
+  }
+
+  .slider-row .est {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  table.fin:not(.keys) {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .save-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .save-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Couches de données : en haut à gauche, au-dessus de la carte */
+  #overlays {
+    left: calc(8px + var(--safe-left));
+    right: auto;
+    top: 8px;
+    bottom: auto;
+    max-width: min(320px, calc(100% - 16px));
+  }
+
+  .ov-list {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  /* Bandeau d'outil : au-dessus du dock */
+  #tool-chip {
+    top: auto;
+    bottom: calc(var(--dock-h) + 16px + var(--safe-bottom));
+  }
+
+  /* Notifications : sous la barre du haut, pour ne pas couvrir le dock */
+  #toasts {
+    top: 56px;
+    bottom: auto;
+    width: min(380px, calc(100% - 16px));
+  }
+
+  .toast {
+    font-size: 13px;
+  }
+
+  /* Au plus deux notifications à la fois sur téléphone */
+  #toasts .toast:nth-of-type(n + 3) {
+    display: none;
+  }
+
+  .toast-close {
+    width: 32px;
+    height: 32px;
+  }
+
+  #paused-badge {
+    top: 8px;
+    left: auto;
+    right: calc(8px + var(--safe-right));
+    transform: none;
+  }
+
+  /* Au doigt, l'infobulle se place juste au-dessus du bandeau d'outil, près du pouce */
+  @media (pointer: coarse) {
+    #cursor-tip {
+      top: auto;
+      bottom: calc(var(--dock-h) + 76px + var(--safe-bottom));
+    }
+  }
+
+  /* Écran d'accueil */
+  #menu {
+    padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+  }
+
+  .menu-card {
+    padding: 20px 18px 16px;
+  }
+
+  .menu-brand h1 {
+    font-size: 40px;
+  }
+
+  .menu-brand h1 span {
+    font-size: 28px;
+  }
+
+  .menu-brand p {
+    font-size: 15px;
+  }
+
+  .menu-cols {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 16px;
+  }
+
+  .dialog {
+    padding: 16px;
+  }
+
+  input[type='text'],
+  input[type='number'],
+  select,
+  textarea {
+    font-size: 16px; /* évite le zoom automatique de Safari sur les champs */
+  }
+}
+
+/* Paysage sur téléphone : l'inspecteur passe sur le côté droit pour garder la carte visible */
+@media (max-height: 500px) and (min-width: 600px) {
+  #inspector {
+    top: 8px;
+    left: auto;
+    right: calc(8px + var(--safe-right));
+    width: min(330px, 46vw);
+    max-height: none;
+  }
+
+  .flyout {
+    left: auto;
+    right: calc(8px + var(--safe-right));
+    width: min(380px, 60vw);
+  }
+
+  #toasts {
+    left: calc(8px + var(--safe-left));
+    transform: none;
+  }
+}
+
+/* ───────────────────── Mode immersif (iPhone et cadres sans plein écran) ───────────────────── */
+#app.immersive {
+  --hud-h: 40px;
+}
+
+#app.immersive .hud-city span,
+#app.immersive .hud-label,
+#app.immersive .hud-sub,
+#app.immersive .hud-alerts,
+#app.immersive .hud-demand span {
+  display: none;
+}
+
+#app.immersive .hud-value {
+  font-size: 15px;
+}
+
+#app.immersive .hud-date {
+  display: none;
+}
+
+#app.immersive .hud-group {
+  border-left: 0;
+}
+
+#app.immersive #overlays:not(:has(.ov-list)) .ov-bar {
+  opacity: 0.8;
+}
+
+#app.immersive .toolbar-group {
+  background: rgba(29, 39, 48, 0.78);
+}
+
+@media (max-width: 760px), (max-height: 500px) {
+  #app.immersive #toolbar {
+    background: rgba(29, 39, 48, 0.82);
+  }
+
+  #app.immersive .toolbar-group {
+    background: none;
+  }
+
+  #app.immersive .tool-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  #app.immersive {
+    --dock-h: 48px;
+  }
+}
+
+/* Plein écran natif : rien à masquer, on garde simplement les zones sûres. */
+#app.fullscreen {
+  background: var(--slate);
+}
+
+/* ─────────────── Téléphone en portrait : barre du haut sur deux lignes, dock sur deux lignes ─────────────── */
+.hud-break {
+  display: none;
+}
+
+@media (max-width: 500px) and (orientation: portrait) {
+  :root {
+    --hud-h: 88px;
+    --dock-h: 92px;
+  }
+
+  #hud {
+    flex-wrap: wrap;
+    align-content: stretch;
+    overflow: hidden;
+  }
+
+  .hud-city {
+    order: 1;
+    max-width: none;
+  }
+
+  .hud-city span {
+    display: none;
+  }
+
+  .hud-time {
+    order: 2;
+    border-left: 0;
+  }
+
+  .hud-spacer {
+    order: 3;
+    flex: 1;
+  }
+
+  .hud-alerts {
+    display: none;
+  }
+
+  .hud-icon {
+    order: 5;
+    align-self: center;
+  }
+
+  .hud-fullscreen {
+    order: 6;
+  }
+
+  .hud-break {
+    display: block;
+    order: 7;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .hud-money,
+  .hud-pop {
+    grid-auto-flow: column;
+    align-items: baseline;
+    justify-content: start;
+    column-gap: 6px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .hud-money {
+    order: 8;
+  }
+
+  .hud-pop {
+    order: 9;
+  }
+
+  .hud-demand {
+    order: 10;
+    margin-left: auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .hud-label,
+  .hud-pop .hud-sub {
+    display: none;
+  }
+
+  .hud-pop .hud-value::after {
+    content: ' hab.';
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-dim);
+  }
+
+  #toolbar {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .toolbar-group {
+    grid-auto-columns: 1fr;
+    justify-items: center;
+  }
+
+  .toolbar-group + .toolbar-group {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+
+  .tool-btn,
+  #app.immersive .tool-btn {
+    width: 34px;
+    height: 38px;
+  }
+
+  /* Mode immersif : une seule ligne en haut (vitesse, trésorerie, annuler, plein écran) */
+  #app.immersive {
+    --hud-h: 44px;
+    --dock-h: 88px;
+  }
+
+  #app.immersive #hud {
+    flex-wrap: nowrap;
+  }
+
+  #app.immersive .hud-break,
+  #app.immersive .hud-pop,
+  #app.immersive .hud-demand,
+  #app.immersive .hud-money .hud-sub {
+    display: none;
+  }
+
+  #app.immersive .hud-money {
+    order: 4;
+    border-top: 0;
+    align-items: center;
+  }
+}
+
+/* Objectifs sur téléphone : sous le bouton des couches, sans l'explication tant qu'on ne déplie pas */
+@media (max-width: 760px), (max-height: 500px) {
+  #objectives {
+    top: 52px;
+    left: calc(8px + var(--safe-left));
+    width: min(300px, calc(100% - 16px));
+    padding: 6px 8px 8px;
+  }
+
+  #objectives .obj-current p {
+    display: none;
+  }
+
+  #objectives:has(.obj-list) .obj-current p {
+    display: block;
+  }
+
+  #toasts {
+    top: 8px;
+  }
+
+  #fps-meter {
+    top: auto;
+    bottom: calc(var(--dock-h) + 20px + var(--safe-bottom));
+  }
+}
+
+#app.immersive #objectives {
+  display: none;
+}

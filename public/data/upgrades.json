@@ -1,0 +1,325 @@
+{
+  "formatVersion": 1,
+  "upgrades": [
+    {
+      "id": "police_patrols",
+      "name": "Patrouilles de proximité",
+      "appliesTo": ["police", "police_post"],
+      "cost": 6000,
+      "upkeep": 250,
+      "effects": { "serviceRadius": 4 },
+      "description": "Îlotiers à pied et à vélo : le poste couvre des rues plus éloignées."
+    },
+    {
+      "id": "police_video",
+      "name": "Centre de vidéoprotection",
+      "appliesTo": ["police"],
+      "cost": 12000,
+      "upkeep": 400,
+      "unlock": { "population": 1000 },
+      "effects": { "serviceStrength": 1.3, "powerNeed": 1.3 },
+      "description": "Opérateurs et caméras aux carrefours sensibles : interventions plus rapides."
+    },
+    {
+      "id": "police_predictive",
+      "name": "Analyse prédictive",
+      "appliesTo": ["police", "police_post"],
+      "cost": 25000,
+      "upkeep": 700,
+      "unlock": { "era": 2 },
+      "effects": { "serviceStrength": 1.25, "serviceRadius": 3, "powerNeed": 1.5 },
+      "description": "Une IA répartit les patrouilles selon les risques du moment. Gourmande en électricité."
+    },
+    {
+      "id": "fire_ladder",
+      "name": "Grande échelle et camion-citerne",
+      "appliesTo": ["fire", "fire_drone"],
+      "cost": 10000,
+      "upkeep": 350,
+      "effects": { "serviceStrength": 1.3 },
+      "description": "Matériel lourd pour les immeubles de grande hauteur et les feux industriels."
+    },
+    {
+      "id": "fire_sensors",
+      "name": "Capteurs d'incendie connectés",
+      "appliesTo": ["fire", "fire_drone"],
+      "cost": 18000,
+      "upkeep": 500,
+      "unlock": { "era": 2 },
+      "effects": { "serviceRadius": 6 },
+      "description": "Détecteurs reliés à la caserne : l'alerte part avant même l'appel des habitants."
+    },
+    {
+      "id": "health_imaging",
+      "name": "Plateau d'imagerie médicale",
+      "appliesTo": ["clinic", "hospital"],
+      "cost": 15000,
+      "upkeep": 600,
+      "effects": { "serviceStrength": 1.3, "powerNeed": 1.4 },
+      "description": "Scanner et IRM sur place : diagnostics plus rapides, moins de transferts."
+    },
+    {
+      "id": "health_telemed",
+      "name": "Téléconsultation",
+      "appliesTo": ["clinic", "hospital", "health_ai"],
+      "cost": 12000,
+      "upkeep": 400,
+      "unlock": { "population": 1500 },
+      "effects": { "serviceRadius": 8 },
+      "description": "Consultations à distance pour les quartiers éloignés de l'établissement."
+    },
+    {
+      "id": "edu_digital",
+      "name": "Classes numériques",
+      "appliesTo": ["school", "high_school", "university", "library"],
+      "cost": 8000,
+      "upkeep": 300,
+      "effects": { "serviceStrength": 1.25 },
+      "description": "Tablettes, tableaux interactifs et ressources en ligne : de meilleurs résultats scolaires."
+    },
+    {
+      "id": "edu_extension",
+      "name": "Extension des locaux",
+      "appliesTo": ["school", "high_school", "university"],
+      "cost": 14000,
+      "upkeep": 500,
+      "effects": { "serviceRadius": 5, "landValue": 2 },
+      "description": "De nouvelles salles pour accueillir les élèves de quartiers plus lointains."
+    },
+    {
+      "id": "edu_ai_tutor",
+      "name": "Tuteurs IA personnalisés",
+      "appliesTo": ["school", "high_school", "university", "library"],
+      "cost": 22000,
+      "upkeep": 600,
+      "unlock": { "era": 2 },
+      "effects": { "serviceStrength": 1.35, "powerNeed": 1.3 },
+      "description": "Chaque élève suit un parcours adapté à son rythme. La qualification progresse plus vite."
+    },
+    {
+      "id": "hall_eservices",
+      "name": "Guichet unique numérique",
+      "appliesTo": ["city_hall"],
+      "cost": 15000,
+      "upkeep": 300,
+      "effects": { "serviceRadius": 10, "landValue": 4 },
+      "description": "Démarches en ligne et agents mobiles : toute la ville profite de la mairie."
+    },
+    {
+      "id": "gas_scrubbers",
+      "name": "Filtres catalytiques",
+      "appliesTo": ["power_gas"],
+      "cost": 20000,
+      "upkeep": 400,
+      "effects": { "pollution": 0.55 },
+      "description": "Réduit fortement les oxydes d'azote et les particules rejetés par la centrale."
+    },
+    {
+      "id": "gas_combined",
+      "name": "Turbine à cycle combiné",
+      "appliesTo": ["power_gas"],
+      "cost": 30000,
+      "upkeep": 500,
+      "effects": { "powerOutput": 1.3 },
+      "description": "La chaleur des fumées fait tourner une seconde turbine : plus d'électricité pour le même gaz."
+    },
+    {
+      "id": "solar_trackers",
+      "name": "Suiveurs solaires",
+      "appliesTo": ["power_solar"],
+      "cost": 9000,
+      "upkeep": 100,
+      "effects": { "powerOutput": 1.3 },
+      "description": "Les panneaux s'orientent vers le soleil tout au long de la journée."
+    },
+    {
+      "id": "wind_large",
+      "name": "Pales de grande envergure",
+      "appliesTo": ["power_wind"],
+      "cost": 3500,
+      "upkeep": 50,
+      "effects": { "powerOutput": 1.35, "noise": 1.2 },
+      "description": "Captent plus de vent, au prix d'un peu plus de bruit."
+    },
+    {
+      "id": "battery_cells",
+      "name": "Cellules haute densité",
+      "appliesTo": ["power_battery"],
+      "cost": 7000,
+      "upkeep": 80,
+      "effects": { "powerStorage": 1.6 },
+      "description": "Davantage d'énergie stockée dans le même bâtiment."
+    },
+    {
+      "id": "nuclear_safety",
+      "name": "Sûreté renforcée",
+      "appliesTo": ["power_nuclear"],
+      "cost": 60000,
+      "upkeep": 1200,
+      "effects": { "riskChance": 0.25 },
+      "description": "Redondance des systèmes de refroidissement : les arrêts d'urgence deviennent rares."
+    },
+    {
+      "id": "dc_cooling",
+      "name": "Refroidissement liquide",
+      "appliesTo": ["data_center"],
+      "cost": 35000,
+      "upkeep": 400,
+      "effects": { "heat": 0.4, "compute": 1.2 },
+      "description": "Moins de chaleur rejetée dans le quartier et des serveurs plus performants."
+    },
+    {
+      "id": "pump_efficient",
+      "name": "Pompes à haut rendement",
+      "appliesTo": ["water_pump", "water_tower", "desalination"],
+      "cost": 3000,
+      "upkeep": 80,
+      "effects": { "waterOutput": 1.35 },
+      "description": "Moteurs et filtres modernes : plus d'eau potable produite."
+    },
+    {
+      "id": "sewage_membrane",
+      "name": "Traitement membranaire",
+      "appliesTo": ["sewage_plant"],
+      "cost": 15000,
+      "upkeep": 300,
+      "effects": { "sewageTreatment": 1.4, "pollution": 0.5 },
+      "description": "Filtration fine des eaux usées : plus de volume traité et moins d'odeurs."
+    },
+    {
+      "id": "waste_trucks",
+      "name": "Bennes supplémentaires",
+      "appliesTo": ["waste_depot", "landfill", "incinerator", "valorisation"],
+      "cost": 8000,
+      "upkeep": 350,
+      "effects": { "wasteCollect": 1.5 },
+      "description": "Plus de tournées : davantage de déchets ramassés chaque jour."
+    },
+    {
+      "id": "waste_electric",
+      "name": "Bennes électriques",
+      "appliesTo": ["waste_depot"],
+      "cost": 12000,
+      "upkeep": 200,
+      "effects": { "noise": 0.4, "wasteRadius": 3 },
+      "description": "Silencieuses, elles peuvent collecter tôt le matin dans des quartiers plus éloignés."
+    },
+    {
+      "id": "landfill_extension",
+      "name": "Extension de la décharge",
+      "appliesTo": ["landfill"],
+      "cost": 9000,
+      "upkeep": 150,
+      "effects": { "wasteStorage": 1.6 },
+      "description": "Une nouvelle alvéole : la décharge peut stocker beaucoup plus longtemps."
+    },
+    {
+      "id": "landfill_gas",
+      "name": "Captage du biogaz",
+      "appliesTo": ["landfill"],
+      "cost": 14000,
+      "upkeep": 250,
+      "effects": { "pollution": 0.6, "landValue": 5 },
+      "description": "Le méthane est capté et brûlé : moins d'odeurs et de pollution autour du site."
+    },
+    {
+      "id": "incinerator_filters",
+      "name": "Filtres à fumées",
+      "appliesTo": ["incinerator"],
+      "cost": 25000,
+      "upkeep": 500,
+      "effects": { "pollution": 0.45 },
+      "description": "Dépoussiérage et lavage des fumées : l'incinérateur devient bien moins polluant."
+    },
+    {
+      "id": "incinerator_heat",
+      "name": "Récupération de chaleur",
+      "appliesTo": ["incinerator"],
+      "cost": 20000,
+      "upkeep": 300,
+      "effects": { "wastePower": 1.4 },
+      "description": "Une meilleure chaudière : plus d'électricité produite par tonne brûlée."
+    },
+    {
+      "id": "recycling_optical",
+      "name": "Tri optique",
+      "appliesTo": ["recycling", "valorisation"],
+      "cost": 18000,
+      "upkeep": 400,
+      "effects": { "wasteProcess": 1.4, "wasteRevenue": 1.25 },
+      "description": "Des caméras trient les matériaux : plus de volume traité et des matières mieux revendues."
+    },
+    {
+      "id": "bus_fleet",
+      "name": "Bus supplémentaires",
+      "appliesTo": ["bus_depot"],
+      "cost": 9000,
+      "upkeep": 400,
+      "effects": { "transitCapacity": 1.5 },
+      "description": "Une flotte plus grande : 50 % de voyageurs en plus sur le réseau de bus."
+    },
+    {
+      "id": "bus_shelter",
+      "name": "Abri connecté",
+      "appliesTo": ["bus_stop"],
+      "cost": 400,
+      "upkeep": 10,
+      "effects": { "transitRadius": 2 },
+      "description": "Horaires en temps réel et abri chauffé : les habitants acceptent de marcher plus loin."
+    },
+    {
+      "id": "metro_long",
+      "name": "Rames allongées",
+      "appliesTo": ["metro_station"],
+      "cost": 20000,
+      "upkeep": 500,
+      "effects": { "transitCapacity": 1.5 },
+      "description": "Des quais prolongés pour des rames plus longues."
+    },
+    {
+      "id": "train_platform",
+      "name": "Quai supplémentaire",
+      "appliesTo": ["train_station", "hyperloop"],
+      "cost": 25000,
+      "upkeep": 600,
+      "effects": { "transitCapacity": 1.5 },
+      "description": "Plus de trains peuvent s'arrêter : la gare accueille davantage de voyageurs."
+    },
+    {
+      "id": "train_parkride",
+      "name": "Parc relais",
+      "appliesTo": ["train_station", "metro_station"],
+      "cost": 12000,
+      "upkeep": 200,
+      "effects": { "transitRadius": 5 },
+      "description": "Un parking et des vélos en libre-service : la station attire des habitants plus éloignés."
+    },
+    {
+      "id": "park_care",
+      "name": "Entretien renforcé",
+      "appliesTo": ["park_small", "park", "forest_urban", "playground", "sports_field", "plaza"],
+      "cost": 2500,
+      "upkeep": 80,
+      "effects": { "green": 1.3, "landValue": 3 },
+      "description": "Jardiniers, fleurissement et arrosage : un espace plus agréable et plus fréquenté."
+    },
+    {
+      "id": "culture_program",
+      "name": "Programmation culturelle",
+      "appliesTo": ["museum", "zoo", "marina"],
+      "cost": 12000,
+      "upkeep": 400,
+      "effects": { "revenue": 1.35, "satisfaction": 0.2 },
+      "description": "Expositions, animations et nocturnes : plus de visiteurs et d'habitants ravis."
+    },
+    {
+      "id": "stadium_screens",
+      "name": "Toit rétractable et écrans géants",
+      "appliesTo": ["stadium"],
+      "cost": 40000,
+      "upkeep": 800,
+      "effects": { "revenue": 1.3, "noise": 0.75 },
+      "description": "Des matchs par tous les temps et moins de bruit pour les riverains."
+    }
+  ]
+}
