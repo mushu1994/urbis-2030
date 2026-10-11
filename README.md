@@ -473,6 +473,6 @@ s'en approche : les tronçons hors écran sont masqués et seuls les tronçons m
 - Ponts droits uniquement ; pas de tunnels ni de ponts au-dessus des routes.
 - Piétons, tramway, dette par échéances complexes, fiscalité différenciée par quartier : non implémentés.
 - Graphismes 100 % procéduraux et originaux ; les dossiers `public/assets/*` accueilleront des sprites.
-- Les e2e Playwright sont lents sans GPU (≈ 9 min pour les 8 parcours) ; ils passent avec les délais configurés.
+- Les e2e Playwright sont lents sans GPU (rendu logiciel, environ 1,5 image par seconde : une vingtaine de minutes pour les 8 parcours) ; ils coupent le son et les effets décoratifs (`storageState` de `playwright.config.js`) et passent avec les délais configurés.
 - Les gares n'ont pas de voies tracées sur la carte : le réseau ferré régional est implicite.
 - Prix des échanges régionaux fixes (pas de marché qui varie selon la saison ou la demande).

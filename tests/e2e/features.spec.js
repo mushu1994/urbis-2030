@@ -147,6 +147,8 @@ test('pont, bus, couches, progression, tutoriel et débogage depuis l\'interface
 });
 
 test('aucun bouton principal n\'est décoratif', async ({ page }) => {
+  // Une trentaine de clics : sans GPU (rendu logiciel, ~1,5 image/s), le parcours dépasse les 4 minutes par défaut
+  test.setTimeout(600_000);
   await newTown(page);
   const panelTitles = {
     finance: 'Finances municipales', city: 'Tableau de bord de la ville', ai: 'IA urbaine et politiques publiques',
