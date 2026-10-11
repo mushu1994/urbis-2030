@@ -44,11 +44,14 @@ test('scénario depuis l\'accueil, crise déclenchée et gérée, météo, son, 
   const history = await page.evaluate(() => window.__urbis.session.state.crises.history.map((c) => c.kind));
   expect(history).toContain('fire');
 
-  // 5. Son : bouton de coupure
+  // 5. Son : le bouton haut-parleur ouvre les réglages du son ; la case coupe ou rétablit le son
   const mute = page.locator('.hud-mute');
   const before = await mute.getAttribute('aria-pressed');
   await mute.click();
+  await expect(page.locator('#panel-host .win-title')).toHaveText('Réglages du son');
+  await page.locator('#sound-muted').click();
   await expect(mute).not.toHaveAttribute('aria-pressed', before);
+  await page.locator('#panel-host .panel-close').click();
 
   // 6. Sauvegarde : la réplique est synchronisée avant l'écriture
   await page.keyboard.press('Control+s');
