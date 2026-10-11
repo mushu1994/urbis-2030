@@ -6,6 +6,18 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.2
+
+| Fonction | En bref |
+| --- | --- |
+| **Audio** | Entièrement synthétisé (Web Audio, aucun fichier) : effets d'interface et de construction, ambiance qui suit la caméra (rumeur, circulation, oiseaux, grillons, pluie, vent, tonnerre), musique générative propre à chaque ère, plus tendue pendant une crise. Volumes séparés, touche N pour couper. |
+| **Effets visuels** | Cycle jour/nuit (fenêtres, lampadaires et phares allumés), chantiers avec échafaudages et grues animées, fumées des usines et centrales, saisons (herbe, feuillage d'automne, neige au sol). |
+| **Météo et saisons** | Ensoleillé, nuageux, pluie, orage, neige, brouillard, fortes chaleurs, avec des effets chiffrés sur la simulation (chauffage et climatisation, solaire, éolien, capacité des routes, déneigement, îlots de chaleur, transports en commun). |
+| **Scénarios et défis** | 6 villes à redresser ou à bâtir (dette, pollution, crues, embouteillages, ville fantôme, défi « ville symbiotique »), objectifs chiffrés, échéance, règles d'échec, bilan de fin. |
+| **Catastrophes et crises** | Inondation, canicule extrême, cyberattaque de l'IA municipale, panne géante, grève des transports, incendie : causes, prévention, deux réponses chiffrées, dégâts réels. Fréquence réglable. |
+| **Simulation dans un Web Worker** | Le calcul quitte le fil d'affichage : l'interface reste fluide, même en 128 × 128 à vitesse maximale. |
+| **Application installable** | Manifeste, icônes, service worker : jeu en plein écran depuis l'écran d'accueil, utilisable hors connexion (iPhone, Android, ordinateur). |
+
 ## Démarrer
 
 ```bash
@@ -18,7 +30,23 @@ npm run test:e2e     # parcours utilisateur (Playwright ; `npx playwright instal
 npm run bench        # mesures de performance de la simulation (64×64 et 128×128)
 ```
 
-Node 20 ou plus récent.
+Node 20 ou plus récent. `PW_CHROMIUM=/chemin/vers/chromium npm run test:e2e` utilise un Chromium déjà installé.
+
+## Installer le jeu sur un téléphone
+
+Le build de production (`npm run build`, dossier `dist/`) est une application web installable. Il suffit de
+l'héberger en HTTPS (GitHub Pages, Netlify, tout hébergement statique) :
+
+- **Android (Chrome)** : bouton « Installer » sur l'écran d'accueil du jeu, ou menu ⋮ → « Installer l'application ».
+- **iPhone et iPad (Safari)** : bouton Partager → « Sur l'écran d'accueil ». L'écran d'accueil du jeu le rappelle.
+- **Ordinateur (Chrome, Edge)** : icône d'installation dans la barre d'adresse.
+
+Une fois installé, le jeu s'ouvre en plein écran et fonctionne hors connexion (le service worker garde tous les
+fichiers en cache ; une nouvelle version est récupérée dès que la connexion revient).
+
+- **GitHub Pages** : le dépôt contient `.github/workflows/pages.yml`. Une seule fois : Settings → Pages →
+  Source « GitHub Actions » ; chaque envoi sur `main` teste, construit et publie le jeu.
+- **Netlify** : `netlify.toml` (commande `npm run build`, dossier `dist`) et `public/_headers` (cache).
 
 ## Prise en main
 
@@ -54,6 +82,7 @@ coûts que le joueur) puis le simule pendant un an.
 | L | Couche de données suivante |
 | X | Rendre translucides les bâtiments devant le curseur |
 | Ctrl+S | Sauvegarde rapide |
+| N | Couper ou rétablir le son |
 | M, H | Menu, aide |
 | F | Plein écran (ou mode immersif) |
 | F3 | Outils de débogage |
@@ -80,6 +109,80 @@ le build (`npm run build`) puis, dans Safari, « Partager → Sur l'écran d'acc
 `apple-mobile-web-app-capable` d'`index.html` font alors démarrer le jeu sans barre de navigateur.
 
 ## Contenu du jeu
+
+### Météo et saisons
+
+Le temps change par épisodes de quelques jours, selon la saison (climat tempéré : neige l'hiver, orages et
+fortes chaleurs l'été). Il est tiré d'un hachage déterministe (graine de la partie, jour) et non du générateur
+aléatoire de la partie : la croissance et les incidents gardent la même suite de tirages, et une partie rechargée
+retrouve exactement la même météo. L'icône météo de la barre du haut ouvre le détail des effets
+(tableau de bord → **Risques et météo**).
+
+| Temps | Effets sur la ville |
+| --- | --- |
+| Ensoleillé | Production solaire maximale, éoliennes au ralenti |
+| Nuageux | Production solaire −30 % |
+| Pluie | Routes moins fluides, solaire −50 %, transports en commun +8 %, îlots de chaleur atténués ; une pluie qui dure sature les sols (risque de crue) |
+| Orage | Routes perturbées, solaire −70 %, éoliennes +30 % |
+| Neige | Capacité des routes −20 %, déneigement (entretien des routes +35 %), chauffage (demande électrique +15 %), collecte des déchets ralentie ; neige au sol |
+| Brouillard | Circulation ralentie, solaire −35 % |
+| Fortes chaleurs | Climatisation (demande électrique +12 %), eau +15 %, îlots de chaleur renforcés, satisfaction en baisse |
+
+Les épisodes exceptionnels de la ville (tempête, canicule) imposent leur temps. L'automne roussit le feuillage,
+l'hiver ternit l'herbe, la neige blanchit le sol.
+
+### Catastrophes et crises
+
+| Crise | Ce qui la provoque | Prévention | Réponses |
+| --- | --- | --- | --- |
+| Inondation | Pluie des derniers jours, quartiers bâtis au ras de l'eau | Politique « Plan de prévention des inondations » ; parcs et forêts en bord de rivière (la crue ne les traverse pas) | Mobiliser secours et pompes (décrue deux fois plus rapide, dégâts divisés par deux) / attendre |
+| Canicule extrême | Fortes chaleurs, îlots de chaleur | « Plan canicule », toitures végétalisées, parcs, réserve électrique | Plan canicule (impact sur la satisfaction divisé par trois) / recommandations |
+| Cyberattaque de l'IA municipale | Nombre de technologies ; une rançon déjà payée | « Cybersécurité municipale » | Restaurer les sauvegardes (durée −⅓) / payer la rançon (immédiat, mais attire d'autres attaques) |
+| Panne géante | Faible marge de production, chaleur, orages | Surplus de production, batteries, interconnexion régionale | Achat d'urgence à la région / délestages tournants |
+| Grève des transports | Fréquentation, satisfaction, trésorerie | « Dialogue social dans les transports » | Négocier (reprise en deux jours) / tenir bon |
+| Incendie | Industrie, chaleur, densité, absence de pompiers | Casernes de pompiers : propagation et durée réduites | Renforts départementaux (maîtrisé le lendemain) / pompiers de la ville |
+
+Chaque crise a des effets réels : bâtiments évacués ou à l'arrêt, habitants qui partent, technologies coupées,
+centrales déconnectées, bus et métro arrêtés, bâtiments privés détruits par le feu, réparations payées à la fin
+(ligne « Crises et catastrophes » du compte de résultat). La carte de crise propose les deux réponses avec leur coût
+(grisées si la trésorerie ne suit pas) et met le jeu en pause le temps de décider (réglable). Fréquence :
+désactivées, rares, normales, fréquentes (écran d'accueil et paramètres) ; aucune crise aléatoire la première
+année. Le tableau de bord affiche le risque mensuel de chaque crise et permet, comme dans les SimCity, de déclencher
+une catastrophe volontairement. Tous les tirages sont déterministes (hachage graine × jour).
+
+### Scénarios et défis
+
+Écran d'accueil → **Scénarios et défis**. Chaque ville de départ est construite avec les commandes du jeu (mêmes
+règles, mêmes coûts) ; les cibles sont calculées sur la situation réellement obtenue.
+
+| Scénario | Difficulté | Durée | Objectifs |
+| --- | --- | --- | --- |
+| Valmont-sur-Dette | ★★ | 5 ans | Dette divisée par deux, trésorerie en hausse chaque mois, 150 000 € de réserve, satisfaction ≥ 55, garder ses habitants (échec : trésorerie < −250 000 € pendant 6 mois) |
+| Ferrange, ciel gris | ★★ | 6 ans | Pollution moyenne divisée par deux, +25 % d'habitants, satisfaction ≥ 58 |
+| Riverbourg sous les eaux | ★★★ | 4 ans | Crues fréquentes : plan de prévention adopté, +40 % d'habitants, satisfaction ≥ 55 |
+| Nova-Lys embouteillée | ★★ | 5 ans | Temps de trajet −20 %, voyageurs en transports en commun, +25 % d'habitants |
+| Saint-Aubin, ville fantôme | ★★★ | 6 ans | Satisfaction ≥ 55, au plus 2 bâtiments abandonnés, +30 % d'habitants |
+| Défi 2045 : ville symbiotique | ★★★★ | 15 ans | Terrain vierge : ère 3, 8 000 habitants, résultat positif |
+
+La carte du scénario (en haut à gauche) suit chaque objectif, l'échéance et les règles d'échec ; un bilan s'affiche
+à la fin, et la ville peut continuer en partie libre.
+
+### Son
+
+Tout est synthétisé à la volée (Web Audio API) : aucun fichier son. Effets de construction, route, zonage,
+démolition, refus, notifications, sirène et tonnerre ; ambiance qui dépend de ce que montre la caméra (densité,
+circulation, espaces verts, zoom), du temps et de l'heure ; musique générative : piano et nappes chaudes pour la
+ville connectée, arpèges pulsés pour la ville autonome, cloches et nappes aériennes pour la ville symbiotique,
+thème mineur pendant une crise. Le son démarre au premier geste (règle des navigateurs, iPhone compris).
+
+### Effets visuels
+
+Cycle jour/nuit décoratif (environ 4 minutes à vitesse normale, accéléré avec le jeu) : la scène se teinte au
+crépuscule, les fenêtres occupées, les lampadaires (bleutés dès l'ère 2) et les phares s'allument. Les bâtiments
+neufs passent quelques jours en chantier (palissade, structure qui monte, échafaudages, grue animée pour les
+immeubles), comme les bâtiments qui montent de niveau. Les cheminées fument quand l'usine tourne. Pluie, neige,
+brouillard et éclairs se superposent à la scène. Tout se désactive dans les paramètres (« réduire les animations »
+du système est respecté pour les éclairs).
 
 ### Ponts
 
@@ -191,25 +294,30 @@ panneaux et l'inspecteur, ne disparaissent pas tant que le pointeur est dessus, 
 ```
 src/
 ├── app/          GameApp (assemblage), GameSession (état + simulation + services, sans rendu),
-│                 GameState (données pures), GameLoop, EventBus, InputController, ToolController, scenarios
+│                 GameState (données pures), GameLoop, EventBus, InputController, ToolController, scenarios,
+│                 challenges (scénarios et défis), SimHost / SimWorkerCore / SimSync / sim.worker (simulation
+│                 dans un Web Worker), InstallPrompt (installation de l'application)
 ├── world/        Grid (tableaux typés), Tile (vue d'une case), Terrain, WorldGenerator, PlacementSystem
 ├── simulation/   Simulation (orchestrateur), SimulationClock, PopulationSystem, BuildingSystem,
 │                 EconomySystem, TrafficSystem, UtilitySystem, EnvironmentSystem, AISystem, WasteSystem,
-│                 TransitSystem, ProgressionSystem, Modifiers, config
+│                 TransitSystem, ProgressionSystem, WeatherSystem, CrisisSystem, ScenarioSystem, Modifiers, config
 ├── systems/      ConstructionService, ZoningService, RoadNetwork, Pathfinding, RouteService (itinéraires en cache),
 │                 TransportService, EventSystem, ActionHistory, BuildingFactory
 ├── debug/        Invariants (contrôles de cohérence de l'état)
 ├── rendering/    Renderer (PixiJS), IsometricProjection, Camera, LayerManager, SelectionRenderer,
-│                 VehicleRenderer, Overlays, art/ (dessin procédural original)
+│                 VehicleRenderer, EffectsRenderer (jour/nuit, météo, chantiers, fumées, crises), Overlays,
+│                 art/ (dessin procédural original)
+├── audio/        AudioEngine (effets, ambiance et musique synthétisés)
 ├── ui/           HUD, Toolbar, InspectorPanel, FinancePanel, TechPanel, CityPanel, OverlayManager,
 │                 Notifications, PanelHost, MenuPanels (accueil, sauvegardes, paramètres, aide),
-│                 ObjectivesCard (tutoriel), DebugPanel, BuildingSheet (fiches)
+│                 ObjectivesCard (tutoriel et scénario), CrisisPanel, ScenarioDialogs, DebugPanel, BuildingSheet
 ├── persistence/  SaveService (IndexedDB), SaveMigration, SettingsService (localStorage)
 ├── data/         Catalog, Validators, Upgrades, defaultData
 └── styles/
 public/data/      buildings.json, technologies.json, policies.json, upgrades.json
+public/           manifest.webmanifest, icons/, _headers
 tests/            unit/, integration/, e2e/
-scripts/bench.js  mesures de performance
+scripts/          bench.js (performances), sw-plugin.js (service worker généré au build), make-icons.mjs
 ```
 
 Règles respectées :
@@ -232,6 +340,28 @@ bâtiment, valeur foncière, pollution, bruit, chaleur, réseaux, trafic, couver
 la position du canevas et l'altitude (pointage du plan le plus haut vers le plus bas). La sélection d'un bâtiment teste
 d'abord la silhouette dessinée (on peut cliquer sur une tour), puis la case au sol ; la touche X rend translucides les
 bâtiments qui masquent le curseur.
+
+### Simulation dans un Web Worker
+
+Par défaut, la simulation tourne dans un Web Worker (paramètre « Simulation en arrière-plan », repli automatique
+dans le fil principal si le navigateur refuse). Le fil principal garde une **réplique** de l'état, lue par le rendu
+et l'interface :
+
+- l'horloge du fil principal demande des jours à la simulation ; au-delà de 24 jours en attente, le retard est
+  abandonné (comme avant) ;
+- les commandes du joueur s'appliquent tout de suite sur la réplique (coût, refus, annulation immédiats), puis
+  sont transmises et appliquées dans le même ordre par la simulation, qui fait foi ;
+- un instantané revient au plus toutes les 110 ms pendant que le temps s'écoule (immédiatement après une commande) :
+  couches de la grille transférées sans copie, bâtiments en JSON, champs légers, et seulement ce qui a changé pour
+  le journal comptable, les immobilisations, les périodes et l'historique ; les commandes pas encore confirmées
+  sont rejouées sur la réplique ;
+- les événements de la simulation (notifications, fin de mois, crises, météo…) et les cases ou bâtiments modifiés
+  sont relayés à l'interface ; un écart entre prédiction et simulation est signalé et redessiné ;
+- avant chaque sauvegarde, la réplique est synchronisée (`flush`) : la partie enregistrée est celle de la simulation.
+
+Tests : la réplique est identique à l'état de la simulation après synchronisation, y compris avec des commandes
+« en vol » pendant un calcul, et une partie simulée dans le worker est identique au bit près à la même partie
+simulée dans le fil principal (`tests/unit/worker.test.js`).
 
 ### Temps
 
@@ -279,9 +409,10 @@ y compris après sauvegarde et rechargement (testé).
 
 ### Sauvegardes
 
-IndexedDB, format versionné (`formatVersion` = 4) avec migrations explicites (`SaveMigration.js` : v1 → v2 ;
+IndexedDB, format versionné (`formatVersion` = 5) avec migrations explicites (`SaveMigration.js` : v1 → v2 ;
 v2 → v3 ajoute ponts, transports, déchets et progression ; v3 → v4 ajoute améliorations et échanges régionaux, tous
-désactivés, pour que l'équilibre d'une ancienne partie ne change pas).
+désactivés, pour que l'équilibre d'une ancienne partie ne change pas ; v4 → v5 ajoute météo, crises, scénario et
+options de partie, catastrophes désactivées pour une ancienne partie).
 Somme de contrôle, validation structurelle avant intégration, relecture après écriture. La sauvegarde automatique
 alterne entre deux emplacements : un état invalide ou une écriture ratée n'écrase jamais la dernière sauvegarde valide.
 Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est enregistré.
@@ -289,9 +420,11 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Paramètres, accessibilité et débogage
 
-- **Paramètres** : taille de l'interface (90 à 130 %), qualité graphique (automatique, haute, moyenne, économie : la
-  résolution du rendu baisse pour les machines modestes), compteur d'images, véhicules et drones, quadrillage,
-  défilement par les bords, confirmation des démolitions coûteuses.
+- **Paramètres** : son (général, musique, effets, ambiance, coupure), fréquence des catastrophes et pause pendant
+  une crise, effets visuels (jour/nuit, météo, chantiers et fumées), taille de l'interface (90 à 130 %), qualité
+  graphique (automatique, haute, moyenne, économie : la résolution du rendu baisse pour les machines modestes),
+  compteur d'images, véhicules et drones, quadrillage, défilement par les bords, confirmation des démolitions
+  coûteuses, simulation en arrière-plan (Web Worker).
 - **Accessibilité** : toutes les fonctions au clavier et à la souris (ou au toucher), libellés ARIA, focus
   visible, alertes annoncées (`role="status"`), aucune information portée par la seule couleur.
 - **Outils de débogage** (F3 ou Paramètres) : images par seconde, temps de préparation, temps par sous-système,
@@ -301,12 +434,15 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 205 tests Vitest (21 fichiers, dont le chargement de chacun des 79 modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 230 tests Vitest (23 fichiers, dont le chargement de chacun des 92 modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 82 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
-accumulation d'objets), invariants sur une ville simulée plusieurs années.
-`npm run test:e2e` : 7 parcours Playwright — fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
+accumulation d'objets), invariants sur une ville simulée plusieurs années ; météo (saisons, déterminisme, effets),
+crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, désactivation), scénarios (départ,
+victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements).
+`npm run test:e2e` : 8 parcours Playwright — scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
+bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
 gare animée et notifications ; fiche dépliable et notification fermée au doigt ; fonder une ville à la souris ; pont, bus, couches, progression, tutoriel
 et débogage depuis l'interface ; aucun bouton principal décoratif ; pas de duplication d'objets graphiques ni de fuite
 mémoire ; iPhone (gestes, pose au double appui, mode immersif).
@@ -331,10 +467,12 @@ s'en approche : les tronçons hors écran sont masqués et seuls les tronçons m
 ## Limites connues et suites
 
 - Lignes de transport implicites (desserte par rayon et par réseau) : pas de tracé manuel de lignes ni d'horaires.
+- Le cycle jour/nuit est décoratif (un tick = un jour) ; les chantiers sont visuels (le bâtiment fonctionne déjà).
+- Les e2e Playwright ne couvrent pas l'installation hors ligne : elle a été vérifiée sur le build de production
+  (`vite preview`, rechargement sans réseau).
 - Ponts droits uniquement ; pas de tunnels ni de ponts au-dessus des routes.
 - Piétons, tramway, dette par échéances complexes, fiscalité différenciée par quartier : non implémentés.
-- Pas d'audio dans la v0.1 (dossier `public/assets/audio` réservé).
 - Graphismes 100 % procéduraux et originaux ; les dossiers `public/assets/*` accueilleront des sprites.
-- Les e2e Playwright sont lents sans GPU (≈ 7 min pour les 7 parcours) ; ils passent avec les délais configurés.
+- Les e2e Playwright sont lents sans GPU (≈ 9 min pour les 8 parcours) ; ils passent avec les délais configurés.
 - Les gares n'ont pas de voies tracées sur la carte : le réseau ferré régional est implicite.
 - Prix des échanges régionaux fixes (pas de marché qui varie selon la saison ou la demande).

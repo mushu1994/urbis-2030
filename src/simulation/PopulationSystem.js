@@ -56,6 +56,8 @@ export class PopulationSystem {
     f.garbage = -Math.min(12, (b.garbage ?? 0) * 12);
     f.transit = Math.max(g.transitBus[i], g.transitMetro[i], g.transitRail[i]) * 3;
     f.policies = (mods['satisfaction.all'] ?? 0) + (mods[`satisfaction.${cls}`] ?? 0);
+    // Sinistre en cours (inondation, incendie) : habitants évacués ou relogés
+    if (b.disasterUntil > state.time.tick) f.disaster = -30;
     let total = 0;
     for (const v of Object.values(f)) total += v;
     return { total: clamp(total, 0, 100), factors: f };
@@ -95,6 +97,7 @@ export class PopulationSystem {
         target = cap * attract;
         if (!net.isConnectedToOutside(b.access)) target *= 0.25;
         if (state.demand.R < -30) target *= 0.85;
+        if (b.disasterUntil > state.time.tick) target *= 0.4;
       }
       const delta = Math.round(target) - b.residents;
       const step = Math.max(1, Math.ceil(cap * 0.12));
@@ -141,7 +144,7 @@ export class PopulationSystem {
     for (const { b, def } of workplaces) {
       const k = poolOf(b);
       b._jb = jobBracket(def.capacity.qualification);
-      const slots = b.abandoned ? 0 : def.capacity.jobs * (b.powered ? 1 : 0.6);
+      const slots = b.abandoned ? 0 : def.capacity.jobs * (b.powered ? 1 : 0.6) * (b.disasterUntil > state.time.tick ? 0.2 : 1);
       b._slots = slots;
       if (k) getPool(k).jobs[b._jb] += slots;
       st.jobs += slots;

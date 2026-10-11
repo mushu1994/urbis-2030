@@ -13,6 +13,14 @@ const TERRAIN_COLORS = {
   [TERRAIN.ROCK]: 0x8e9182
 };
 const CLIFF = 0x9b7b55;
+const SEASON_TONE = { autumn: [0xb59a4a, 0.28], winter: [0x8f9a7c, 0.3], spring: [0x8fd06a, 0.12] };
+
+/** Teinte du feuillage selon la saison et la neige. */
+export function foliageTint(season, snow = 0) {
+  let c = { autumn: 0xc07a32, winter: 0x56704a, spring: 0x4fa83f }[season] ?? 0x3a7f37;
+  if (snow > 0) c = mix(c, 0xeef3f8, 0.55 * snow);
+  return c;
+}
 
 const corners = (x, y, alt) => [gridToWorld(x, y, alt), gridToWorld(x + 1, y, alt), gridToWorld(x + 1, y + 1, alt), gridToWorld(x, y + 1, alt)];
 
@@ -21,7 +29,7 @@ const corners = (x, y, alt) => [gridToWorld(x, y, alt), gridToWorld(x + 1, y, al
  * @param {import('pixi.js').Graphics} g
  * @param {import('../../world/Grid.js').Grid} grid
  */
-export function drawTerrainTile(g, grid, x, y, { gridLines = false } = {}) {
+export function drawTerrainTile(g, grid, x, y, { gridLines = false, snow = 0, season = 'summer' } = {}) {
   const i = grid.idx(x, y);
   const alt = grid.altitude[i];
   const terr = grid.terrain[i];
@@ -45,6 +53,12 @@ export function drawTerrainTile(g, grid, x, y, { gridLines = false } = {}) {
     c = mix(c, 0x6fb8e6, n * 0.25);
   } else {
     c = shade(c, 0.93 + n * 0.12 + alt * 0.025);
+    // Saisons : herbe jaunie en été sec, roussie en automne, terne en hiver ; manteau neigeux
+    if (terr === TERRAIN.GRASS || terr === TERRAIN.FOREST) {
+      const tone = SEASON_TONE[season];
+      if (tone) c = mix(c, tone[0], tone[1]);
+    }
+    if (snow > 0 && terr !== TERRAIN.SAND) c = mix(c, 0xf3f6fa, snow * (0.75 + n * 0.2));
   }
   g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).fill(c);
   if (terr === TERRAIN.WATER && n > 0.82) {

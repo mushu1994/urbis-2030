@@ -25,6 +25,8 @@ export class GameSession {
     this.construction = new ConstructionService({ catalog, economy: this.sim.economy, history: this.history, bus });
     this.zoning = new ZoningService({ catalog, economy: this.sim.economy, construction: this.construction, bus });
     this.sim.attach(state);
+    /** Hôte distant (simulation dans un Web Worker) : reçoit les commandes appliquées sur cette réplique. */
+    this.remote = null;
   }
 
   static newGame({ catalog, seed, width, height, name, bus }) {
@@ -32,8 +34,12 @@ export class GameSession {
     return new GameSession({ catalog, state, bus });
   }
 
-  /** Avance la simulation de n ticks. */
+  /**
+   * Avance la simulation de n ticks. Quand la simulation tourne dans un Web Worker, renvoie une promesse
+   * résolue une fois la réplique à jour.
+   */
   run(ticks) {
+    if (this.remote) return this.remote.run(ticks);
     for (let k = 0; k < ticks; k++) this.sim.step(this.state);
   }
 
@@ -66,10 +72,20 @@ export class GameSession {
   }
 
   /**
-   * Exécute une commande validée.
+   * Exécute une commande validée (et la transmet à la simulation distante s'il y en a une).
    * @returns {{ok:boolean} & Record<string, any>}
    */
   execute(cmd) {
+    const r = this.applyCommand(cmd);
+    if (r?.ok && this.remote) this.remote.forward(cmd, r);
+    return r;
+  }
+
+  /**
+   * Applique une commande sur cet état uniquement.
+   * @returns {{ok:boolean} & Record<string, any>}
+   */
+  applyCommand(cmd) {
     const s = this.state;
     let r;
     switch (cmd.type) {
@@ -126,6 +142,31 @@ export class GameSession {
         if (!allowed[cmd.resource]?.includes(cmd.side)) return { ok: false, reasons: ['invalid'], messages: ['Échange inconnu'] };
         s.trade[cmd.resource][cmd.side] = !!cmd.enabled;
         s.dirty.utilities = true;
+        r = { ok: true };
+        break;
+      }
+      case 'crisisResponse':
+        r = this.sim.crises.respond(s, cmd.crisisId, cmd.option);
+        break;
+      case 'triggerDisaster':
+        // Déclenchement volontaire d'une catastrophe (menu « Risques », comme dans les SimCity)
+        r = this.sim.crises.trigger(s, cmd.kind, { manual: true });
+        break;
+      case 'option': {
+        const allowed = { disasters: ['off', 'rare', 'normal', 'frequent'] };
+        if (!allowed[cmd.key]?.includes(cmd.value)) return { ok: false, reasons: ['invalid'], messages: ['Option inconnue'] };
+        s.options[cmd.key] = cmd.value;
+        r = { ok: true };
+        break;
+      }
+      case 'debug': {
+        // Outils de test et de débogage (panneau F3, parcours automatisés) : passent par la même porte que le jeu.
+        if (cmd.op === 'unlock') s.stats.peakPopulation = Math.max(s.stats.peakPopulation ?? 0, Number(cmd.population) || 0);
+        else if (cmd.op === 'treasury') {
+          const cents = toCents(Number(cmd.euros) || 0);
+          s.economy.treasury += cents;
+          s.economy.opening += cents;
+        } else return { ok: false, reasons: ['invalid'] };
         r = { ok: true };
         break;
       }

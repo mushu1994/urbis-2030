@@ -37,7 +37,8 @@ const FACTOR_LABELS = {
   taxes: 'Fiscalité',
   sanitation: 'Assainissement',
   delivery: 'Livraisons',
-  policies: 'Politiques et IA'
+  policies: 'Politiques, IA, météo et crises',
+  disaster: 'Sinistre en cours'
 };
 
 const row = (label, value, cls = '') => h('div.kv', h('span', label), h('strong', { class: cls }, value));

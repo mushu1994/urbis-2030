@@ -3,6 +3,8 @@ import { Rng } from '../util/rng.js';
 import { generateWorld } from '../world/WorldGenerator.js';
 import { SIM } from '../simulation/config.js';
 import { toCents } from '../util/money.js';
+import { defaultWeather } from '../simulation/WeatherSystem.js';
+import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
 
 /**
  * @typedef {Object} Building
@@ -89,6 +91,14 @@ export class GameState {
     /** Échanges avec la région : vente des excédents, achat en cas de pénurie (prix prohibitif). */
     this.trade = defaultTrade();
     this.utilities = { power: {}, water: {}, batteryCharge: 0 };
+    /** Météo du jour (tirée de façon déterministe). */
+    this.weather = defaultWeather();
+    /** Catastrophes et crises en cours et passées. */
+    this.crises = defaultCrises();
+    /** Scénario en cours (null en partie libre). */
+    this.scenario = null;
+    /** Options de partie qui influencent la simulation (fréquence des catastrophes). */
+    this.options = defaultOptions('normal');
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};

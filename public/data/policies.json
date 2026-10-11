@@ -223,6 +223,98 @@
           "label": "Contrainte pour les habitants"
         }
       ]
+    },
+    {
+      "id": "flood_plan",
+      "name": "Plan de prévention des inondations",
+      "description": "Digues amovibles, bassins de rétention et alerte des riverains : les crues sont plus rares et moins étendues.",
+      "monthlyCost": 900,
+      "unlock": {
+        "population": 300
+      },
+      "effects": [
+        {
+          "key": "risk.flood",
+          "op": "mul",
+          "value": -0.6,
+          "label": "Risque et étendue des crues −60 %"
+        },
+        {
+          "key": "growth.R",
+          "op": "mul",
+          "value": -0.04,
+          "label": "Constructibilité des berges réduite"
+        }
+      ]
+    },
+    {
+      "id": "heat_plan",
+      "name": "Plan canicule",
+      "description": "Registre des personnes fragiles, salles rafraîchies, fontaines et ombrières : la ville encaisse mieux les fortes chaleurs.",
+      "monthlyCost": 500,
+      "unlock": {
+        "population": 800
+      },
+      "effects": [
+        {
+          "key": "risk.heat",
+          "op": "mul",
+          "value": -0.55,
+          "label": "Risque de canicule extrême −55 %"
+        },
+        {
+          "key": "heatMult",
+          "op": "mul",
+          "value": -0.08,
+          "label": "Îlots de chaleur −8 %"
+        }
+      ]
+    },
+    {
+      "id": "cyber_defense",
+      "name": "Cybersécurité municipale",
+      "description": "Centre de supervision, sauvegardes hors ligne et exercices de crise pour protéger l'IA urbaine.",
+      "monthlyCost": 1400,
+      "unlock": {
+        "population": 600
+      },
+      "effects": [
+        {
+          "key": "risk.cyber",
+          "op": "mul",
+          "value": -0.75,
+          "label": "Risque de cyberattaque −75 %"
+        },
+        {
+          "key": "risk.blackout",
+          "op": "mul",
+          "value": -0.2,
+          "label": "Pilotage du réseau électrique sécurisé (−20 % de pannes)"
+        }
+      ]
+    },
+    {
+      "id": "social_dialogue",
+      "name": "Dialogue social dans les transports",
+      "description": "Négociations annuelles et prime de service : les conflits sociaux sont rares.",
+      "monthlyCost": 700,
+      "unlock": {
+        "population": 1200
+      },
+      "effects": [
+        {
+          "key": "risk.strike",
+          "op": "mul",
+          "value": -0.7,
+          "label": "Risque de grève −70 %"
+        },
+        {
+          "key": "upkeep.transport",
+          "op": "mul",
+          "value": 0.03,
+          "label": "Coût d'exploitation des transports +3 %"
+        }
+      ]
     }
   ]
 }

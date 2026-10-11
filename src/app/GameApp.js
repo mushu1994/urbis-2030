@@ -25,6 +25,12 @@ import { confirmDialog } from '../ui/Dialog.js';
 import { FullscreenController } from './Fullscreen.js';
 import { h, icon, setChildren } from '../ui/dom.js';
 import { buildingSummary } from '../ui/BuildingSheet.js';
+import { LocalSimHost, WorkerSimHost } from './SimHost.js';
+import { setupChallenge, CHALLENGE_BY_ID } from './challenges.js';
+import { AudioEngine } from '../audio/AudioEngine.js';
+import { CrisisPanel } from '../ui/CrisisPanel.js';
+import { scenarioEndDialog } from '../ui/ScenarioDialogs.js';
+import { InstallPrompt } from './InstallPrompt.js';
 
 /**
  * Application : relie la session de jeu (simulation pure), le rendu, l'interface et la persistance.
@@ -43,7 +49,11 @@ export class GameApp {
     this.saves = new SaveService();
     this.renderer = new Renderer({ catalog });
     this.lastAutosave = performance.now();
-    this.uiTimers = { hud: 0, inspector: 0, panel: 0, preview: 0 };
+    this.uiTimers = { hud: 0, inspector: 0, panel: 0, preview: 0, audio: 0 };
+    /** Hôte de la simulation (fil principal ou Web Worker). */
+    this.host = null;
+    this.audio = new AudioEngine(this.settings);
+    this.install = new InstallPrompt();
   }
 
   $(sel) {
@@ -58,7 +68,9 @@ export class GameApp {
       onMenu: () => this.showMenu(),
       onUndo: () => this.undo(),
       onOpenPanel: (id) => this.togglePanel(id),
-      onFullscreen: () => this.fullscreen.toggle()
+      onFullscreen: () => this.fullscreen.toggle(),
+      onMute: () => this.toggleMute(),
+      onWeather: () => this.openPanel('city', 'risks')
     });
     this.toolbar = new Toolbar(this.$('#toolbar'), {
       catalog: this.catalog,
@@ -83,11 +95,14 @@ export class GameApp {
     this.panels = {
       finance: new FinancePanel({ execute, notify }),
       ai: new TechPanel({ execute, notify }),
-      city: new CityPanel({ onFocus: (x, y) => this.focus(x, y), getRenderStats: () => this.renderer.stats }),
+      city: new CityPanel({ onFocus: (x, y) => this.focus(x, y), getRenderStats: () => this.renderer.stats, getHostStats: () => this.host?.stats, execute, notify }),
       saves: new SavesPanel({ saves: this.saves, settings: this.settings, onSave: (o) => this.save(o), onLoad: (id) => this.load(id), notify }),
       settings: new SettingsPanel({
         settings: this.settings,
         apply: () => this.applySettings(),
+        execute,
+        getSession: () => this.session,
+        audio: this.audio,
         onShowObjectives: () => this.objectives.show(),
         onDebug: () => this.togglePanel('debug')
       }),
@@ -95,8 +110,16 @@ export class GameApp {
       debug: new DebugPanel({ getRenderer: () => this.renderer, getLoop: () => this.loop, settings: this.settings, apply: () => this.applySettings(), notify })
     };
     this.objectives = new ObjectivesCard(this.$('#objectives'), { notify });
+    this.crisisPanel = new CrisisPanel(this.$('#crisis'), {
+      execute,
+      notify,
+      onFocus: (x, y) => this.focus(x, y),
+      onDecided: () => this.#resumeAfterCrisis(),
+      play: (n) => this.audio.play(n)
+    });
     this.menu = new StartMenu(this.$('#menu'), {
       saves: this.saves,
+      install: this.install,
       onNew: (o) => this.newGame(o),
       onContinue: (id) => this.load(id),
       onLoad: (id) => this.load(id),
@@ -131,8 +154,11 @@ export class GameApp {
 
     this.loop = new GameLoop({
       clock: this.clock,
-      step: () => this.session && this.session.sim.step(this.session.state),
-      frame: (dt) => this.#frame(dt)
+      step: () => this.host?.tick(),
+      frame: (dt) => {
+        this.host?.endFrame();
+        this.#frame(dt);
+      }
     });
     this.loop.onError = (err) => this.#fatal(err);
     this.applySettings();
@@ -140,6 +166,14 @@ export class GameApp {
     window.addEventListener('beforeunload', () => {
       if (this.session && this.settings.get('autosaveMinutes') > 0) this.saves.autosave(this.session.state).catch(() => {});
     });
+    // Son : déverrouillé au premier geste (exigence des navigateurs), clics des boutons
+    const unlock = () => this.audio.unlock();
+    window.addEventListener('pointerdown', unlock, { capture: true });
+    window.addEventListener('keydown', unlock, { capture: true });
+    document.addEventListener('click', (e) => {
+      if (e.target instanceof Element && e.target.closest('button, .btn, [role="tab"], select')) this.audio.play('click');
+    }, { capture: true });
+    this.renderer.effects.onThunder = () => this.audio.play('thunder');
     await this.showMenu();
   }
 
@@ -174,6 +208,7 @@ export class GameApp {
         this.notifications.push({ level: 'info', message: this.xray ? 'Transparence des bâtiments activée' : 'Transparence désactivée' });
       },
       m: () => this.showMenu(),
+      n: () => this.toggleMute(),
       f: () => this.fullscreen.toggle(),
       F3: () => this.togglePanel('debug')
     };
@@ -204,6 +239,15 @@ export class GameApp {
   }
 
   applySettings() {
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.renderer.setEffects({
+      dayNight: this.settings.get('dayNight') !== false,
+      weather: this.settings.get('weatherFx') !== false,
+      effects: this.settings.get('effects') !== false,
+      reducedMotion: reduced
+    });
+    this.audio.applyVolumes();
+    this.hud?.setMuted(!!this.settings.get('muted'));
     this.renderer.setVehicles(this.settings.get('showVehicles'));
     this.renderer.setGridLines(this.settings.get('showGridLines'));
     this.renderer.setRenderScale(this.settings.get('renderScale'));
@@ -226,12 +270,23 @@ export class GameApp {
     el.hidden = !text;
   }
 
-  async newGame({ name, seed, size, mode }) {
+  async newGame({ name, seed, size, mode, disasters = 'normal', scenarioId }) {
     this.#busy('Génération du territoire…');
     await new Promise((r) => setTimeout(r, 30));
     const bus = new EventBus();
+    const challenge = mode === 'scenario' ? CHALLENGE_BY_ID.get(scenarioId) : null;
+    if (challenge) {
+      seed = challenge.seed ?? seed;
+      size = challenge.size;
+      name = challenge.name;
+    }
     const session = GameSession.newGame({ catalog: this.catalog, seed, width: size, height: size, name, bus });
-    if (mode === 'town') {
+    session.state.options.disasters = disasters;
+    if (challenge) {
+      this.#busy(`Préparation du scénario « ${challenge.name} »…`);
+      await new Promise((r) => setTimeout(r, 30));
+      setupChallenge(session, challenge.id);
+    } else if (mode === 'town') {
       this.#busy('Construction du bourg selon les règles du jeu…');
       await new Promise((r) => setTimeout(r, 30));
       const town = buildStarterTown(session, { size: size >= 96 ? 'large' : 'small' });
@@ -240,31 +295,108 @@ export class GameApp {
       session.run(240);
       session.history.clear();
     }
+    // Pas de catastrophe aléatoire dans les premiers mois d'une partie (bourg existant ou scénario)
+    session.state.crises.graceUntil = session.state.time.tick + (challenge?.risks ? 75 : mode === 'empty' ? 360 : 240);
+    await this.startSession(session);
     this.#busy(null);
-    this.startSession(session);
-    if (mode !== 'town') {
+    if (challenge) {
+      this.notifications.push({ level: 'info', message: `Scénario « ${challenge.name} » : ${challenge.years} ans pour atteindre les objectifs (carte en haut à gauche).` });
+    } else if (mode !== 'town') {
       this.notifications.push({ level: 'info', message: 'Commencez par tracer une rue depuis l\'accès autoroutier, à l\'ouest. Aide : touche H.' });
     }
   }
 
-  startSession(session) {
+  /** Démarre l'hôte de simulation : Web Worker si possible (et activé), sinon fil principal. */
+  async #createHost(session) {
+    this.host?.destroy();
+    this.host = null;
+    const wanted = this.settings.get('simWorker') !== false && typeof Worker !== 'undefined';
+    if (wanted) {
+      try {
+        const host = new WorkerSimHost({
+          session,
+          createWorker: () => new Worker(new URL('./sim.worker.js', import.meta.url), { type: 'module', name: 'urbis-simulation' }),
+          onError: (err) => this.#fatal(err)
+        });
+        return await host.start();
+      } catch (err) {
+        console.warn('Simulation dans le fil principal :', err);
+        this.workerFailed = err.message;
+      }
+    }
+    return new LocalSimHost(session);
+  }
+
+  async startSession(session) {
+    this.#busy('Démarrage de la simulation…');
     this.session = session;
     this.bus = session.bus;
+    this.host = await this.#createHost(session);
     this.renderer.attach(session);
     this.select(null);
     this.panelHost.close();
     this.toolbar.select({ id: 'select', kind: 'select', label: 'Sélection' });
-    this.bus.on('notify', (n) => this.notifications.push(n));
+    this.bus.on('notify', (n) => {
+      // Les crises ont leur propre carte (avec « Voir ») : pas de notification en double
+      if (n.kind === 'crisis') return;
+      this.notifications.push(n);
+      if (n.kind !== 'crisis') this.audio.play(n.level === 'danger' ? 'danger' : n.level === 'warning' ? 'warning' : n.level === 'success' ? 'success' : 'info');
+    });
     this.bus.on('sim:month', () => this.panelHost.refresh());
+    this.bus.on('command:done', ({ cmd }) => {
+      const sfx = { road: 'road', building: 'build', zone: 'zone', deliveryZone: 'zone', demolish: 'demolish', upgrade: 'money', loan: 'money', research: 'tech', undo: 'undo', crisisResponse: 'money' }[cmd.type];
+      if (sfx) this.audio.play(sfx);
+    });
+    this.bus.on('era:changed', () => this.audio.play('fanfare'));
+    this.bus.on('crisis:started', ({ crisis }) => {
+      this.audio.play(crisis.kind === 'fire' || crisis.kind === 'flood' ? 'siren' : 'danger');
+      this.crisisPanel.update(this.session, { force: true });
+      if (this.settings.get('pauseOnCrisis') !== false && !crisis.manual && !this.clock.paused) {
+        this.speedBeforeCrisis = this.clock.speedIndex;
+        this.setSpeed(0);
+      }
+    });
+    this.bus.on('crisis:ended', () => this.crisisPanel.update(this.session, { force: true }));
+    this.bus.on('scenario:ended', ({ scenario }) => {
+      this.audio.play(scenario.status === 'won' ? 'fanfare' : 'fail');
+      this.setSpeed(0);
+      scenarioEndDialog(scenario, {
+        onContinue: () => this.setSpeed(1),
+        onMenu: () => this.showMenu()
+      });
+      this.objectives.update(true);
+    });
     this.objectives.attach(session);
+    this.crisisPanel.attach(session);
     this.setSpeed(1);
     this.lastAutosave = performance.now();
     document.title = `${session.state.meta.name} — URBIS 2030`;
+    this.#busy(null);
+  }
+
+  #resumeAfterCrisis() {
+    if (this.speedBeforeCrisis && this.clock.paused) this.setSpeed(this.speedBeforeCrisis);
+    this.speedBeforeCrisis = 0;
+  }
+
+  toggleMute() {
+    const muted = !this.settings.get('muted');
+    this.settings.set('muted', muted);
+    this.audio.unlock();
+    this.audio.applyVolumes();
+    this.hud.setMuted(muted);
+    this.notifications.push({ level: 'info', message: muted ? 'Son coupé (N pour le rétablir)' : 'Son activé', key: 'mute' });
+  }
+
+  openPanel(id, tab) {
+    const panel = this.panels[id];
+    if (panel && this.session) this.panelHost.open(panel, this.session, tab);
   }
 
   async save({ id, name } = {}) {
     if (!this.session) return;
     try {
+      await this.host?.flush();
       const r = await this.saves.save(this.session.state, { id, name: name ?? this.session.state.meta.name });
       this.settings.set('lastSaveId', r.id);
       this.notifications.push({ level: 'success', message: `Partie sauvegardée : ${r.name}` });
@@ -278,7 +410,7 @@ export class GameApp {
     try {
       const state = await this.saves.load(id);
       const session = new GameSession({ catalog: this.catalog, state, bus: new EventBus() });
-      this.startSession(session);
+      await this.startSession(session);
       this.menu.hide();
       this.notifications.push({ level: 'success', message: `Partie chargée : ${state.meta.name}` });
     } catch (err) {
@@ -292,6 +424,7 @@ export class GameApp {
   async #autosave() {
     if (!this.session) return;
     try {
+      await this.host?.flush();
       await this.saves.autosave(this.session.state);
       this.notifications.push({ level: 'info', message: 'Sauvegarde automatique effectuée', key: 'autosave' });
     } catch (err) {
@@ -338,6 +471,12 @@ export class GameApp {
 
   focus(x, y) {
     this.renderer.focus(x, y);
+    // La carte des crises occupe le haut de l'écran : la cible est montrée un peu plus bas
+    const crisis = this.$('#crisis');
+    if (crisis && !crisis.hidden && window.innerWidth > 760) {
+      this.renderer.camera.y -= 110 / this.renderer.camera.zoom;
+      this.renderer.camera.version++;
+    }
   }
 
   setSpeed(i) {
@@ -363,8 +502,12 @@ export class GameApp {
     if (!this.session) {
       return;
     }
-    this.renderer.render(dt, { paused: this.clock.paused });
+    this.renderer.render(dt, { paused: this.clock.paused, speedIndex: this.clock.speedIndex });
     const now = performance.now();
+    if (now - this.uiTimers.audio > 300) {
+      this.uiTimers.audio = now;
+      this.#updateAudio();
+    }
     if (now - this.uiTimers.hud > 250) {
       this.uiTimers.hud = now;
       this.hud.update(this.session.state, { speedIndex: this.clock.speedIndex, canUndo: this.session.construction.canUndo(this.session.state).ok });
@@ -382,12 +525,15 @@ export class GameApp {
     if (now - (this.uiTimers.objectives ?? 0) > 1000) {
       this.uiTimers.objectives = now;
       this.objectives.update();
+      this.crisisPanel.update(this.session);
     }
     if (this.settings.get('showFps') && now - (this.uiTimers.fps ?? 0) > 500) {
       this.uiTimers.fps = now;
       const t = this.session.sim.timings;
       const tick = Object.values(t).reduce((a, v) => a + v, 0);
-      this.$('#fps-meter').textContent = `${Math.round(this.renderer.stats.fps)} i/s · image ${this.renderer.stats.frameMs.toFixed(1)} ms · simulation ${tick.toFixed(1)} ms`;
+      const hs = this.host?.stats;
+      const where = hs?.kind === 'worker' ? ` (worker, synchro ${hs.applyMs.toFixed(1)} ms)` : '';
+      this.$('#fps-meter').textContent = `${Math.round(this.renderer.stats.fps)} i/s · image ${this.renderer.stats.frameMs.toFixed(1)} ms · simulation ${tick.toFixed(1)} ms${where}`;
     }
     if (now - this.uiTimers.preview > 700) {
       this.uiTimers.preview = now;
@@ -398,6 +544,55 @@ export class GameApp {
       this.lastAutosave = now;
       this.#autosave();
     }
+  }
+
+  /** Ambiance sonore : densité et circulation de la zone visible, zoom, météo, nuit, ère, crises. */
+  #updateAudio() {
+    const s = this.session?.state;
+    if (!s) {
+      this.audio.update({ inMenu: true });
+      return;
+    }
+    const g = s.grid;
+    const cam = this.renderer.camera;
+    const c = this.renderer.tileAtScreen(this.renderer.view.width / 2, this.renderer.view.height / 2);
+    let density = 0;
+    let traffic = 0;
+    let green = 0;
+    if (c) {
+      let n = 0;
+      for (let dy = -6; dy <= 6; dy += 2) {
+        for (let dx = -6; dx <= 6; dx += 2) {
+          const x = c.x + dx;
+          const y = c.y + dy;
+          if (!g.inBounds(x, y)) continue;
+          const i = g.idx(x, y);
+          density += Math.min(1, (g.density[i] ?? 0) / 40) + (g.building[i] ? 0.3 : 0);
+          traffic += g.road[i] ? Math.min(1, g.congestion[i] * 1.5 + (g.traffic[i] > 5 ? 0.2 : 0)) : 0;
+          green += Math.min(1, (g.green[i] ?? 0) / 30);
+          n++;
+        }
+      }
+      if (n) {
+        density = Math.min(1, density / n);
+        traffic = Math.min(1, (traffic / n) * 3);
+        green = green / n;
+      }
+    }
+    const month = Math.floor(s.time.tick / 30) % 12;
+    this.audio.update({
+      density,
+      traffic,
+      green,
+      zoom: cam.zoom,
+      weather: s.weather?.kind ?? 'clear',
+      intensity: s.weather?.intensity ?? 0,
+      night: this.renderer.effects?.night ?? 0,
+      season: month === 11 || month <= 1 ? 'winter' : month <= 4 ? 'spring' : month <= 7 ? 'summer' : 'autumn',
+      paused: this.clock.paused,
+      inMenu: this.menu.visible
+    });
+    this.audio.setMusic({ era: s.progression?.era ?? 1, crisis: (s.crises?.active ?? []).some((x) => x.kind !== 'strike') });
   }
 
   #fatal(err) {

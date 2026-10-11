@@ -87,6 +87,9 @@ export class VehicleRenderer {
   update(state, dtMs, viewRect, paused = false) {
     const g = this.g;
     g.clear();
+    const lights = this.lightsG;
+    lights?.clear();
+    const night = this.night ?? 0;
     if (!this.enabled || !this.weights) return;
     const grid = state.grid;
     while (this.cars.length < this.target && this.weights.length) {
@@ -133,6 +136,12 @@ export class VehicleRenderer {
       const hx = (dx / len) * 4 * scale;
       const hy = (dy / len) * 2 * scale;
       g.poly([x - hx - 1.5, y - hy - 1.5, x + hx - 1.5, y + hy - 1.5, x + hx + 1.5, y + hy + 0.5, x - hx + 1.5, y - hy + 0.5]).fill(c.color);
+      // Phares la nuit (calque lumineux)
+      if (lights && night > 0.25) {
+        lights.circle(x + hx * 1.25, y + hy * 1.25, 1.8).fill({ color: 0xfff1b8, alpha: 0.75 });
+        lights.circle(x + hx * 2.2, y + hy * 2.2, 4).fill({ color: 0xfff1b8, alpha: 0.1 });
+        lights.circle(x - hx * 1.1, y - hy * 1.1, 1.2).fill({ color: 0xff3b2f, alpha: 0.8 });
+      }
     }
 
     // Ère symbiotique : drones de service au-dessus de la ville

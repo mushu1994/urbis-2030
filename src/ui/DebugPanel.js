@@ -56,8 +56,8 @@ export class DebugPanel {
       h('h3', 'Contrôles'),
       h('div.debug-actions',
         h('button.btn', { on: { click: () => { this.lastCheck = checkInvariants(s, session.catalog); rerender(); } } }, 'Vérifier la cohérence'),
-        h('button.btn', { on: { click: () => { session.run(1); rerender(); } } }, 'Avancer d\'un jour'),
-        h('button.btn', { on: { click: () => { session.run(30); rerender(); } } }, 'Avancer d\'un mois'),
+        h('button.btn', { on: { click: async () => { await session.run(1); rerender(); } } }, 'Avancer d\'un jour'),
+        h('button.btn', { on: { click: async () => { await session.run(30); rerender(); } } }, 'Avancer d\'un mois'),
         h('button.btn', { on: { click: () => textDialog('État de la partie (JSON)', JSON.stringify(serializeState(s)), 'urbis-etat.json') } }, 'Exporter l\'état'),
         h('label.check', h('input', { type: 'checkbox', checked: !!this.settings.get('showFps'), on: { change: (e) => { this.settings.set('showFps', e.target.checked); this.apply(); } } }), 'Compteur d\'images à l\'écran')
       ),

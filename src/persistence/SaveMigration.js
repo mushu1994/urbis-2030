@@ -3,7 +3,7 @@
  * Chaque entrée transforme une sauvegarde de la version N vers N+1. Les migrations sont appliquées
  * en chaîne jusqu'à la version courante, sur une copie : l'enregistrement d'origine n'est jamais modifié.
  */
-export const CURRENT_FORMAT_VERSION = 4;
+export const CURRENT_FORMAT_VERSION = 5;
 
 /** @type {Record<number, (data:any) => any>} */
 export const MIGRATIONS = {
@@ -64,6 +64,19 @@ export const MIGRATIONS = {
     for (const b of d.buildings ?? []) b.upgrades ??= [];
     d.trade ??= { power: { sell: false, buy: false }, water: { sell: false, buy: false }, waste: { buy: false }, stats: {} };
     d.formatVersion = 4;
+    return d;
+  },
+
+  /**
+   * v4 → v5 : météo, crises, scénarios et options de partie. Une ancienne partie démarre avec un temps
+   * neutre et les catastrophes désactivées (activables dans les paramètres de la partie).
+   */
+  4: (d) => {
+    d.weather ??= { kind: 'cloudy', intensity: 0.4, temp: 8, since: d.time?.tick ?? 0, until: d.time?.tick ?? 0, rain7: 0, snowCover: 0, forced: null };
+    d.crises ??= { active: [], history: [], nextId: 1, last: {}, ransomsPaid: 0, total: 0 };
+    d.scenario ??= null;
+    d.options ??= { disasters: 'off' };
+    d.formatVersion = 5;
     return d;
   }
 };

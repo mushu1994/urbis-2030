@@ -136,7 +136,7 @@ describe('Ponts', () => {
     v2.formatVersion = 2;
     delete v2.world.layers.bridge;
     const { data, applied } = migrate(v2);
-    expect(applied).toEqual([2, 3]);
+    expect(applied).toEqual([2, 3, 4]);
     expect(deserializeState(v2).grid.bridge.every((v) => v === 0)).toBe(true);
     expect(data.economy.tariffs.transit).toBeGreaterThan(0);
   });

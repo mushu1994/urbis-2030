@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Icône originale URBIS 2030 : îlot isométrique et tours, panneau jaune de signalisation -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22303b"/>
+      <stop offset="1" stop-color="#151d24"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <!-- Dalle -->
+  <polygon points="256,300 430,387 256,474 82,387" fill="#2d6b46"/>
+  <polygon points="82,387 256,474 256,492 82,405" fill="#1f4a31"/>
+  <polygon points="256,474 430,387 430,405 256,492" fill="#173826"/>
+  <!-- Routes -->
+  <polygon points="168,343 190,332 364,419 342,430" fill="#3a434b"/>
+  <!-- Tour gauche -->
+  <polygon points="130,330 186,358 186,250 130,222" fill="#d7dde2"/>
+  <polygon points="186,358 230,336 230,228 186,250" fill="#9aa6b0"/>
+  <polygon points="130,222 174,200 230,228 186,250" fill="#eef2f5"/>
+  <!-- Grande tour centrale -->
+  <polygon points="214,342 270,370 270,150 214,122" fill="#f2c230"/>
+  <polygon points="270,370 322,344 322,124 270,150" fill="#c99a12"/>
+  <polygon points="214,122 266,96 322,124 270,150" fill="#ffd95a"/>
+  <!-- Fenêtres de la tour centrale (bandes) -->
+  <g stroke="#1d2730" stroke-opacity="0.35" stroke-width="6">
+    <line x1="214" y1="160" x2="270" y2="188"/>
+    <line x1="214" y1="200" x2="270" y2="228"/>
+    <line x1="214" y1="240" x2="270" y2="268"/>
+    <line x1="214" y1="280" x2="270" y2="308"/>
+    <line x1="270" y1="188" x2="322" y2="162"/>
+    <line x1="270" y1="228" x2="322" y2="202"/>
+    <line x1="270" y1="268" x2="322" y2="242"/>
+    <line x1="270" y1="308" x2="322" y2="282"/>
+  </g>
+  <!-- Tour droite -->
+  <polygon points="306,398 350,420 350,300 306,278" fill="#e9eef0"/>
+  <polygon points="350,420 398,396 398,276 350,300" fill="#a9b8c2"/>
+  <polygon points="306,278 354,254 398,276 350,300" fill="#ffffff"/>
+  <!-- Antenne et drone -->
+  <rect x="266" y="56" width="8" height="46" fill="#e9eef0"/>
+  <circle cx="270" cy="52" r="9" fill="#5be3f2"/>
+  <rect x="368" y="150" width="44" height="7" rx="3" fill="#e9eef0"/>
+  <circle cx="390" cy="153" r="6" fill="#5be3f2"/>
+</svg>

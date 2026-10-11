@@ -78,7 +78,12 @@ const ICONS = {
   expand: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5',
   shrink: 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5',
   rotate: 'M20 12a8 8 0 11-2.34-5.66M20 4v4h-4',
-  settings: 'M12 9a3 3 0 110 6 3 3 0 010-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1'
+  settings: 'M12 9a3 3 0 110 6 3 3 0 010-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
+  sound: 'M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11',
+  mute: 'M4 9v6h4l5 4V5L8 9zM16 9l5 6M21 9l-5 6',
+  scenario: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  risk: 'M12 3l10 18H2zM12 10v5M12 18h.01',
+  install: 'M12 3v12M7 10l5 5 5-5M4 19h16'
 };
 
 export function icon(name, size = 20) {

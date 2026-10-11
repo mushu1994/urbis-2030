@@ -4,7 +4,10 @@ import { Camera } from './Camera.js';
 import { SelectionRenderer } from './SelectionRenderer.js';
 import { VehicleRenderer } from './VehicleRenderer.js';
 import { TrainRenderer } from './TrainRenderer.js';
-import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners } from './art/GroundArt.js';
+import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners, foliageTint } from './art/GroundArt.js';
+import { EffectsRenderer } from './EffectsRenderer.js';
+import { drawConstructionSite } from './art/EffectsArt.js';
+import { seasonKey } from '../simulation/WeatherSystem.js';
 import { drawBuilding, drawTree } from './art/BuildingArt.js';
 import { gridToWorld, screenToTile } from './IsometricProjection.js';
 import { OVERLAY_BY_ID } from './Overlays.js';
@@ -42,6 +45,12 @@ export class Renderer {
     this.lastCameraVersion = -1;
     this.alertTimer = 0;
     this.stats = { fps: 0, frameMs: 0, drawCalls: 0 };
+    /** Chantiers en cours : identifiant → jour de fin (le bâtiment est redessiné à la livraison). */
+    this.constructing = new Map();
+    /** Modèle dessiné pour chaque bâtiment (détecte les montées de niveau). */
+    this.drawnDef = new Map();
+    this.snowLevel = 0;
+    this.season = 'summer';
   }
 
   async init(parent) {
@@ -58,6 +67,8 @@ export class Renderer {
     parent.appendChild(this.app.canvas);
     this.app.canvas.setAttribute('aria-label', 'Carte de la ville');
     this.app.stage.addChild(this.layers.world);
+    this.effects = new EffectsRenderer(this.layers, this.app.stage);
+    this.vehicles.lightsG = this.effects.headlightsLayer;
     this.app.ticker.stop(); // la boucle est pilotée par GameLoop
     this.#resize();
     window.addEventListener('resize', () => this.#resize());
@@ -88,10 +99,14 @@ export class Renderer {
     const state = session.state;
     const grid = state.grid;
     const bus = session.bus;
+    this.effects?.reset();
     this.layers.clear();
     this.trains.reset();
     this.buildingGfx.clear();
     this.treeGfx.clear();
+    this.constructing.clear();
+    this.drawnDef.clear();
+    this.#updateSeason(state, false);
 
     this.terrainLayer = new ChunkedLayer(this.layers.terrain, grid.width, grid.height, (g, x0, y0, x1, y1) => this.#drawTerrainChunk(g, x0, y0, x1, y1));
     this.groundLayer = new ChunkedLayer(this.layers.ground, grid.width, grid.height, (g, x0, y0, x1, y1) => this.#drawGroundChunk(g, x0, y0, x1, y1));
@@ -124,7 +139,34 @@ export class Renderer {
       bus.on('building:added', ({ building }) => this.dirtyBuildings.add(building.id)),
       bus.on('building:changed', ({ building }) => this.dirtyBuildings.add(building.id)),
       bus.on('building:removed', ({ building }) => this.dirtyBuildings.add(building.id)),
-      bus.on('network:rebuilt', () => this.groundLayer.markAll()),
+      bus.on('network:rebuilt', () => {
+        this.groundLayer.markAll();
+        this.effects?.markStreets();
+      }),
+      // Simulation dans un Web Worker : cases et bâtiments modifiés depuis le dernier instantané
+      bus.on('sync:dirty', ({ tiles, buildings, all }) => {
+        if (all || !tiles) {
+          this.terrainLayer.markAll();
+          this.groundLayer.markAll();
+          for (let d = 0; d <= grid.width + grid.height - 2; d++) this.dirtyTrees.add(d);
+          for (const id of this.buildingGfx.keys()) this.dirtyBuildings.add(id);
+          for (const b of this.session.state.buildings.values()) this.dirtyBuildings.add(b.id);
+        } else markTiles(tiles);
+        for (const id of buildings ?? []) this.dirtyBuildings.add(id);
+        this.overlayDirty = true;
+        this.selectionDirty = true;
+        this.effects?.markStreets();
+        this.effects?.markEmitters();
+        this.vehicles.refresh(this.session.state);
+      }),
+      bus.on('weather:changed', () => this.#updateSeason(this.session.state, true)),
+      bus.on('sim:month', () => this.#updateSeason(this.session.state, true)),
+      bus.on('crisis:started', () => this.effects?.markEmitters()),
+      bus.on('crisis:ended', ({ crisis }) => {
+        for (const id of crisis?.burnt ?? []) this.dirtyBuildings.add(id);
+        for (const id of crisis?.buildings ?? []) this.dirtyBuildings.add(id);
+        this.effects?.markEmitters();
+      }),
       bus.on('era:changed', () => {
         this.groundLayer.markAll();
         this.#applyEraTheme();
@@ -132,11 +174,32 @@ export class Renderer {
       bus.on('fields:updated', ({ fields }) => {
         if (fields.includes('traffic')) this.vehicles.refresh(this.session.state);
         this.overlayDirty = true;
-      })
+      }),
+      bus.on('world:changed', () => this.effects?.markStreets())
     );
     this.vehicles.refresh(state);
     this.overlayDirty = true;
     this.#applyEraTheme();
+  }
+
+  /** Saison et neige au sol : le terrain et les arbres sont redessinés quand l'une ou l'autre change. */
+  #updateSeason(state, redraw) {
+    const month = Math.floor(state.time.tick / 30) % 12;
+    const season = seasonKey(month);
+    const cover = state.weather?.snowCover ?? 0;
+    const level = cover >= 0.7 ? 2 : cover >= 0.3 ? 1 : 0;
+    if (season === this.season && level === this.snowLevel) return;
+    this.season = season;
+    this.snowLevel = level;
+    if (!redraw || !this.terrainLayer) return;
+    this.terrainLayer.markAll();
+    const grid = state.grid;
+    for (let d = 0; d <= grid.width + grid.height - 2; d++) this.dirtyTrees.add(d);
+  }
+
+  /** Options des effets visuels (paramètres). */
+  setEffects(options) {
+    this.effects?.setOptions(options);
   }
 
   /** Ambiance de l'ère : ciel légèrement plus bleuté à mesure que la ville se transforme. */
@@ -162,7 +225,8 @@ export class Renderer {
 
   #drawTerrainChunk(g, x0, y0, x1, y1) {
     const grid = this.session.state.grid;
-    this.#forEachDiagonal(x0, y0, x1, y1, (x, y) => drawTerrainTile(g, grid, x, y, { gridLines: this.gridLines }));
+    const snow = [0, 0.5, 0.85][this.snowLevel];
+    this.#forEachDiagonal(x0, y0, x1, y1, (x, y) => drawTerrainTile(g, grid, x, y, { gridLines: this.gridLines, snow, season: this.season }));
   }
 
   #drawGroundChunk(g, x0, y0, x1, y1) {
@@ -202,11 +266,12 @@ export class Renderer {
       this.layers.objects.addChild(g);
     }
     g.clear();
+    const tint = foliageTint(this.season, [0, 0.5, 0.9][this.snowLevel]);
     for (let x = Math.max(0, d - (grid.height - 1)); x <= Math.min(grid.width - 1, d); x++) {
       const y = d - x;
       const i = grid.idx(x, y);
       if (grid.terrain[i] !== TERRAIN.FOREST || grid.building[i] || grid.road[i]) continue;
-      for (const t of forestTrees(x, y, grid.altitude[i])) drawTree(g, t.x, t.y, t.s, 0x3a7f37);
+      for (const t of forestTrees(x, y, grid.altitude[i])) drawTree(g, t.x, t.y, t.s, tint);
     }
   }
 
@@ -219,6 +284,9 @@ export class Renderer {
         g.destroy();
         this.buildingGfx.delete(id);
       }
+      this.constructing.delete(id);
+      this.drawnDef.delete(id);
+      this.effects?.removeBuilding(id);
       return;
     }
     if (!g) {
@@ -229,8 +297,24 @@ export class Renderer {
     g.clear();
     const def = this.catalog.building(b.defId);
     const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
-    drawBuilding(g, def, b, alt);
+    const tick = state.time.tick;
+    // Montée de niveau d'un bâtiment de zone : courte rénovation sous échafaudage
+    const before = this.drawnDef.get(id);
+    if (before && before !== b.defId && def.kind === 'growable' && this.effects?.options.effects) this.constructing.set(id, tick + 6);
+    this.drawnDef.set(id, b.defId);
+    let end = this.effects?.constructionEnd(def, b, tick) ?? 0;
+    if (!end && this.constructing.get(id) > tick) end = this.constructing.get(id);
     g.zIndex = (b.x + b.w - 1 + b.y + b.h - 1) * 10 + 5;
+    if (end) {
+      const total = Math.max(1, end - Math.min(b.builtTick, end - 6));
+      drawConstructionSite(g, def, b, alt, Math.min(1, 1 - (end - tick) / total));
+      this.constructing.set(id, end);
+    } else {
+      drawBuilding(g, def, b, alt);
+      this.constructing.delete(id);
+    }
+    this.effects?.setCrane(b, def, alt, !!end, g.zIndex);
+    this.effects?.drawLights(b, def, alt);
     const L = gridToWorld(b.x, b.y + b.h, alt);
     const R = gridToWorld(b.x + b.w, b.y, alt);
     const B = gridToWorld(b.x + b.w, b.y + b.h, alt);
@@ -410,8 +494,9 @@ export class Renderer {
    * @param {number} dtMs
    * @param {{paused:boolean}} opts
    */
-  render(dtMs, { paused = false } = {}) {
+  render(dtMs, { paused = false, speedIndex = 1 } = {}) {
     if (!this.app || !this.session) return;
+    this.speedIndex = speedIndex;
     const t0 = performance.now();
     const state = this.session.state;
 
@@ -454,8 +539,14 @@ export class Renderer {
       }
       this.lastCameraVersion = cam.version;
     }
+    // Chantiers livrés : le bâtiment définitif remplace l'échafaudage
+    if (this.constructing.size) {
+      for (const [id, end] of this.constructing) if (state.time.tick >= end) this.dirtyBuildings.add(id);
+    }
+    this.vehicles.night = this.effects?.night ?? 0;
     this.vehicles.update(state, dtMs, rect, paused);
     this.trains.update(state, this.catalog, rect, dtMs, paused);
+    this.effects?.update({ state, catalog: this.catalog, camera: cam, view: this.view, rect, dtMs, paused, speedIndex: this.speedIndex ?? 1, buildingGfx: this.buildingGfx });
     this.app.renderer.render(this.app.stage);
     const frame = performance.now() - t0;
     this.stats.frameMs = this.stats.frameMs * 0.9 + frame * 0.1;

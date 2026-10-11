@@ -1,7 +1,11 @@
 import { h } from './dom.js';
 import { lineChart, meter } from './charts.js';
 import { formatNumber } from '../util/money.js';
-import { MONTH_NAMES, SIM } from '../simulation/config.js';
+import { MONTH_NAMES, SIM, formatDate } from '../simulation/config.js';
+import { WEATHER, SEASONS, weatherEffectLabels } from '../simulation/WeatherSystem.js';
+import { CRISIS_TYPES, CRISIS_KINDS, DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
+import { confirmDialog } from './Dialog.js';
+import { formatMoney } from '../util/money.js';
 
 const pct = (v) => `${Math.round((v || 0) * 100)} %`;
 const row = (label, value, cls = '') => h('div.kv', h('span', label), h('strong', { class: cls }, value));
@@ -11,8 +15,11 @@ const monthLabel = (mi) => `${MONTH_NAMES[mi % 12]} ${String(SIM.START_YEAR + Ma
  * Tableau de bord de la ville : population, emploi, demande, énergie, eau, mobilité, environnement.
  */
 export class CityPanel {
-  constructor({ onFocus, getRenderStats }) {
+  constructor({ onFocus, getRenderStats, getHostStats, execute, notify }) {
     this.getRenderStats = getRenderStats;
+    this.getHostStats = getHostStats;
+    this.execute = execute;
+    this.notify = notify;
     this.id = 'city';
     this.title = 'Tableau de bord de la ville';
     this.onFocus = onFocus;
@@ -23,6 +30,7 @@ export class CityPanel {
       { id: 'transit', label: 'Transports en commun' },
       { id: 'waste', label: 'Déchets' },
       { id: 'progression', label: 'Progression' },
+      { id: 'risks', label: 'Risques et météo' },
       { id: 'trends', label: 'Évolution' },
       { id: 'perf', label: 'Performance' }
     ];
@@ -35,6 +43,7 @@ export class CityPanel {
     if (tab === 'transit') return this.#transit(s);
     if (tab === 'waste') return this.#waste(s);
     if (tab === 'progression') return this.#progression(session);
+    if (tab === 'risks') return this.#risks(session);
     if (tab === 'trends') return this.#trends(s);
     if (tab === 'perf') return this.#perf(session);
     return this.#people(s);
@@ -239,10 +248,72 @@ export class CityPanel {
     ];
   }
 
+  #risks(session) {
+    const s = session.state;
+    const w = s.weather ?? {};
+    const info = WEATHER[w.kind] ?? WEATHER.clear;
+    const month = Math.floor(s.time.tick / 30) % 12;
+    const crises = s.crises ?? { active: [], history: [] };
+    const level = s.options?.disasters ?? 'off';
+    const effects = weatherEffectLabels(w);
+    const trigger = async (kind) => {
+      const type = CRISIS_TYPES[kind];
+      if (!(await confirmDialog(`Déclencher volontairement : ${type.name} ?`, { confirmLabel: 'Déclencher', danger: true }))) return;
+      const r = this.execute({ type: 'triggerDisaster', kind });
+      if (!r?.ok) this.notify('warning', r?.reason ?? 'Impossible pour le moment');
+    };
+    return [
+      h('div.grid2',
+        h('section',
+          h('h3', 'Météo'),
+          h('div.weather-now', h('span.weather-big', { 'aria-hidden': 'true' }, info.icon), h('div', h('strong', info.label), h('small', `${String(w.temp ?? '–').replace('.', ',')} °C · ${SEASONS[month]}`))),
+          effects.length ? h('ul.plain', effects.map((e) => h('li', e))) : h('p.hint', 'Aucun effet notable sur la ville.'),
+          row('Pluie des derniers jours', (w.rain7 ?? 0) >= 2.6 ? 'sols saturés : risque de crue' : (w.rain7 ?? 0) >= 1.5 ? 'sols humides' : 'faible', (w.rain7 ?? 0) >= 2.6 ? 'neg' : ''),
+          (w.snowCover ?? 0) > 0.05 ? row('Neige au sol', pct(w.snowCover)) : null
+        ),
+        h('section',
+          h('h3', 'Crises en cours'),
+          crises.active.length
+            ? h('ul.plain', crises.active.map((c) => h('li', `${CRISIS_TYPES[c.kind].icon} ${CRISIS_TYPES[c.kind].name} — depuis le ${formatDate(c.start)}${c.response ? ` · réponse : ${CRISIS_TYPES[c.kind].responses.find((r) => r.id === c.response)?.label}` : ' · décision en attente'}`,
+              Number.isInteger(c.x) ? h('button.link', { type: 'button', on: { click: () => this.onFocus(c.x, c.y) } }, ' Voir') : null)))
+            : h('p.hint', 'Aucune crise en cours.'),
+          h('h3', 'Dernières crises'),
+          crises.history.length
+            ? h('ul.plain', crises.history.slice(-8).reverse().map((c) => h('li', h('strong', `${CRISIS_TYPES[c.kind]?.icon ?? ''} ${c.label}`), h('small', ` ${formatDate(c.start)}${c.summary ? ` · ${c.summary}` : ''}`))))
+            : h('p.hint', 'Aucune crise pour le moment.'),
+          row('Dépenses de crise (mois en cours)', formatMoney(s.economy.current?.opex?.crisis ?? 0))
+        )
+      ),
+      h('section',
+        h('h3', 'Risques du mois'),
+        row('Fréquence des catastrophes', DISASTER_LEVEL_LABELS[level] ?? level),
+        level === 'off' ? h('p.hint', 'Catastrophes désactivées (Menu → Paramètres pour les réactiver).') : null,
+        h('table.fin.compact.risk-table',
+          h('thead', h('tr', h('th', 'Crise'), h('th.num', 'Risque / mois'), h('th', 'Prévention'))),
+          h('tbody', CRISIS_KINDS.map((k) => {
+            const p = session.sim.crises.monthlyRisk(s, k);
+            const t = CRISIS_TYPES[k];
+            const cls = p > 0.1 ? 'neg' : p > 0.03 ? 'warn' : '';
+            return h('tr', h('td', `${t.icon} ${t.name}`), h('td.num', { class: cls }, p < 0.001 ? '—' : `${(p * 100).toFixed(p < 0.1 ? 1 : 0).replace('.', ',')} %`), h('td', h('small', t.mitigation)));
+          }))
+        ),
+        h('details.factors', h('summary', 'Ce qui fait monter les risques'), h('ul.plain', CRISIS_KINDS.map((k) => h('li', h('strong', `${CRISIS_TYPES[k].name} : `), CRISIS_TYPES[k].factors)))),
+        h('details.trigger',
+          h('summary', 'Déclencher une catastrophe'),
+          h('p.hint', 'Comme dans les SimCity : pour tester la résistance de la ville. Les dégâts sont réels.'),
+          h('div.debug-actions', CRISIS_KINDS.map((k) => h('button.btn', { type: 'button', on: { click: () => trigger(k) } }, `${CRISIS_TYPES[k].icon} ${CRISIS_TYPES[k].name}`)))
+        )
+      )
+    ];
+  }
+
   #perf(session) {
     const t = session.sim.timings;
     const r = this.getRenderStats?.() ?? {};
+    const hs = this.getHostStats?.();
     return [
+      hs ? row('Simulation', hs.kind === 'worker' ? `Web Worker (arrière-plan) · ${formatNumber(hs.snapshots)} synchronisations · ${hs.applyMs.toFixed(2)} ms chacune` : 'fil principal') : null,
+      hs?.kind === 'worker' ? row('Jours en attente / abandonnés', `${hs.backlog} / ${formatNumber(hs.dropped)}`) : null,
       h('p.hint', 'Temps de calcul moyens mesurés sur cette machine (moyenne glissante).'),
       h('table.fin.compact', h('thead', h('tr', h('th', 'Sous-système'), h('th.num', 'ms par exécution'))),
         h('tbody', Object.entries(t).map(([k, v]) => h('tr', h('td', k), h('td.num', v.toFixed(2)))))),

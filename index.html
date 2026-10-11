@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="URBIS 2030" />
     <meta name="theme-color" content="#1d2730" />
     <meta name="description" content="URBIS 2030 — construisez et administrez une ville transformée par l'intelligence artificielle." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <title>URBIS 2030</title>
   </head>
   <body>
@@ -25,6 +28,7 @@
         <div id="paused-badge" aria-hidden="true">Pause</div>
         <div id="tool-chip" role="status" hidden></div>
         <section id="objectives" aria-label="Objectifs" hidden></section>
+        <div id="crisis" aria-live="assertive" hidden></div>
         <div id="fps-meter" aria-hidden="true" hidden></div>
       </main>
       <div id="cursor-tip" hidden></div>

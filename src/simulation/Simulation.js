@@ -13,6 +13,9 @@ import { WasteSystem } from './WasteSystem.js';
 import { TransitSystem } from './TransitSystem.js';
 import { ProgressionSystem } from './ProgressionSystem.js';
 import { RouteService } from '../systems/RouteService.js';
+import { WeatherSystem } from './WeatherSystem.js';
+import { CrisisSystem } from './CrisisSystem.js';
+import { ScenarioSystem } from './ScenarioSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -41,6 +44,9 @@ export class Simulation {
     this.transit = new TransitSystem({ catalog, network: this.network });
     this.progression = new ProgressionSystem({ bus });
     this.routes = new RouteService({ network: this.network });
+    this.weather = new WeatherSystem({ bus });
+    this.crises = new CrisisSystem({ catalog, economy: this.economy, bus });
+    this.scenario = new ScenarioSystem({ bus });
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -106,6 +112,8 @@ export class Simulation {
 
     state.time.tick++;
     this.events.daily(state);
+    this.weather.daily(state);
+    this.crises.daily(state);
 
     if (state.time.tick % SIM.DAYS_PER_MONTH === 0) this.#monthEnd(state);
     this.bus?.emit('sim:tick', { tick: state.time.tick });
@@ -140,6 +148,7 @@ export class Simulation {
     s.departures = 0;
     this.progression.monthly(state);
     this.events.monthly(state);
+    this.scenario.monthly(state);
     state.dirty.modifiers = true;
     this.bus?.emit('sim:month', { period, summary: sum });
   }

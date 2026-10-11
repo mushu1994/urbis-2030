@@ -14,7 +14,8 @@ async function place(page, defId) {
   return page.evaluate((defId) => {
     const app = window.__urbis;
     const s = app.session;
-    s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation, 5000);
+    // Déblocage par la commande de débogage (la simulation peut tourner dans un Web Worker)
+    s.execute({ type: 'debug', op: 'unlock', population: 5000 });
     for (let y = 6; y < s.state.grid.height - 6; y++) {
       for (let x = 6; x < s.state.grid.width - 6; x++) {
         const r = s.execute({ type: 'building', defId, x, y });

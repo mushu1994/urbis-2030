@@ -8,7 +8,8 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     viewport: { width: 1100, height: 720 },
     actionTimeout: 60_000,
-    launchOptions: { args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] }
+    // PW_CHROMIUM : chemin d'un Chromium déjà installé (sinon `npx playwright install chromium`)
+    launchOptions: { args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}) }
   },
   webServer: {
     command: 'npx vite --port 5173 --strictPort',

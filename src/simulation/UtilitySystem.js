@@ -238,7 +238,7 @@ export class UtilitySystem {
       const staffing = def.capacity.jobs ? 0.5 + 0.5 * Math.min(1, b.jobsFilled / def.capacity.jobs) : 1;
       if (def.capacity.waterOutput && b.powered && !b.abandoned) wSupply[c] += def.capacity.waterOutput * staffing;
       if (def.capacity.sewageTreatment && b.powered && !b.abandoned) treat[c] += def.capacity.sewageTreatment * staffing;
-      const need = def.networks.water * this.activity(b, def);
+      const need = def.networks.water * this.activity(b, def) * (def.kind === 'growable' ? mods.waterDemandMult ?? 1 : 1);
       b.waterNeed = need;
       wDemand[c] += need;
     }

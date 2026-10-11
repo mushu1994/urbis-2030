@@ -76,7 +76,7 @@ test('pont, bus, couches, progression, tutoriel et débogage depuis l\'interface
   // Bus : dépôt et arrêt posés depuis la barre d'outils
   const town = await page.evaluate(() => {
     const s = window.__urbis.session;
-    s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation, 500);
+    s.execute({ type: 'debug', op: 'unlock', population: 500 });
     const find = (defId) => {
       for (let y = 10; y < 54; y++) for (let x = 6; x < 34; x++) if (s.preview({ type: 'building', defId, x, y }).ok) return { x, y };
       return null;
@@ -197,8 +197,7 @@ test('pas de duplication d\'objets graphiques ni de fuite mémoire importante', 
     const app = window.__urbis;
     const s = app.session;
     const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
-    s.state.economy.treasury += 1e9;
-    s.state.economy.opening += 1e9;
+    s.execute({ type: 'debug', op: 'treasury', euros: 1e7 });
     const spots = [];
     for (let y = 2; y < 62 && spots.length < 30; y++) for (let x = 2; x < 62 && spots.length < 30; x++) {
       if (s.preview({ type: 'building', defId: 'park_small', x, y }).ok) spots.push({ x, y });
@@ -213,7 +212,7 @@ test('pas de duplication d\'objets graphiques ni de fuite mémoire importante', 
       await frame();
       counts.push({ sim: s.state.buildings.size, gfx: app.renderer.buildingGfx.size, children: app.renderer.layers.objects.children.length });
     }
-    s.run(360);
+    await s.run(360);
     await frame();
     await frame();
     const heap1 = performance.memory?.usedJSHeapSize ?? 0;

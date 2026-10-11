@@ -1,6 +1,8 @@
 import { h, setChildren } from './dom.js';
 import { formatMoney, formatNumber } from '../util/money.js';
 import { confirmDialog, textDialog, pasteDialog } from './Dialog.js';
+import { CHALLENGES } from '../app/challenges.js';
+import { DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -25,6 +27,7 @@ export const SHORTCUTS = [
   ['F', 'Plein écran (ou mode immersif quand le navigateur l\'interdit)'],
   ['F3', 'Outils de débogage'],
   ['M', 'Menu principal'],
+  ['N', 'Couper ou rétablir le son'],
   ['H', 'Aide']
 ];
 
@@ -70,7 +73,9 @@ export class HelpPanel {
       h('li', h('strong', 'Gérez les déchets. '), 'Un centre de collecte près des quartiers et une décharge ou un incinérateur. Les déchets non collectés font baisser la satisfaction et bloquent les nouveaux niveaux.'),
       h('li', h('strong', 'Développez les transports en commun. '), 'Un dépôt de bus puis des arrêts reliés par la route ; plus tard métro, gare et hyperboucle. Moins de voitures, des trajets plus courts.'),
       h('li', h('strong', 'Franchissez l\'eau. '), 'Une rue tracée en ligne droite d\'une rive à l\'autre devient un pont.'),
-      h('li', h('strong', 'Faites entrer la ville dans le futur. '), 'Technologies (I), puis ères « Ville autonome » et « Ville symbiotique » (C → Progression) : elles débloquent des bâtiments et des niveaux d\'habitation futuristes.')
+      h('li', h('strong', 'Faites entrer la ville dans le futur. '), 'Technologies (I), puis ères « Ville autonome » et « Ville symbiotique » (C → Progression) : elles débloquent des bâtiments et des niveaux d\'habitation futuristes.'),
+      h('li', h('strong', 'Suivez la météo. '), 'Pluie, neige, brouillard, orages et fortes chaleurs changent la consommation d\'énergie, la circulation, la production solaire et le coût du déneigement (icône météo en haut).'),
+      h('li', h('strong', 'Préparez-vous aux crises. '), 'Inondations, canicules, incendies, pannes géantes, grèves et cyberattaques : chacune se prévient (casernes, parcs en bord de rivière, réserve électrique, politiques) et se gère par une décision chiffrée. Tableau de bord (C) → Risques et météo.')
     ));
   }
 }
@@ -134,9 +139,12 @@ export class SavesPanel {
 }
 
 export class SettingsPanel {
-  constructor({ settings, apply, onShowObjectives, onDebug }) {
+  constructor({ settings, apply, onShowObjectives, onDebug, execute, getSession, audio }) {
     this.onShowObjectives = onShowObjectives;
     this.onDebug = onDebug;
+    this.execute = execute;
+    this.getSession = getSession;
+    this.audio = audio;
     this.id = 'settings';
     this.title = 'Paramètres';
     this.static = true;
@@ -144,13 +152,40 @@ export class SettingsPanel {
     this.apply = apply;
   }
 
-  render() {
-    const toggle = (key, label) => h('label.check', h('input', { type: 'checkbox', checked: !!this.settings.get(key), on: { change: (e) => { this.settings.set(key, e.target.checked); this.apply(); } } }), label);
+  render(_session, _tab, rerender) {
+    const toggle = (key, label, def = false) => h('label.check', h('input', { type: 'checkbox', checked: this.settings.get(key) === undefined ? def : !!this.settings.get(key), on: { change: (e) => { this.settings.set(key, e.target.checked); this.apply(); } } }), label);
+    const slider = (key, label, def) => {
+      const v = Number(this.settings.get(key) ?? def);
+      const out = h('output', `${Math.round(v * 100)} %`);
+      return h('label.setting.slider', h('span', label),
+        h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: v, 'aria-label': label, on: { input: (e) => { this.settings.set(key, Number(e.target.value)); out.textContent = `${Math.round(Number(e.target.value) * 100)} %`; this.apply(); } } }),
+        out);
+    };
+    const session = this.getSession?.();
+    const disasters = session
+      ? h('label.setting', h('span', 'Catastrophes et crises (partie en cours)'),
+        h('select', { 'aria-label': 'Fréquence des catastrophes', on: { change: (e) => { this.execute({ type: 'option', key: 'disasters', value: e.target.value }); rerender?.(); } } },
+          Object.entries(DISASTER_LEVEL_LABELS).map(([v, l]) => h('option', { value: v, selected: session.state.options?.disasters === v }, l))))
+      : null;
     const select = (key, label, options) =>
       h('label.setting', h('span', label),
         h('select', { 'aria-label': label, on: { change: (e) => { this.settings.set(key, e.target.value === 'auto' ? 'auto' : Number(e.target.value)); this.apply(); } } },
           options.map(([v, l]) => h('option', { value: v, selected: String(this.settings.get(key)) === String(v) }, l))));
     return h('div.settings',
+      h('h3', 'Son'),
+      toggle('muted', 'Couper tout le son (N)'),
+      slider('volumeMaster', 'Volume général', 0.8),
+      slider('volumeMusic', 'Musique', 0.5),
+      slider('volumeSfx', 'Effets sonores', 0.7),
+      slider('volumeAmbience', 'Ambiance de la ville', 0.6),
+      this.audio && !this.audio.supported ? h('p.hint', 'Ce navigateur ne permet pas de jouer du son.') : null,
+      h('h3', 'Partie'),
+      disasters,
+      toggle('pauseOnCrisis', 'Mettre en pause quand une crise exige une décision', true),
+      h('h3', 'Effets visuels'),
+      toggle('dayNight', 'Cycle jour et nuit (fenêtres et lampadaires allumés)', true),
+      toggle('weatherFx', 'Météo visible (pluie, neige, brouillard, éclairs)', true),
+      toggle('effects', 'Chantiers animés, fumées et incendies', true),
       h('h3', 'Affichage'),
       select('uiScale', 'Taille de l\'interface', [[0.9, '90 %'], [1, '100 %'], [1.15, '115 %'], [1.3, '130 %']]),
       select('renderScale', 'Qualité graphique (résolution)', [['auto', 'Automatique'], [1, 'Haute'], [0.75, 'Moyenne'], [0.5, 'Économie']]),
@@ -160,6 +195,9 @@ export class SettingsPanel {
       h('h3', 'Commandes'),
       toggle('edgeScroll', 'Défilement de la carte au bord de l\'écran'),
       toggle('confirmDemolish', 'Demander confirmation avant une démolition coûteuse'),
+      h('h3', 'Performances'),
+      toggle('simWorker', 'Simulation en arrière-plan (Web Worker) : l\'affichage reste fluide pendant les calculs', true),
+      h('p.hint', 'Prend effet au prochain chargement ou à la prochaine partie.'),
       h('h3', 'Aide et développement'),
       h('div.debug-actions',
         this.onShowObjectives ? h('button.btn', { on: { click: () => this.onShowObjectives() } }, 'Afficher les objectifs guidés') : null,
@@ -173,8 +211,10 @@ export class SettingsPanel {
  * Écran d'accueil : nouvelle partie, reprise, chargement.
  */
 export class StartMenu {
-  constructor(root, { onNew, onContinue, onLoad, onClose, saves }) {
+  constructor(root, { onNew, onContinue, onLoad, onClose, saves, install }) {
     this.root = root;
+    this.install = install;
+    this.tab = 'new';
     this.onNew = onNew;
     this.onContinue = onContinue;
     this.onLoad = onLoad;
@@ -190,6 +230,8 @@ export class StartMenu {
     const mode = h('select', { 'aria-label': 'Départ' },
       h('option', { value: 'empty' }, 'Terrain vierge'),
       h('option', { value: 'town' }, 'Bourg existant (déjà construit selon les règles du jeu)'));
+    const disasters = h('select', { 'aria-label': 'Catastrophes' },
+      Object.entries(DISASTER_LEVEL_LABELS).map(([v, l]) => h('option', { value: v, selected: v === 'normal' }, l)));
     let latest = null;
     let items = [];
     try {
@@ -198,17 +240,35 @@ export class StartMenu {
     } catch {
       /* IndexedDB indisponible : on propose seulement une nouvelle partie */
     }
+    const stars = (n) => h('span.stars', { 'aria-label': `Difficulté ${n} sur 4` }, '★'.repeat(n), h('span.off', '★'.repeat(4 - n)));
+    const scenarios = h('div.scenario-list',
+      CHALLENGES.map((c) => h('article.scenario-card',
+        h('header', h('h3', c.name), stars(c.difficulty)),
+        h('p', c.pitch),
+        h('ul', c.goalsText.map((g) => h('li', g))),
+        h('p.hint', `${c.years} ans · ${c.size} × ${c.size}${c.failText ? ` · ${c.failText}` : ''}`),
+        h('button.btn.primary', { type: 'button', on: { click: () => { this.hide(); this.onNew({ mode: 'scenario', scenarioId: c.id, name: c.name, seed: c.seed ?? (Number(seed.value) || 2030), size: c.size, disasters: c.disasters }); } } }, 'Relever le défi')
+      ))
+    );
+    const installBox = this.#installBox();
+    const tabs = h('nav.menu-tabs', { role: 'tablist' },
+      [['new', 'Nouvelle partie'], ['scenarios', 'Scénarios et défis']].map(([id, label]) =>
+        h('button.menu-tab', { type: 'button', role: 'tab', 'aria-selected': String(this.tab === id), class: this.tab === id ? 'active' : '', on: { click: () => { this.tab = id; this.show({ canResume }); } } }, label)));
+    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value }); } } },
+      h('h2', 'Nouvelle partie'),
+      h('label', 'Nom de la ville', name),
+      h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
+      h('label', 'Départ', mode),
+      h('label', 'Catastrophes', disasters),
+      h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville')
+    );
     setChildren(this.root,
       h('div.menu-card',
         h('div.menu-brand', h('h1', 'URBIS', h('span', '2030')), h('p', 'Bâtissez, financez et administrez une ville transformée par l\'intelligence artificielle.')),
-        h('div.menu-cols',
-          h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value }); } } },
-            h('h2', 'Nouvelle partie'),
-            h('label', 'Nom de la ville', name),
-            h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
-            h('label', 'Départ', mode),
-            h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville')
-          ),
+        tabs,
+        this.tab === 'scenarios' ? scenarios : null,
+        h('div.menu-cols', { hidden: this.tab === 'scenarios' },
+          newForm,
           h('div.menu-load',
             h('h2', 'Reprendre'),
             canResume ? h('button.btn.big', { on: { click: () => { this.hide(); this.onClose(); } } }, 'Retour à la partie en cours') : null,
@@ -216,9 +276,30 @@ export class StartMenu {
             items.slice(1, 5).map((it) => h('button.btn.ghost', { on: { click: () => { this.hide(); this.onLoad(it.id); } } }, it.name, h('small', ` ${it.summary.date}`)))
           )
         ),
+        installBox,
         h('p.menu-foot', 'Toutes les données restent dans votre navigateur. Aucun compte, aucun service distant.')
       )
     );
+    this.offInstall?.();
+    this.offInstall = this.install?.onChange(() => {
+      const box = this.#installBox();
+      this.root.querySelector('.install-box')?.replaceWith(box ?? h('span.install-box'));
+    });
+  }
+
+  /** Encart d'installation de l'application (Android / ordinateur : bouton ; iPhone : marche à suivre). */
+  #installBox() {
+    const mode = this.install?.mode;
+    if (mode === 'prompt') {
+      return h('div.install-box',
+        h('div', h('strong', 'Installer URBIS 2030'), h('small', 'Jeu en plein écran, disponible hors ligne, lancé depuis l\'écran d\'accueil.')),
+        h('button.btn.primary', { type: 'button', on: { click: () => this.install.prompt() } }, 'Installer'));
+    }
+    if (mode === 'ios') {
+      return h('div.install-box',
+        h('div', h('strong', 'Installer sur iPhone ou iPad'), h('small', 'Dans Safari : bouton Partager ', h('span.ios-share', { 'aria-hidden': 'true' }, '⬆'), ' puis « Sur l\'écran d\'accueil ». Le jeu s\'ouvrira en plein écran, même hors ligne.')));
+    }
+    return h('span.install-box', { hidden: true });
   }
 
   hide() {

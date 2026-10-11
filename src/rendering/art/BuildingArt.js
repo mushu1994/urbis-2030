@@ -93,6 +93,11 @@ function drawBuildingBody(g, def, b, alt) {
     base = shade(desaturate(base, 0.85), 0.72);
     roof = shade(desaturate(roof, 0.85), 0.65);
   }
+  if (b.burning) {
+    // Incendie en cours : façades noircies
+    base = shade(desaturate(base, 0.7), 0.45);
+    roof = shade(desaturate(roof, 0.7), 0.35);
+  }
   const { T, R, B, L } = footprintCorners(b.x, b.y, b.w, b.h, alt, inset);
   const H = v.height;
   const seed = b.id * 13;
@@ -214,10 +219,7 @@ function drawBuildingBody(g, def, b, alt) {
       const cw = d === 'stacks' ? 4 : 3;
       g.rect(p.x - cw, p.y - ch, cw * 2, ch).fill(b.abandoned ? 0x6b6b6b : 0x8c8c8c);
       if (d === 'stacks') g.rect(p.x - cw, p.y - ch, cw * 2, 5).fill(0xc84b3c);
-      if (!b.abandoned) {
-        g.circle(p.x + 2, p.y - ch - 5, 4).fill({ color: 0xdedede, alpha: 0.55 });
-        g.circle(p.x + 6, p.y - ch - 10, 5).fill({ color: 0xdedede, alpha: 0.35 });
-      }
+      // Fumée : particules animées (EffectsRenderer)
     }
   }
   if (d === 'solar') {

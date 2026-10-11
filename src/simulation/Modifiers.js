@@ -1,4 +1,5 @@
 import { SIM } from './config.js';
+import { weatherEffects } from './WeatherSystem.js';
 
 /**
  * Modificateurs globaux appliqués par les technologies, les politiques et les événements.
@@ -41,7 +42,15 @@ export const DEFAULT_MODIFIERS = Object.freeze({
   'waste.recycleMult': 1,
   'transit.ridershipMult': 1,
   'transit.busCapacityMult': 1,
-  'transit.fareMult': 1
+  'transit.fareMult': 1,
+  waterDemandMult: 1,
+  /** Multiplicateurs de risque des crises (1 = risque normal ; < 1 = atténué par une politique). */
+  'risk.flood': 1,
+  'risk.heat': 1,
+  'risk.cyber': 1,
+  'risk.blackout': 1,
+  'risk.strike': 1,
+  'risk.fire': 1
 });
 
 /** Un bâtiment est-il en état de fonctionner (ni abandonné, ni arrêté par un incident) ? */
@@ -120,6 +129,12 @@ export function computeModifiers(state, catalog) {
 
   for (const ev of state.events.active) {
     if (ev.effects) applyEffects(mods, ev.effects);
+  }
+
+  // Météo du jour et crises en cours
+  if (state.weather) applyEffects(mods, weatherEffects(state.weather));
+  for (const c of state.crises?.active ?? []) {
+    if (c.effects?.length) applyEffects(mods, c.effects);
   }
 
   // Effets à l'échelle de la ville de certains équipements (port, aéroport, stade, musée…)

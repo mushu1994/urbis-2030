@@ -3,6 +3,8 @@ import { formatMoney, formatNumber } from '../util/money.js';
 import { formatDate } from '../simulation/config.js';
 import { SPEEDS } from '../simulation/SimulationClock.js';
 import { EconomySystem } from '../simulation/EconomySystem.js';
+import { WEATHER, SEASONS } from '../simulation/WeatherSystem.js';
+import { CRISIS_TYPES } from '../simulation/CrisisSystem.js';
 
 const DEMANDS = [
   ['R', 'Résidentiel', 'var(--zone-r)'],
@@ -24,6 +26,7 @@ export class HUD {
     this.actions = actions;
     this.cityName = h('button.hud-city', { on: { click: actions.onMenu }, title: 'Menu (M)' }, icon('menu', 16), h('span'));
     this.date = h('div.hud-date');
+    this.weather = h('button.hud-weather', { type: 'button', title: 'Météo — ouvrir les risques et la météo', on: { click: () => actions.onWeather?.() } });
     this.speedBtns = SPEEDS.map((s, i) =>
       h('button.hud-speed', { title: `${s.label} (${i === 0 ? 'Espace' : i})`, 'aria-label': s.label, on: { click: () => actions.onSpeed(i) } }, icon(['pause', 'play', 'fast', 'ultra'][i], 15))
     );
@@ -43,11 +46,12 @@ export class HUD {
     );
     this.alerts = h('button.hud-alerts', { on: { click: () => actions.onOpenPanel('city') }, title: 'Alertes — ouvrir le tableau de bord de la ville' });
     this.undo = h('button.hud-icon', { title: 'Annuler la dernière action (Ctrl+Z)', 'aria-label': 'Annuler', on: { click: actions.onUndo } }, icon('undo', 17));
+    this.mute = h('button.hud-icon.hud-mute', { title: 'Couper le son (N)', 'aria-label': 'Couper le son', 'aria-pressed': 'false', on: { click: () => actions.onMute?.() } }, icon('sound', 17));
     this.fullscreen = h('button.hud-icon.hud-fullscreen', { title: 'Plein écran (F)', 'aria-label': 'Plein écran', 'aria-pressed': 'false', on: { click: actions.onFullscreen } }, icon('expand', 17));
 
     root.append(
       this.cityName,
-      h('div.hud-group.hud-time', this.date, h('div.hud-speeds', this.speedBtns)),
+      h('div.hud-group.hud-time', h('div.hud-dateline', this.date, this.weather), h('div.hud-speeds', this.speedBtns)),
       h('button.hud-group.hud-money', { on: { click: () => actions.onOpenPanel('finance') }, title: 'Finances (B)' }, h('span.hud-label', 'Trésorerie'), this.treasury, this.net),
       h('div.hud-break', { 'aria-hidden': 'true' }),
       h('button.hud-group.hud-pop', { on: { click: () => actions.onOpenPanel('city') }, title: 'Ville (C)' }, h('span.hud-label', 'Habitants'), this.population, this.popSub),
@@ -55,8 +59,16 @@ export class HUD {
       h('div.hud-spacer'),
       this.alerts,
       this.undo,
+      this.mute,
       this.fullscreen
     );
+  }
+
+  setMuted(muted) {
+    this.mute.replaceChildren(icon(muted ? 'mute' : 'sound', 17));
+    this.mute.setAttribute('aria-pressed', String(muted));
+    this.mute.title = muted ? 'Rétablir le son (N)' : 'Couper le son (N)';
+    this.mute.setAttribute('aria-label', this.mute.title);
   }
 
   /** Met à jour l'icône du bouton plein écran. */
@@ -71,6 +83,15 @@ export class HUD {
   update(state, { speedIndex, canUndo }) {
     this.cityName.lastChild.textContent = state.meta.name;
     this.date.textContent = formatDate(state.time.tick);
+    const wx = state.weather;
+    if (wx) {
+      const info = WEATHER[wx.kind] ?? WEATHER.clear;
+      const month = Math.floor(state.time.tick / 30) % 12;
+      const text = `${info.icon} ${Math.round(wx.temp)}°`;
+      if (this.weather.textContent !== text) this.weather.textContent = text;
+      this.weather.title = `${info.label}, ${String(wx.temp).replace('.', ',')} °C — ${SEASONS[month]}. Cliquer pour les effets sur la ville.`;
+      this.weather.setAttribute('aria-label', `Météo : ${info.label}, ${Math.round(wx.temp)} degrés`);
+    }
     this.speedBtns.forEach((b, i) => b.classList.toggle('active', i === speedIndex));
     const eco = state.economy;
     this.treasury.textContent = formatMoney(eco.treasury, { compact: true });
@@ -102,6 +123,7 @@ export class HUD {
     if (w.unwateredBuildings) alerts.push(`${w.unwateredBuildings} sans eau`);
     if (s.abandoned) alerts.push(`${s.abandoned} abandonnés`);
     if (eco.treasury < 0) alerts.push('trésorerie négative');
+    for (const c of state.crises?.active ?? []) alerts.unshift(`${CRISIS_TYPES[c.kind]?.icon ?? ''} ${CRISIS_TYPES[c.kind]?.name ?? c.kind}`);
     this.alerts.textContent = alerts.length ? `⚠ ${alerts[0]}${alerts.length > 1 ? ` (+${alerts.length - 1})` : ''}` : 'Aucune alerte';
     this.alerts.classList.toggle('warn', alerts.length > 0);
     this.undo.disabled = !canUndo;

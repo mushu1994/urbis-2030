@@ -11,6 +11,7 @@ import './styles/main.css';
 import './styles/hud.css';
 import './styles/panels.css';
 import './styles/mobile.css';
+import './styles/features.css';
 import { createDefaultCatalog } from './data/defaultData.js';
 import { GameApp } from './app/GameApp.js';
 
@@ -31,3 +32,10 @@ async function boot() {
 }
 
 boot();
+
+// Application installable hors ligne : le service worker met le jeu en cache (production uniquement).
+if ('serviceWorker' in navigator && import.meta.env.PROD && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Service worker non enregistré :', err));
+  });
+}

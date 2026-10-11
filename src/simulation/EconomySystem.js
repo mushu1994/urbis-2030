@@ -39,7 +39,8 @@ export const CATEGORY_LABELS = {
   clearing: 'Défrichement',
   interest: 'Charges d\'intérêts',
   loan: 'Emprunts',
-  principal: 'Remboursement du capital'
+  principal: 'Remboursement du capital',
+  crisis: 'Crises et catastrophes'
 };
 
 /** Rattachement des catégories de bâtiments aux catégories comptables et aux modificateurs d'entretien. */

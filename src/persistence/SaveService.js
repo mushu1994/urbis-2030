@@ -5,6 +5,8 @@ import { typedToBase64, base64ToTyped, checksum } from '../util/encoding.js';
 import { validateSaveData } from '../data/Validators.js';
 import { CURRENT_FORMAT_VERSION, migrate } from './SaveMigration.js';
 import { formatDate } from '../simulation/config.js';
+import { defaultWeather } from '../simulation/WeatherSystem.js';
+import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
 
 const TRAFFIC_ARRAYS = { acc: Float32Array, cost: Float64Array, jobW: Float64Array, shopW: Float64Array };
 
@@ -40,6 +42,10 @@ export function serializeState(state) {
     progression: { ...state.progression },
     trade: structuredClone(state.trade),
     utilities: structuredClone(state.utilities),
+    weather: structuredClone(state.weather ?? null),
+    crises: structuredClone(state.crises ?? null),
+    scenario: structuredClone(state.scenario ?? null),
+    options: structuredClone(state.options ?? null),
     modifiers: { ...mods, disabledModes: { ...(disabledModes ?? {}) }, compute: compute ? { ...compute } : undefined },
     dirty: { ...state.dirty }
   };
@@ -90,6 +96,10 @@ export function deserializeState(raw) {
   s.progression = data.progression ?? { era: 1, eraSince: 0 };
   s.trade = data.trade ?? defaultTrade();
   s.utilities = data.utilities ?? { power: {}, water: {} };
+  s.weather = data.weather ?? defaultWeather();
+  s.crises = data.crises ?? defaultCrises();
+  s.scenario = data.scenario ?? null;
+  s.options = data.options ?? defaultOptions('off');
   s.modifiers = data.modifiers ?? {};
   s.dirty = { ...s.dirty, ...(data.dirty ?? {}), roads: true, roadReach: true };
   if (!data.modifiers) s.dirty.modifiers = true;
