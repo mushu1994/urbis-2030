@@ -191,6 +191,7 @@ export class SettingsPanel {
       h('h3', 'Commandes'),
       toggle('edgeScroll', 'Défilement de la carte au bord de l\'écran'),
       toggle('confirmDemolish', 'Demander confirmation avant une démolition coûteuse'),
+      toggle('confirmPlacement', 'Valider la pose des bâtiments par un bouton, aussi à la souris (toujours actif au doigt)'),
       h('h3', 'Performances'),
       toggle('simWorker', 'Simulation en arrière-plan (Web Worker) : l\'affichage reste fluide pendant les calculs', true),
       h('p.hint', 'Prend effet au prochain chargement ou à la prochaine partie.'),

@@ -33,16 +33,39 @@ export class ZoningService {
     const all = this.#rectTiles(state, rect);
     const zone = zoneId ? this.catalog.zoneById.get(zoneId) : null;
     const code = zone ? zone.code : 0;
-    const eligible = all.filter((i) => (zone ? canZoneTile(state, i) && g.zone[i] !== code : g.zone[i] !== 0 && !g.building[i]));
+    let eligible;
+    /** Dézonage : bâtiments de zone présents sur les cases (ils sont démolis avec le zonage). */
+    const buildings = [];
+    if (zone) eligible = all.filter((i) => canZoneTile(state, i) && g.zone[i] !== code);
+    else {
+      const set = new Set();
+      for (const i of all) {
+        if (!g.zone[i]) continue;
+        const id = g.building[i];
+        if (!id) {
+          set.add(i);
+          continue;
+        }
+        const b = state.buildings.get(id);
+        // Seuls les bâtiments nés du zonage sont concernés (un équipement public n'a pas de zone)
+        if (!b || this.catalog.building(b.defId).kind === 'plop' || buildings.includes(b)) continue;
+        buildings.push(b);
+        for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) set.add(g.idx(b.x + dx, b.y + dy));
+      }
+      eligible = [...set].sort((a, z) => a - z);
+    }
     const reasons = [];
     if (!eligible.length) reasons.push(zone ? 'noZone' : 'nothing');
-    const cost = zone ? eligible.length * zone.costCents : 0;
+    let cost = zone ? eligible.length * zone.costCents : 0;
+    for (const b of buildings) cost += this.construction.demolitionCost(b);
     if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');
     return {
       ok: reasons.length === 0,
       cost,
       tiles: all,
       eligible,
+      buildings: buildings.map((b) => b.id),
+      residents: buildings.reduce((n, b) => n + (b.residents ?? 0), 0),
       reasons,
       messages: reasons.map((r) => REASONS[r])
     };
@@ -55,7 +78,12 @@ export class ZoningService {
     const zone = params.zoneId ? this.catalog.zoneById.get(params.zoneId) : null;
     const snapshot = this.construction.snapshot(state, pv.eligible);
     const txs = [];
-    if (pv.cost > 0) {
+    let removed = {};
+    if (!zone && pv.buildings.length) {
+      // Dézonage d'une parcelle bâtie : le bâtiment est démoli (frais de démolition)
+      if (pv.cost > 0) txs.push(this.economy.payOpex(state, { amount: pv.cost, category: 'demolition', label: `Dézonage : démolition de ${pv.buildings.length} bâtiment${pv.buildings.length > 1 ? 's' : ''}` }));
+      removed = this.construction.removeBuildings(state, pv.buildings.map((id) => state.buildings.get(id)));
+    } else if (pv.cost > 0) {
       const pay = this.economy.payCapex(state, {
         amount: pv.cost,
         category: 'zoning',
@@ -69,7 +97,7 @@ export class ZoningService {
       g.zone[i] = zone ? zone.code : 0;
       g.touch(i);
     }
-    this.construction.record(state, zone ? `Zonage : ${zone.name}` : 'Dézonage', snapshot, pv.eligible, txs);
+    this.construction.record(state, zone ? `Zonage : ${zone.name}` : 'Dézonage', snapshot, pv.eligible, txs, removed);
     this.bus?.emit('world:changed', { tiles: pv.eligible, reason: 'zone' });
     return { ...pv, ok: true };
   }

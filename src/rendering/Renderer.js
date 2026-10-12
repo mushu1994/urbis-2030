@@ -256,7 +256,12 @@ export class Renderer {
         if (x > 0 && linked(i - 1)) conn |= 8;
         if (x === 0 && road.id === 'road_highway') conn |= 8;
         if (grid.bridge[i]) drawBridgeTile(g, x, y, alt, conn, road.visual);
-        else drawRoadTile(g, x, y, alt, conn, road.visual, { era: state.progression?.era ?? 1 });
+        else {
+          // Dénivelé vers chaque voisin relié (rampe dessinée côté case basse)
+          const d = (n) => grid.surfaceAlt(n) - alt;
+          const rise = [conn & 1 ? d(i - grid.width) : 0, conn & 2 ? d(i + 1) : 0, conn & 4 ? d(i + grid.width) : 0, conn & 8 && x > 0 ? d(i - 1) : 0];
+          drawRoadTile(g, x, y, alt, conn, road.visual, { era: state.progression?.era ?? 1, rise: rise.some((r) => r > 0) ? rise : null });
+        }
       } else if (grid.zone[i] && !grid.building[i]) {
         const z = cat.zoneByCode.get(grid.zone[i]);
         drawZoneTile(g, x, y, alt, z.color, { reachable: grid.roadDist[i] <= ROAD_REACH });

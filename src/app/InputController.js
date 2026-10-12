@@ -151,7 +151,7 @@ export class InputController {
     const touch = d.type !== 'mouse';
     this.tools.up(this.renderer.tileAtScreen(p.x, p.y), { moved: d.moved, screen: p, touch });
     // Au doigt, il n'y a pas de survol : on efface l'aperçu sauf s'il attend une confirmation.
-    if (touch && !this.tools.pendingKey) this.tools.hover(null, { shift: false });
+    if (touch && !this.tools.pending) this.tools.hover(null, { shift: false });
   }
 
   #wheel(e) {
@@ -167,6 +167,7 @@ export class InputController {
     const tag = e.target?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (k === 'Enter' && (tag === 'BUTTON' || tag === 'A')) return; // Entrée active le bouton qui a le focus
     if (down) this.keys.add(k);
     else this.keys.delete(k);
     if (!down) return;

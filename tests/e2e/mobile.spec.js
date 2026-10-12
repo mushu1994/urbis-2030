@@ -54,7 +54,7 @@ test('iPhone : mise en page, gestes tactiles, pose au double appui, mode immersi
   });
   expect(gesture).toEqual({ zoomed: true, panned: true });
 
-  // Poser un square : premier appui = aperçu, second appui = construction
+  // Poser un square : un appui place l'aperçu, le bouton « Valider » construit
   await page.getByRole('button', { name: 'Parcs et loisirs' }).tap();
   await page.locator('.flyout-item', { hasText: 'Square' }).tap();
   const spot = await page.evaluate(() => {
@@ -78,9 +78,9 @@ test('iPhone : mise en page, gestes tactiles, pose au double appui, mode immersi
   const parks = () => page.evaluate(() => [...window.__urbis.session.state.buildings.values()].filter((b) => b.defId === 'park_small').length);
   const before = await parks();
   await page.touchscreen.tap(spot.x, spot.y);
-  await expect(page.locator('#cursor-tip')).toContainText('Touchez à nouveau');
+  await expect(page.locator('#cursor-tip')).toContainText('Valider');
   expect(await parks()).toBe(before);
-  await page.touchscreen.tap(spot.x, spot.y);
+  await page.getByRole('button', { name: /^Valider/ }).tap();
   await expect.poll(parks).toBe(before + 1);
 
   // Plein écran indisponible : repli sur le mode immersif, réversible

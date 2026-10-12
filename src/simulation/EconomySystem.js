@@ -37,6 +37,7 @@ export const CATEGORY_LABELS = {
   policies: 'Politiques publiques',
   demolition: 'Démolitions',
   clearing: 'Défrichement',
+  terraforming: 'Terrassement et plantations',
   interest: 'Charges d\'intérêts',
   loan: 'Emprunts',
   principal: 'Remboursement du capital',

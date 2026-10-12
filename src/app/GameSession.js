@@ -59,13 +59,17 @@ export class GameSession {
       case 'building':
         return this.construction.previewBuilding(s, cmd);
       case 'demolish':
-        return this.construction.previewDemolish(s, cmd.rect);
+        return this.construction.previewDemolish(s, cmd.rect, cmd.filter);
       case 'zone':
         return this.zoning.previewZone(s, cmd);
       case 'deliveryZone':
         return this.zoning.previewDeliveryZone(s, cmd);
       case 'upgrade':
         return this.construction.previewUpgrade(s, cmd);
+      case 'move':
+        return this.construction.previewMove(s, cmd);
+      case 'terraform':
+        return this.construction.previewTerraform(s, cmd);
       default:
         return { ok: false, reasons: ['unknown'], messages: [`Commande inconnue : ${cmd.type}`] };
     }
@@ -96,7 +100,7 @@ export class GameSession {
         r = this.construction.placeBuilding(s, cmd);
         break;
       case 'demolish':
-        r = this.construction.demolish(s, cmd.rect);
+        r = this.construction.demolish(s, cmd.rect, cmd.filter);
         break;
       case 'zone':
         r = this.zoning.applyZone(s, cmd);
@@ -106,6 +110,12 @@ export class GameSession {
         break;
       case 'undo':
         r = this.construction.undo(s);
+        break;
+      case 'move':
+        r = this.construction.moveBuilding(s, cmd);
+        break;
+      case 'terraform':
+        r = this.construction.terraform(s, cmd);
         break;
       case 'upgrade':
         r = this.construction.applyUpgrade(s, cmd);

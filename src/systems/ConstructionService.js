@@ -1,8 +1,29 @@
 import { toCents } from '../util/money.js';
-import { TERRAIN, CLEARING_COST_EUROS } from '../world/Terrain.js';
-import { REASONS, checkBuildingPlacement, checkRoadTile, roadPath, planBridges } from '../world/PlacementSystem.js';
-import { createBuilding, removeBuilding } from './BuildingFactory.js';
+import { TERRAIN, CLEARING_COST_EUROS, MAX_ALTITUDE } from '../world/Terrain.js';
+import { REASONS, checkBuildingPlacement, checkRoadTile, roadPath, planBridges, footprintOf, findAccess } from '../world/PlacementSystem.js';
+import { createBuilding, removeBuilding, markNetworksDirty } from './BuildingFactory.js';
 import { accountForCategory } from '../simulation/EconomySystem.js';
+
+/** Coût de démolition d'une case de route (centimes). */
+export const ROAD_DEMOLITION_CENTS = 500;
+
+/**
+ * Terrassement : opérations et coûts par case (euros). La roche coûte le double à creuser ou remblayer.
+ * - raise / lower : élever ou abaisser d'un niveau ;
+ * - level : aplanir à l'altitude de la case de départ (coût par niveau déplacé) ;
+ * - clear : défricher une forêt ; plant : planter une forêt.
+ */
+export const TERRAFORM = {
+  raise: { label: 'Élever le terrain', euros: 600 },
+  lower: { label: 'Abaisser le terrain', euros: 600 },
+  level: { label: 'Aplanir le terrain', euros: 600 },
+  clear: { label: 'Défricher', euros: CLEARING_COST_EUROS },
+  plant: { label: 'Planter une forêt', euros: 40 }
+};
+
+/** Déplacement d'un équipement : 15 % de son coût de construction (gratuit dans les 30 jours qui suivent la pose). */
+export const MOVE_COST_SHARE = 0.15;
+export const MOVE_FREE_DAYS = 30;
 
 /** Noms des ères de progression (voir ProgressionSystem). */
 export const ERA_NAMES = { 1: 'Ville connectée', 2: 'Ville autonome', 3: 'Ville symbiotique' };
@@ -234,16 +255,26 @@ export class ConstructionService {
     return toCents(80 * def.level * b.w * b.h);
   }
 
-  /** @param {{x0:number,y0:number,x1:number,y1:number}} rect */
-  previewDemolish(state, rect) {
+  /**
+   * @param {{x0:number,y0:number,x1:number,y1:number}} rect
+   * @param {'all'|'roads'|'buildings'} [filter] « roads » : routes seules ; « buildings » : bâtiments seuls
+   */
+  previewDemolish(state, rect, filter = 'all') {
     const g = state.grid;
-    const { tiles, buildings, roads, forests } = this.#collectDemolition(state, rect);
+    const all = this.#collectDemolition(state, rect);
+    const tiles = all.tiles;
+    const buildings = filter === 'roads' ? [] : all.buildings;
+    const forests = filter === 'all' ? all.forests : [];
+    // L'accès autoroutier est simplement ignoré (il n'empêche plus de démolir le reste du rectangle)
+    const highway = all.roads.filter((i) => g.road[i] === this.highwayCode);
+    const roads = filter === 'buildings' ? [] : all.roads.filter((i) => g.road[i] !== this.highwayCode);
     const reasons = [];
     let cost = 0;
     for (const b of buildings) cost += this.demolitionCost(b);
     cost += forests.length * toCents(CLEARING_COST_EUROS);
-    if (roads.some((i) => g.road[i] === this.highwayCode)) reasons.push('highway');
-    if (!buildings.length && !roads.length && !forests.length) reasons.push('nothing');
+    // Routes : petit coût de chantier (gratuit auparavant), ponts plus chers
+    for (const i of roads) cost += g.bridge[i] ? ROAD_DEMOLITION_CENTS * 4 : ROAD_DEMOLITION_CENTS;
+    if (!buildings.length && !roads.length && !forests.length) reasons.push(highway.length && filter !== 'buildings' ? 'highway' : 'nothing');
     if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');
     return {
       ok: reasons.length === 0,
@@ -257,8 +288,8 @@ export class ConstructionService {
     };
   }
 
-  demolish(state, rect) {
-    const pv = this.previewDemolish(state, rect);
+  demolish(state, rect, filter = 'all') {
+    const pv = this.previewDemolish(state, rect, filter);
     if (!pv.ok) return pv;
     const g = state.grid;
     const buildings = pv.buildings.map((id) => state.buildings.get(id));
@@ -266,25 +297,11 @@ export class ConstructionService {
     for (const b of buildings) for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) touched.add(g.idx(b.x + dx, b.y + dy));
     const tiles = [...touched];
     const snapshot = this.#snapshotTiles(state, tiles);
-    const removedBuildings = buildings.map((b) => structuredClone(b));
-    const removedAssets = [];
-    let writeOffs = 0;
-
     const txs = [];
     if (pv.cost > 0) {
       txs.push(this.economy.payOpex(state, { amount: pv.cost, category: 'demolition', label: `Démolition (${buildings.length} bât., ${pv.roads.length} routes)` }));
     }
-    for (const b of buildings) {
-      for (const assetId of [b.assetId, ...(b.upgradeAssets ?? [])]) {
-        if (!assetId) continue;
-        const asset = state.economy.assets.find((a) => a.id === assetId);
-        if (asset) removedAssets.push({ ...asset });
-        writeOffs += this.economy.disposeAsset(state, assetId);
-      }
-      state.stats.departures += b.residents;
-      removeBuilding(state, b);
-      this.bus?.emit('building:removed', { building: b });
-    }
+    const { removedBuildings, removedAssets, writeOffs } = this.removeBuildings(state, buildings);
     for (const i of pv.roads) {
       g.road[i] = 0;
       g.bridge[i] = 0;
@@ -298,6 +315,28 @@ export class ConstructionService {
     this.#record(state, 'Démolition', snapshot, tiles, txs, { removedBuildings, removedAssets, writeOffs });
     this.bus?.emit('world:changed', { tiles, reason: 'demolish' });
     return { ...pv, ok: true };
+  }
+
+  /**
+   * Retire des bâtiments (actifs mis au rebut, habitants partis) et renvoie de quoi annuler l'opération.
+   * Utilisé par la démolition et par le dézonage.
+   */
+  removeBuildings(state, buildings) {
+    const removedBuildings = buildings.map((b) => structuredClone(b));
+    const removedAssets = [];
+    let writeOffs = 0;
+    for (const b of buildings) {
+      for (const assetId of [b.assetId, ...(b.upgradeAssets ?? [])]) {
+        if (!assetId) continue;
+        const asset = state.economy.assets.find((a) => a.id === assetId);
+        if (asset) removedAssets.push({ ...asset });
+        writeOffs += this.economy.disposeAsset(state, assetId);
+      }
+      state.stats.departures += b.residents;
+      removeBuilding(state, b);
+      this.bus?.emit('building:removed', { building: b });
+    }
+    return { removedBuildings, removedAssets, writeOffs };
   }
 
   #collectDemolition(state, { x0, y0, x1, y1 }) {
@@ -320,6 +359,197 @@ export class ConstructionService {
     return { tiles, buildings, roads, forests };
   }
 
+  // ───────────────────────────── Déplacement ─────────────────────────────
+
+  /** Coût du déplacement d'un équipement (centimes). */
+  moveCost(state, b) {
+    const def = this.catalog.building(b.defId);
+    if (state.time.tick - (b.builtTick ?? 0) <= MOVE_FREE_DAYS) return 0;
+    return Math.round(def.costCents * MOVE_COST_SHARE);
+  }
+
+  /**
+   * Prévisualise le déplacement d'un équipement (le bâtiment garde ses améliorations, son actif et son historique).
+   * @param {{buildingId:number, x:number, y:number, rot?:number}} p
+   */
+  previewMove(state, { buildingId, x, y, rot = 0 }) {
+    const b = state.buildings.get(buildingId);
+    const fail = (msg) => ({ ok: false, cost: 0, reasons: ['move'], messages: [msg] });
+    if (!b) return fail('Bâtiment introuvable');
+    const def = this.catalog.building(b.defId);
+    if (def.kind !== 'plop') return fail('Seuls les équipements construits par la ville peuvent être déplacés');
+    if (b.burning) return fail('Bâtiment en feu');
+    const r = def.rotatable ? rot : 0;
+    if (b.x === x && b.y === y && (b.rot ?? 0) === r) return fail('Choisissez un nouvel emplacement');
+    // L'emprise actuelle est libérée le temps de la vérification
+    const g = state.grid;
+    const own = footprintTiles(state, b);
+    for (const i of own) g.building[i] = 0;
+    let check;
+    try {
+      check = checkBuildingPlacement(state, def, x, y, r);
+    } finally {
+      for (const i of own) g.building[i] = b.id;
+    }
+    const reasons = check.reasons.filter((k) => k !== 'unique');
+    const cost = this.moveCost(state, b) + check.forestTiles.length * toCents(CLEARING_COST_EUROS);
+    if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');
+    return { ok: reasons.length === 0, cost, tiles: check.tiles, w: check.w, h: check.h, reasons, messages: reasons.map((k) => REASONS[k]) };
+  }
+
+  moveBuilding(state, params) {
+    const pv = this.previewMove(state, params);
+    if (!pv.ok) return pv;
+    const b = state.buildings.get(params.buildingId);
+    const def = this.catalog.building(b.defId);
+    const g = state.grid;
+    const rot = def.rotatable ? params.rot ?? 0 : 0;
+    const from = footprintTiles(state, b);
+    const tiles = [...new Set([...from, ...pv.tiles])];
+    const snapshot = this.#snapshotTiles(state, tiles);
+    const txs = [];
+    if (pv.cost > 0) {
+      const pay = this.economy.payCapex(state, { amount: pv.cost, category: accountForCategory(def.category), label: `Déplacement : ${def.name}`, lifeYears: 0 });
+      if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
+      txs.push(pay.tx);
+    }
+    const before = { x: b.x, y: b.y, w: b.w, h: b.h, rot: b.rot ?? 0, access: b.access };
+    for (const i of from) {
+      g.building[i] = 0;
+      g.touch(i);
+    }
+    const { w, h } = footprintOf(def, rot);
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
+        const i = g.idx(params.x + dx, params.y + dy);
+        g.building[i] = b.id;
+        if (g.terrain[i] === TERRAIN.FOREST) g.terrain[i] = TERRAIN.GRASS;
+        g.touch(i);
+      }
+    }
+    Object.assign(b, { x: params.x, y: params.y, w, h, rot, access: findAccess(state, params.x, params.y, w, h) });
+    markNetworksDirty(state);
+    state.dirty.roadReach = true;
+    this.#record(state, `Déplacer : ${def.name}`, snapshot, tiles, txs, { moved: { id: b.id, before } });
+    this.bus?.emit('building:changed', { building: b, moved: before });
+    this.bus?.emit('world:changed', { tiles, reason: 'move' });
+    return { ...pv, ok: true, building: b };
+  }
+
+  // ───────────────────────────── Terrassement ─────────────────────────────
+
+  /**
+   * @param {{op:'raise'|'lower'|'level'|'clear'|'plant', rect:{x0:number,y0:number,x1:number,y1:number}}} p
+   * Pour « level », l'altitude cible est celle de la case (x0, y0) (début du glisser).
+   */
+  previewTerraform(state, { op, rect }) {
+    const spec = TERRAFORM[op];
+    const g = state.grid;
+    if (!spec) return { ok: false, cost: 0, eligible: [], reasons: ['nothing'], messages: ['Opération inconnue'] };
+    const target = g.inBounds(rect.x0, rect.y0) ? g.altitude[g.idx(rect.x0, rect.y0)] : 1;
+    const eligible = [];
+    const skipped = new Set();
+    let cost = 0;
+    for (let y = Math.min(rect.y0, rect.y1); y <= Math.max(rect.y0, rect.y1); y++) {
+      for (let x = Math.min(rect.x0, rect.x1); x <= Math.max(rect.x0, rect.x1); x++) {
+        if (!g.inBounds(x, y)) continue;
+        const i = g.idx(x, y);
+        const terr = g.terrain[i];
+        const factor = terr === TERRAIN.ROCK ? 2 : 1;
+        if (terr === TERRAIN.WATER) {
+          skipped.add('water');
+          continue;
+        }
+        if (op === 'clear') {
+          if (terr !== TERRAIN.FOREST || g.building[i] || g.road[i]) continue;
+          eligible.push(i);
+          cost += toCents(spec.euros);
+          continue;
+        }
+        if (op === 'plant') {
+          if (terr === TERRAIN.FOREST || terr === TERRAIN.ROCK || g.building[i] || g.road[i]) continue;
+          if (g.zone[i]) {
+            skipped.add('zoned');
+            continue;
+          }
+          eligible.push(i);
+          cost += toCents(spec.euros);
+          continue;
+        }
+        if (g.building[i] || g.road[i]) {
+          skipped.add('occupied');
+          continue;
+        }
+        const alt = g.altitude[i];
+        const next = op === 'raise' ? alt + 1 : op === 'lower' ? alt - 1 : target;
+        if (next === alt) continue;
+        if (next > MAX_ALTITUDE) {
+          skipped.add('max');
+          continue;
+        }
+        if (next < 1) {
+          skipped.add('min');
+          continue;
+        }
+        eligible.push(i);
+        cost += toCents(spec.euros) * Math.abs(next - alt) * factor;
+      }
+    }
+    const reasons = [];
+    if (!eligible.length) reasons.push('nothing');
+    else if (!this.economy.canAfford(state, cost)) reasons.push('budget');
+    const NOTES = {
+      water: 'l\'eau n\'est pas modifiable',
+      occupied: 'cases bâties ou routes ignorées',
+      zoned: 'cases zonées ignorées (retirez le zonage pour planter)',
+      max: 'altitude maximale atteinte',
+      min: 'impossible de creuser sous le niveau du sol'
+    };
+    return {
+      ok: reasons.length === 0,
+      cost,
+      tiles: eligible,
+      eligible,
+      target,
+      notes: [...skipped].map((k) => NOTES[k]),
+      reasons,
+      messages: reasons.length ? [reasons[0] === 'budget' ? REASONS.budget : [...skipped].map((k) => NOTES[k]).join(' · ') || REASONS.nothing] : []
+    };
+  }
+
+  terraform(state, params) {
+    const pv = this.previewTerraform(state, params);
+    if (!pv.ok) return pv;
+    const g = state.grid;
+    const spec = TERRAFORM[params.op];
+    // Les falaises sont dessinées par la case voisine : elle est signalée au rendu
+    const around = new Set(pv.eligible);
+    for (const i of pv.eligible) {
+      const x = g.xOf(i);
+      const y = g.yOf(i);
+      if (x > 0) around.add(i - 1);
+      if (y > 0) around.add(i - g.width);
+      if (x < g.width - 1) around.add(i + 1);
+      if (y < g.height - 1) around.add(i + g.width);
+    }
+    const snapshot = this.#snapshotTiles(state, pv.eligible);
+    const pay = this.economy.payCapex(state, { amount: pv.cost, category: 'terraforming', label: `${spec.label} (${pv.eligible.length} case${pv.eligible.length > 1 ? 's' : ''})`, lifeYears: 0 });
+    if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
+    for (const i of pv.eligible) {
+      if (params.op === 'raise') g.altitude[i]++;
+      else if (params.op === 'lower') g.altitude[i]--;
+      else if (params.op === 'level') g.altitude[i] = pv.target;
+      else if (params.op === 'clear') g.terrain[i] = TERRAIN.GRASS;
+      else if (params.op === 'plant') g.terrain[i] = TERRAIN.FOREST;
+      g.touch(i);
+    }
+    state.dirty.environment = true;
+    state.dirty.roadReach = true;
+    this.#record(state, spec.label, snapshot, pv.eligible, [pay.tx]);
+    this.bus?.emit('world:changed', { tiles: [...around], reason: 'terraform' });
+    return { ...pv, ok: true };
+  }
+
   // ───────────────────────────── Annulation ─────────────────────────────
 
   canUndo(state) {
@@ -338,7 +568,16 @@ export class ConstructionService {
         this.bus?.emit('building:removed', { building: b });
       }
     }
+    if (e.moved) {
+      const b = state.buildings.get(e.moved.id);
+      if (b) {
+        Object.assign(b, e.moved.before);
+        markNetworksDirty(state);
+        this.bus?.emit('building:changed', { building: b });
+      }
+    }
     for (const t of e.snapshot) {
+      if (t.altitude !== undefined) g.altitude[t.i] = t.altitude;
       g.terrain[t.i] = t.terrain;
       g.zone[t.i] = t.zone;
       g.road[t.i] = t.road;
@@ -379,6 +618,7 @@ export class ConstructionService {
     const g = state.grid;
     return tiles.map((i) => ({
       i,
+      altitude: g.altitude[i],
       terrain: g.terrain[i],
       zone: g.zone[i],
       road: g.road[i],

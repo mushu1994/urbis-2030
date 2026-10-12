@@ -138,7 +138,8 @@ export class GameApp {
       notify,
       needsConfirm: (cents) => this.settings.get('confirmDemolish') && cents >= 500000,
       confirm: (message) => confirmDialog(message, { confirmLabel: 'Démolir', danger: true }),
-      onChange: (tool) => this.#updateToolChip(tool)
+      onChange: (tool) => this.#updateToolChip(tool),
+      confirmPlacement: () => !!this.settings.get('confirmPlacement')
     });
     this.input = new InputController({
       canvas: this.renderer.canvas,
@@ -190,6 +191,7 @@ export class GameApp {
         if (this.inspector.open) return this.select(null);
         sel('select')();
       },
+      Enter: () => this.tools.confirmPending(),
       Delete: sel('demolish'),
       Backspace: sel('demolish'),
       r: () => this.tools.rotate(),
@@ -229,13 +231,31 @@ export class GameApp {
       zone: 'Glissez pour délimiter',
       demolish: 'Glissez pour sélectionner',
       deliveryZone: 'Glissez pour délimiter',
+      terraform: 'Glissez pour délimiter',
+      move: this.tools.moveSource ? 'Choisissez le nouvel emplacement' : 'Touchez l\'équipement à déplacer',
       building: 'Choisissez l\'emplacement'
     }[tool.kind];
     // Bâtiment : rappel des effets principaux pendant la pose
     const summary = tool.kind === 'building' && this.session ? buildingSummary(this.session.catalog.building(tool.defId), this.session.catalog) : null;
+    // Pose en attente : bouton « Valider » avec le coût (désactivé si l'emplacement est impossible)
+    const pv = this.tools.pending ? this.tools.pendingPreview : null;
+    const validate = pv
+      ? h('button.chip-btn.chip-validate', {
+        type: 'button',
+        'aria-label': `Valider${pv.ok ? ` (${pv.cost ? formatMoney(pv.cost) : 'gratuit'})` : ''}`,
+        title: pv.ok ? 'Construire ici (Entrée)' : pv.messages?.filter(Boolean).join(' · '),
+        disabled: !pv.ok,
+        on: { click: () => this.tools.confirmPending() }
+      }, icon('check', 16), h('span', pv.ok ? `Valider · ${pv.cost ? formatMoney(pv.cost, { compact: true }) : 'gratuit'}` : 'Impossible ici'))
+      : null;
+    const cancel = this.tools.pending
+      ? h('button.chip-btn', { type: 'button', 'aria-label': 'Annuler la pose', title: 'Annuler la pose (Échap)', on: { click: () => this.tools.cancel() } }, h('span', 'Annuler'))
+      : null;
     setChildren(chip,
-      h('span.chip-label', h('strong', tool.label ?? ''), summary ? h('small.chip-summary', summary) : hint ? h('small', hint) : null),
-      this.tools.canRotate ? h('button.chip-btn', { 'aria-label': 'Pivoter', title: 'Pivoter (R)', on: { click: () => this.tools.rotate() } }, icon('rotate', 16), h('span', 'Pivoter')) : null,
+      h('span.chip-label', h('strong', tool.label ?? ''), summary && !pv ? h('small.chip-summary', summary) : hint ? h('small', pv && !pv.ok ? pv.messages?.filter(Boolean).join(' · ') || hint : hint) : null),
+      this.tools.canRotate ? h('button.chip-btn', { 'aria-label': 'Pivoter', title: 'Pivoter (R)', on: { click: () => { this.tools.rotate(); this.#updateToolChip(this.tools.tool); } } }, icon('rotate', 16), h('span', 'Pivoter')) : null,
+      validate,
+      cancel,
       h('button.chip-btn', { 'aria-label': 'Terminer', title: 'Revenir à la sélection (Échap)', on: { click: () => this.toolbar.selectById('select') } }, icon('close', 16))
     );
     chip.hidden = false;

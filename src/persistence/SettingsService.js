@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   renderScale: 'auto',
   showFps: false,
   confirmDemolish: true,
+  confirmPlacement: false,
   lastSaveId: null
 });
 

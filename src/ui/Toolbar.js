@@ -1,6 +1,15 @@
 import { h, icon, setChildren } from './dom.js';
 import { formatMoney } from '../util/money.js';
-import { isUnlocked } from '../systems/ConstructionService.js';
+import { isUnlocked, TERRAFORM, ROAD_DEMOLITION_CENTS } from '../systems/ConstructionService.js';
+import { toCents } from '../util/money.js';
+
+const TERRAFORM_DESC = {
+  raise: 'Glissez pour élever les cases d\'un niveau (roche : coût doublé). Les cases bâties et les routes sont ignorées.',
+  lower: 'Glissez pour abaisser les cases d\'un niveau, sans descendre sous le niveau du sol.',
+  level: 'Glissez depuis une case : tout le rectangle prend son altitude. Coût par niveau déplacé.',
+  clear: 'Glissez pour abattre les forêts du rectangle.',
+  plant: 'Glissez pour planter une forêt sur les cases libres et non zonées : fraîcheur, verdure, bruit et pollution réduits.'
+};
 import { isCompact } from './layout.js';
 import { renderToolSheet } from './BuildingSheet.js';
 
@@ -68,7 +77,32 @@ export class Toolbar {
             : [])
         ]
       })),
-      { id: 'demolish', label: 'Démolir', icon: 'demolish', key: 'Suppr', tool: { id: 'demolish', kind: 'demolish', label: 'Démolition' } }
+      {
+        id: 'terrain',
+        label: 'Terrain',
+        icon: 'terrain',
+        tools: Object.entries(TERRAFORM).map(([op, t]) => ({
+          id: `terraform:${op}`,
+          kind: 'terraform',
+          op,
+          label: t.label,
+          cost: toCents(t.euros),
+          costUnit: op === 'raise' || op === 'lower' || op === 'level' ? '/case/niveau' : '/case',
+          desc: TERRAFORM_DESC[op]
+        }))
+      },
+      {
+        id: 'demolish',
+        label: 'Démolir et déplacer',
+        icon: 'demolish',
+        key: 'Suppr',
+        tools: [
+          { id: 'demolish', kind: 'demolish', filter: 'all', label: 'Démolir (tout)', cost: 0, desc: 'Glissez pour démolir bâtiments, routes et forêts du rectangle. L\'accès autoroutier est ignoré.' },
+          { id: 'demolish:roads', kind: 'demolish', filter: 'roads', label: 'Démolir les routes', cost: ROAD_DEMOLITION_CENTS, costUnit: '/case', desc: 'Ne retire que les routes et les ponts (×4) : les bâtiments voisins restent en place.' },
+          { id: 'demolish:buildings', kind: 'demolish', filter: 'buildings', label: 'Démolir les bâtiments', cost: 0, desc: 'Ne retire que les bâtiments du rectangle (routes et forêts conservées).' },
+          { id: 'move', kind: 'move', label: 'Déplacer un équipement', cost: 0, desc: 'Touchez un équipement (centrale, école, parc…), puis son nouvel emplacement, et validez. Gratuit dans les 30 jours suivant la pose, puis 15 % du coût de construction.' }
+        ]
+      }
     ];
 
     this.catButtons = new Map();

@@ -118,6 +118,27 @@ button,
   background: var(--panel-hover);
 }
 
+/* v0.4 : bouton « Valider » de la pose en attente */
+.chip-btn.chip-validate {
+  color: #fff;
+  background: var(--ok);
+  border-color: transparent;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.chip-btn.chip-validate:hover {
+  filter: brightness(1.08);
+  background: var(--ok);
+}
+
+.chip-btn.chip-validate:disabled {
+  color: var(--ink-dim);
+  background: var(--panel-raised);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
 /* Le badge Pause laisse sa place au bandeau d'outil quand les deux sont visibles. */
 #app.paused #paused-badge:has(~ #tool-chip:not([hidden])) {
   top: 64px;

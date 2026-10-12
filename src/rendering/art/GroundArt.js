@@ -88,17 +88,46 @@ export function forestTrees(x, y, alt) {
  * Dessine une case de route. `conn` = masque des connexions [N, E, S, O] (bits 1, 2, 4, 8).
  * @param {{color:string, edge:string, marking:string, median?:string, width:number}} visual
  */
-export function drawRoadTile(g, x, y, alt, conn, visual, { congestion = -1, era = 1 } = {}) {
+export function drawRoadTile(g, x, y, alt, conn, visual, { congestion = -1, era = 1, rise = null } = {}) {
   const [T, R, B, L] = corners(x, y, alt);
   const asphalt = hex(visual.color);
   const edge = hex(visual.edge);
   g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).fill(edge);
   // Chaussée : losange réduit + bras vers les voisins connectés
   const k = (1 - visual.width) / 2;
-  const P = (u, v) => gridToWorld(x + u, y + v, alt);
   const lo = k;
   const hi = 1 - k;
+  // Rampes (v0.4) : un bras qui rejoint une route plus haute monte en pente jusqu'au bord de la case,
+  // pour que la chaussée reste continue d'une terrasse à l'autre. rise = [N, E, S, O] (écart d'altitude du voisin).
+  const up = [0, 0, 0, 0];
+  if (rise) for (let d = 0; d < 4; d++) if (conn & (1 << d)) up[d] = Math.max(0, rise[d]);
+  const sloped = up[0] || up[1] || up[2] || up[3];
+  const altAt = !sloped
+    ? () => alt
+    : (u, v) => alt + Math.max(
+      up[0] * Math.max(0, (lo - v) / lo),
+      up[1] * Math.max(0, (u - hi) / (1 - hi)),
+      up[2] * Math.max(0, (v - hi) / (1 - hi)),
+      up[3] * Math.max(0, (lo - u) / lo)
+    );
+  const P = (u, v) => gridToWorld(x + u, y + v, altAt(u, v));
   const road = congestion >= 0 ? congestionColor(congestion) : asphalt;
+  if (sloped) {
+    const G = (u, v) => gridToWorld(x + u, y + v, alt);
+    const wall = shade(CLIFF, 0.8);
+    // Talus visibles (faces est et sud) puis dalle de la rampe, sur toute la largeur de la case
+    const ramp = [
+      [0, [0, lo], [1, lo], [1, 0], [0, 0], [1, lo], [1, 0]],
+      [1, [hi, 0], [hi, 1], [1, 1], [1, 0], [hi, 1], [1, 1]],
+      [2, [0, hi], [1, hi], [1, 1], [0, 1], [1, hi], [1, 1]],
+      [3, [lo, 0], [lo, 1], [0, 1], [0, 0], [lo, 1], [0, 1]]
+    ];
+    for (const [d, a, b, c, e, w0, w1] of ramp) {
+      if (!up[d]) continue;
+      g.poly([...xy(P(...w0)), ...xy(P(...w1)), ...xy(G(...w1))]).fill(wall);
+      g.poly([...xy(P(...a)), ...xy(P(...b)), ...xy(P(...c)), ...xy(P(...e))]).fill(edge);
+    }
+  }
   g.poly([...xy(P(lo, lo)), ...xy(P(hi, lo)), ...xy(P(hi, hi)), ...xy(P(lo, hi))]).fill(road);
   if (conn & 1) g.poly([...xy(P(lo, 0)), ...xy(P(hi, 0)), ...xy(P(hi, lo)), ...xy(P(lo, lo))]).fill(road);
   if (conn & 2) g.poly([...xy(P(hi, lo)), ...xy(P(1, lo)), ...xy(P(1, hi)), ...xy(P(hi, hi))]).fill(road);
@@ -120,13 +149,16 @@ export function drawRoadTile(g, x, y, alt, conn, visual, { congestion = -1, era 
     const glow = era >= 3 ? 0x5be3f2 : 0x7fd6e6;
     const e1 = P(lo + 0.03, lo + 0.03);
     const e2 = P(hi - 0.03, hi - 0.03);
+    const line = (pts) => {
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let n = 1; n < pts.length; n++) g.lineTo(pts[n].x, pts[n].y);
+      g.stroke({ width: 0.8, color: glow, alpha: 0.7 });
+    };
     if (conn & 5) {
-      g.moveTo(P(lo + 0.03, 0).x, P(lo + 0.03, 0).y).lineTo(P(lo + 0.03, 1).x, P(lo + 0.03, 1).y).stroke({ width: 0.8, color: glow, alpha: 0.7 });
-      g.moveTo(P(hi - 0.03, 0).x, P(hi - 0.03, 0).y).lineTo(P(hi - 0.03, 1).x, P(hi - 0.03, 1).y).stroke({ width: 0.8, color: glow, alpha: 0.7 });
+      for (const u of [lo + 0.03, hi - 0.03]) line([P(u, 0), P(u, lo), P(u, hi), P(u, 1)]);
     }
     if (conn & 10) {
-      g.moveTo(P(0, lo + 0.03).x, P(0, lo + 0.03).y).lineTo(P(1, lo + 0.03).x, P(1, lo + 0.03).y).stroke({ width: 0.8, color: glow, alpha: 0.7 });
-      g.moveTo(P(0, hi - 0.03).x, P(0, hi - 0.03).y).lineTo(P(1, hi - 0.03).x, P(1, hi - 0.03).y).stroke({ width: 0.8, color: glow, alpha: 0.7 });
+      for (const v of [lo + 0.03, hi - 0.03]) line([P(0, v), P(lo, v), P(hi, v), P(1, v)]);
     }
     if (era >= 3 && ends.length > 2) {
       g.circle(e1.x, e1.y, 1.4).fill(glow);
