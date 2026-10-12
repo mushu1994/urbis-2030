@@ -425,12 +425,12 @@ button,
     bottom: calc(var(--dock-h) + 16px + var(--safe-bottom));
   }
 
-  /* Notifications : coin supérieur droit, sous la barre du haut, sans couvrir le dock */
+  /* Notifications : coin inférieur droit, juste au-dessus du dock et du bandeau d'outil */
   #toasts {
-    top: calc(var(--hud-h, 48px) + var(--safe-top) + 8px);
-    bottom: auto;
+    top: auto;
+    bottom: calc(var(--dock-h) + 72px + var(--safe-bottom));
     right: calc(8px + var(--safe-right));
-    width: min(250px, calc(100% - 16px));
+    width: min(240px, calc(100% - 16px));
   }
 
   .toast {
@@ -517,10 +517,6 @@ button,
     width: min(380px, 60vw);
   }
 
-  #toasts {
-    left: calc(8px + var(--safe-left));
-    transform: none;
-  }
 }
 
 /* ───────────────────── Mode immersif (iPhone et cadres sans plein écran) ───────────────────── */
@@ -666,6 +662,20 @@ button,
     margin-left: auto;
     border-left: 0;
     border-top: 1px solid var(--line);
+    grid-template-columns: repeat(4, auto);
+    gap: 0 4px;
+    padding: 2px 4px;
+  }
+
+  /* Téléphone : jauges sur une seule ligne, sans chiffres (détail au toucher) */
+  .demand-col {
+    grid-template-columns: 9px 24px;
+    gap: 2px;
+    padding: 4px 2px;
+  }
+
+  .demand-num {
+    display: none;
   }
 
   .hud-label,
@@ -699,9 +709,10 @@ button,
     border-top: 1px solid var(--line);
   }
 
+  /* 11 catégories d'outils (v0.4 : Terrain) : la largeur s'adapte à l'écran */
   .tool-btn,
   #app.immersive .tool-btn {
-    width: 34px;
+    width: min(34px, calc((100vw - 44px) / 11));
     height: 38px;
   }
 
@@ -746,9 +757,6 @@ button,
     display: block;
   }
 
-  #toasts {
-    top: 8px;
-  }
 
   #fps-meter {
     top: auto;

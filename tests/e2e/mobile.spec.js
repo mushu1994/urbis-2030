@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // Téléphone en portrait, écran tactile ; l'API plein écran est retirée pour reproduire Safari sur iPhone.
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-test('iPhone : mise en page, gestes tactiles, pose au double appui, mode immersif', async ({ page }) => {
+test('iPhone : mise en page, gestes tactiles, pose validée par bouton, mode immersif', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => {
