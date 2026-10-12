@@ -70,6 +70,7 @@ export class GameApp {
       onOpenPanel: (id) => this.togglePanel(id),
       onFullscreen: () => this.fullscreen.toggle(),
       onMute: () => this.togglePanel('sound'),
+      onAlert: (kind) => this.locateAlert(kind),
       onWeather: () => this.openPanel('city', 'risks')
     });
     this.toolbar = new Toolbar(this.$('#toolbar'), {
@@ -482,6 +483,56 @@ export class GameApp {
       this.renderer.camera.y -= 110 / this.renderer.camera.zoom;
       this.renderer.camera.version++;
     }
+  }
+
+  /**
+   * Bouton d'alerte : centre la vue sur le bâtiment en défaut le plus proche du centre de l'écran.
+   * Des clics successifs parcourent les bâtiments suivants (du plus proche au plus lointain).
+   * @param {'power'|'water'|'abandoned'|'treasury'|'crisis'|null} kind
+   */
+  locateAlert(kind) {
+    const state = this.session?.state;
+    if (!state || !kind) return this.togglePanel('city');
+    if (kind === 'treasury') return this.openPanel('finance');
+    if (kind === 'crisis') {
+      const c = state.crises?.active?.[0];
+      if (c && Number.isInteger(c.x)) this.focus(c.x, c.y);
+      return;
+    }
+    const tick = state.time.tick;
+    const matches = [];
+    for (const b of state.buildings.values()) {
+      const def = this.catalog.building(b.defId);
+      const settling = (b.constructionUntil > tick && !b.upgradeTo) || tick - (b.deliveredTick ?? b.builtTick) < 10;
+      const hit =
+        kind === 'power' ? !settling && (b.powerNeed ?? def.networks.power) > 0 && !b.powered
+          : kind === 'water' ? !settling && (b.waterNeed ?? 0) > 0 && !b.watered
+            : kind === 'abandoned' ? b.abandoned : false;
+      if (hit) matches.push(b);
+    }
+    if (!matches.length) return this.togglePanel('city');
+    // Mémoire du parcours : réinitialisée si le type change ou après 20 s d'inactivité
+    const now = performance.now();
+    const cur = this.alertCursor;
+    if (!cur || cur.kind !== kind || now - cur.at > 20_000) this.alertCursor = { kind, seen: new Set(), origin: null, at: now };
+    const c = this.alertCursor;
+    c.at = now;
+    if (!c.origin) {
+      const v = this.renderer.view;
+      c.origin = this.renderer.tileAtScreen(v.width / 2, v.height / 2) ?? { x: state.grid.width / 2, y: state.grid.height / 2 };
+    }
+    let pool = matches.filter((b) => !c.seen.has(b.id));
+    if (!pool.length) {
+      c.seen.clear();
+      pool = matches;
+    }
+    const d = (b) => (b.x + b.w / 2 - c.origin.x) ** 2 + (b.y + b.h / 2 - c.origin.y) ** 2;
+    const target = pool.reduce((a, b) => (d(b) < d(a) ? b : a));
+    c.seen.add(target.id);
+    this.focus(target.x + Math.floor(target.w / 2), target.y + Math.floor(target.h / 2));
+    this.select({ buildingId: target.id });
+    const label = { power: 'sans électricité', water: 'sans eau', abandoned: 'abandonné' }[kind];
+    this.notifications.push({ level: 'info', message: `Bâtiment ${label} (${c.seen.size}/${matches.length}) — vérifiez le raccordement au réseau le plus proche.`, key: `alert-${kind}-${target.id}` });
   }
 
   /** Une crise est-elle en cours ? (le temps est alors ralenti à la vitesse normale) */

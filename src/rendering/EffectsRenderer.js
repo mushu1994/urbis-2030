@@ -32,7 +32,7 @@ export function nightAt(phase) {
   return Math.max(0, dusk - dawn);
 }
 
-const WEATHER_TINT = { clear: 0xffffff, cloudy: 0xe4e8ee, rain: 0xc8d0db, storm: 0x98a2b4, snow: 0xeef2f8, fog: 0xe9ebee, heat: 0xfff0d6 };
+const WEATHER_TINT = { clear: 0xffffff, cloudy: 0xe4e8ee, rain: 0xc8d0db, storm: 0x98a2b4, snow: 0xeef2f8, fog: 0xf1f2f4, heat: 0xfff0d6 };
 
 export class EffectsRenderer {
   /**
@@ -250,8 +250,9 @@ export class EffectsRenderer {
     let color = this.options.weather ? WEATHER_TINT[w?.kind] ?? 0xffffff : 0xffffff;
     if (this.night > 0) {
       // Crépuscule orangé puis nuit bleutée
-      const dusk = Math.max(0, 1 - Math.abs(this.night - 0.45) * 2.6) * 0.5;
-      const night = mix(0xffffff, 0x34457a, this.night * 0.78);
+      // v0.4 : nuit plus claire (≈ 65 % de luminosité au cœur de la nuit au lieu de 38 %)
+      const dusk = Math.max(0, 1 - Math.abs(this.night - 0.45) * 2.6) * 0.4;
+      const night = mix(0xffffff, 0x6f80b0, this.night * 0.62);
       color = multiply(color, mix(night, 0xffb070, dusk));
     }
     if (color === 0xffffff) return;
@@ -474,10 +475,12 @@ export class EffectsRenderer {
     const f = this.fog;
     f.clear();
     if (kind === 'fog') {
-      f.rect(0, 0, view.width, view.height).fill({ color: 0xf2f4f6, alpha: 0.22 + 0.18 * k });
+      // v0.4 : voile plus léger, encore atténué la nuit pour ne pas « blanchir » l'écran
+      const veil = (0.1 + 0.08 * k) * (1 - 0.5 * this.night);
+      f.rect(0, 0, view.width, view.height).fill({ color: 0xf2f4f6, alpha: veil });
       for (let b = 0; b < 4; b++) {
         const x = ((this.time / 60 + b * view.width * 0.4) % (view.width * 1.6)) - view.width * 0.3;
-        f.ellipse(x, view.height * (0.2 + b * 0.2), view.width * 0.35, 46).fill({ color: 0xffffff, alpha: 0.12 });
+        f.ellipse(x, view.height * (0.2 + b * 0.2), view.width * 0.35, 46).fill({ color: 0xffffff, alpha: 0.07 });
       }
     }
 

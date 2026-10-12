@@ -530,3 +530,48 @@ details.factors summary {
 .insp-works h3 {
   margin-bottom: 4px;
 }
+
+/* ---------- v0.4 : emprunts (bouton Max, note de la dette) ---------- */
+.loan-amount {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.loan-amount input {
+  width: 130px;
+}
+
+.kpi .grade {
+  display: inline-block;
+  min-width: 44px;
+  padding: 0 6px;
+  border-radius: 6px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.grade-good {
+  color: #fff;
+  background: var(--ok);
+}
+
+.grade-mid {
+  color: var(--sign-ink, #222);
+  background: var(--warn);
+}
+
+.grade-bad {
+  color: #fff;
+  background: var(--bad);
+}
+
+.credit-details {
+  margin: 6px 0 10px;
+  font-size: 13px;
+}
+
+.credit-details summary {
+  cursor: pointer;
+  color: var(--ink-dim);
+}

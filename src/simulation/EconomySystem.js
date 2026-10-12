@@ -431,11 +431,64 @@ export class EconomySystem {
     return Math.max(0, Math.round(max - outstanding));
   }
 
-  /** Taux annuel proposé selon l'endettement et la situation de trésorerie. */
+  /**
+   * Note de crédit de la ville (façon agence de notation), calculée sur les 3 derniers mois clos.
+   * Critères inspirés de l'analyse financière des collectivités :
+   *  - capacité de désendettement = dette / épargne brute annuelle (seuil d'alerte ≈ 12 ans) ;
+   *  - poids de la dette dans les recettes annuelles ;
+   *  - trésorerie négative (et sa durée) ;
+   *  - résultat net déficitaire.
+   * La note fixe la prime de risque du taux proposé aux nouveaux emprunts.
+   * @returns {{grade:string, score:number, spread:number, provisional:boolean, debt:number, years:number|null, factors:{label:string, value:string, penalty:number}[]}}
+   */
+  creditRating(state) {
+    const eco = state.economy;
+    const debt = eco.loans.reduce((s, l) => s + l.remaining, 0);
+    const last = eco.periods.slice(-3).map((p) => EconomySystem.summarize(p));
+    const avg = (k) => (last.length ? last.reduce((s, p) => s + p[k], 0) / last.length : 0);
+    const revenues = avg('revenues') * 12;
+    const grossSavings = avg('operatingResult') * 12; // épargne brute annuelle (avant intérêts)
+    const net = avg('netResult');
+    const factors = [];
+    let score = 100;
+    const penal = (label, value, penalty) => {
+      const p = Math.round(Math.max(0, penalty));
+      factors.push({ label, value, penalty: p });
+      score -= p;
+    };
+    let years = null;
+    if (debt <= 0) penal('Capacité de désendettement', 'aucune dette', 0);
+    else if (grossSavings <= 0) penal('Capacité de désendettement', 'épargne brute négative', 45);
+    else {
+      years = debt / grossSavings;
+      const p = years <= 5 ? 0 : years <= 8 ? ((years - 5) / 3) * 10 : years <= 12 ? 10 + ((years - 8) / 4) * 20 : Math.min(45, 30 + ((years - 12) / 8) * 15);
+      penal('Capacité de désendettement', `${years.toFixed(1).replace('.', ',')} ans`, p);
+    }
+    const ratio = revenues > 0 ? debt / revenues : debt > 0 ? 2 : 0;
+    penal('Dette / recettes annuelles', `${Math.round(ratio * 100)} %`, ratio <= 0.5 ? 0 : Math.min(20, ((ratio - 0.5) / 1) * 20));
+    penal('Trésorerie', eco.treasury < 0 ? `négative depuis ${eco.monthsNegative} mois` : 'positive', eco.treasury < 0 ? Math.min(25, 10 + 5 * eco.monthsNegative) : 0);
+    penal('Résultat net mensuel', net < 0 ? 'déficitaire' : 'excédentaire', last.length && net < 0 ? 10 : 0);
+    const provisional = last.length === 0;
+    if (provisional) score = Math.min(score, 72);
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    const scale = [
+      [90, 'AAA', -0.008], [80, 'AA', -0.005], [70, 'A', -0.002], [60, 'BBB', 0],
+      [48, 'BB', 0.01], [36, 'B', 0.02], [24, 'CCC', 0.035], [-1, 'D', 0.06]
+    ];
+    const [, grade, spread] = scale.find(([min]) => score >= min);
+    return { grade, score, spread, provisional, debt, years, factors };
+  }
+
+  /** Taux annuel proposé : taux de base + prime de risque liée à la note + poids de l'encours. */
   loanRate(state) {
     const outstanding = state.economy.loans.reduce((s, l) => s + l.remaining, 0);
-    const base = 0.032 + (state.economy.monthsNegative > 0 ? 0.02 : 0);
-    return Math.round((base + outstanding / 1e9) * 10000) / 10000;
+    const { spread } = this.creditRating(state);
+    return Math.round(Math.max(0.012, 0.032 + spread + outstanding / 1e9) * 10000) / 10000;
+  }
+
+  /** Montant maximal empruntable maintenant, arrondi à l'euro inférieur (en euros). */
+  maxLoanEuros(state) {
+    return Math.floor(this.debtCapacity(state) / 100);
   }
 
   /**

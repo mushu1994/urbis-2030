@@ -1,6 +1,6 @@
 import { h, icon } from './dom.js';
 
-const MAX_VISIBLE = 4;
+const MAX_VISIBLE = 3;
 
 /**
  * Notifications éphémères.
@@ -22,7 +22,7 @@ export class Notifications {
     /** @type {{el:HTMLElement, message:string, count:number, timer:any}[]} */
     this.items = [];
     /** Durée d'affichage (ms) par niveau. */
-    this.ttl = { info: 5500, success: 5500, warning: 5500, danger: 9000 };
+    this.ttl = { info: 4500, success: 4500, warning: 6000, danger: 8000 };
     this.root.setAttribute('aria-live', 'polite');
     this.clearBtn = h('button.toast-clear', { type: 'button', on: { click: () => this.clear() } }, 'Tout effacer');
   }

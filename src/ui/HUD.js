@@ -44,7 +44,12 @@ export class HUD {
         return h('div.demand-col', { title: label }, h('div.demand-track', bar), h('span', k === 'O' ? 'B' : k));
       })
     );
-    this.alerts = h('button.hud-alerts', { on: { click: () => actions.onOpenPanel('city') }, title: 'Alertes — ouvrir le tableau de bord de la ville' });
+    /** Type de la première alerte affichée : le bouton mène directement au problème. */
+    this.alertKind = null;
+    this.alerts = h('button.hud-alerts', {
+      on: { click: () => (actions.onAlert ? actions.onAlert(this.alertKind) : actions.onOpenPanel('city')) },
+      title: 'Alertes — cliquer pour aller au problème le plus proche'
+    });
     this.undo = h('button.hud-icon', { title: 'Annuler la dernière action (Ctrl+Z)', 'aria-label': 'Annuler', on: { click: actions.onUndo } }, icon('undo', 17));
     this.mute = h('button.hud-icon.hud-mute', { title: 'Réglages du son (N : couper)', 'aria-label': 'Réglages du son', 'aria-pressed': 'false', on: { click: () => actions.onMute?.() } }, icon('sound', 17));
     this.fullscreen = h('button.hud-icon.hud-fullscreen', { title: 'Plein écran (F)', 'aria-label': 'Plein écran', 'aria-pressed': 'false', on: { click: actions.onFullscreen } }, icon('expand', 17));
@@ -118,12 +123,21 @@ export class HUD {
     const alerts = [];
     const p = state.utilities.power;
     const w = state.utilities.water;
-    if (p.unpoweredBuildings) alerts.push(`${p.unpoweredBuildings} sans électricité`);
-    if (w.unwateredBuildings) alerts.push(`${w.unwateredBuildings} sans eau`);
-    if (s.abandoned) alerts.push(`${s.abandoned} abandonnés`);
-    if (eco.treasury < 0) alerts.push('trésorerie négative');
-    for (const c of state.crises?.active ?? []) alerts.unshift(`${CRISIS_TYPES[c.kind]?.icon ?? ''} ${CRISIS_TYPES[c.kind]?.name ?? c.kind}`);
-    this.alerts.textContent = alerts.length ? `⚠ ${alerts[0]}${alerts.length > 1 ? ` (+${alerts.length - 1})` : ''}` : 'Aucune alerte';
+    if (p.unpoweredBuildings) alerts.push(['power', `${p.unpoweredBuildings} sans électricité`]);
+    if (w.unwateredBuildings) alerts.push(['water', `${w.unwateredBuildings} sans eau`]);
+    if (s.abandoned) alerts.push(['abandoned', `${s.abandoned} abandonnés`]);
+    if (eco.treasury < 0) alerts.push(['treasury', 'trésorerie négative']);
+    for (const c of state.crises?.active ?? []) alerts.unshift(['crisis', `${CRISIS_TYPES[c.kind]?.icon ?? ''} ${CRISIS_TYPES[c.kind]?.name ?? c.kind}`]);
+    this.alertKind = alerts[0]?.[0] ?? null;
+    const text = alerts.length ? `⚠ ${alerts[0][1]}${alerts.length > 1 ? ` (+${alerts.length - 1})` : ''}` : 'Aucune alerte';
+    const short = alerts.length ? `⚠ ${alerts.length}` : '';
+    if (this.alerts.dataset.text !== text) {
+      this.alerts.dataset.text = text;
+      this.alerts.replaceChildren(h('span.alert-long', text), h('span.alert-short', short));
+    }
+    this.alerts.title = alerts.length
+      ? `${alerts.map((a) => a[1]).join(' · ')}\n${{ power: 'Cliquer : aller au bâtiment sans électricité le plus proche (cliquer encore pour le suivant)', water: 'Cliquer : aller au bâtiment sans eau le plus proche (cliquer encore pour le suivant)', abandoned: 'Cliquer : aller au bâtiment abandonné le plus proche', treasury: 'Cliquer : ouvrir les finances', crisis: 'Cliquer : aller à la crise' }[this.alertKind]}`
+      : 'Aucune alerte — ouvrir le tableau de bord de la ville';
     this.alerts.classList.toggle('warn', alerts.length > 0);
     this.undo.disabled = !canUndo;
   }

@@ -75,7 +75,7 @@ export class FinancePanel {
         kpi('Résultat opérationnel', last ? formatMoney(last.operatingResult) : '—', 'recettes − charges', last && last.operatingResult < 0 ? 'neg' : 'pos'),
         kpi('Résultat net', last ? formatMoney(last.netResult) : '—', 'après amortissements et intérêts', last && last.netResult < 0 ? 'neg' : ''),
         kpi('Investissements du mois en cours', formatMoney(cur?.capex ?? 0)),
-        kpi('Dette', formatMoney(debt), `capacité restante ${formatMoney(session.sim.economy.debtCapacity(s), { compact: true })}`)
+        kpi('Dette', formatMoney(debt), `note ${session.sim.economy.creditRating(s).grade} · capacité restante ${formatMoney(session.sim.economy.debtCapacity(s), { compact: true })}`)
       ),
       h('h3', 'Trésorerie : historique et prévision à 12 mois'),
       lineChart({
@@ -272,7 +272,15 @@ export class FinancePanel {
     const econ = session.sim.economy;
     const cap = econ.debtCapacity(s);
     const rate = econ.loanRate(s);
-    const amount = h('input', { type: 'number', min: 10000, step: 10000, value: Math.min(100000, Math.floor(cap / 100 / 10000) * 10000), 'aria-label': 'Montant en euros' });
+    const rating = econ.creditRating(s);
+    const maxEuros = econ.maxLoanEuros(s);
+    const amount = h('input', { type: 'number', min: 1000, max: maxEuros, step: 1000, value: Math.min(100000, Math.floor(maxEuros / 10000) * 10000), 'aria-label': 'Montant en euros' });
+    const maxBtn = h('button.btn.small.loan-max', {
+      type: 'button',
+      title: `Emprunter le maximum autorisé : ${formatMoney(maxEuros * 100)}`,
+      disabled: maxEuros <= 0,
+      on: { click: () => { amount.value = String(maxEuros); updatePreview(); } }
+    }, 'Max');
     const months = h('select', { 'aria-label': 'Durée' }, [24, 60, 120, 240].map((m) => h('option', { value: m, selected: m === 120 }, `${m / 12} ans`)));
     const preview = h('p.hint');
     const updatePreview = () => {
@@ -288,15 +296,17 @@ export class FinancePanel {
     return [
       h('div.kpis',
         h('div.kpi', h('span', 'Capacité d\'emprunt'), h('strong', formatMoney(cap))),
-        h('div.kpi', h('span', 'Taux proposé'), h('strong', `${(rate * 100).toFixed(2)} %`), h('small', 'taux fixe annuel'))
+        h('div.kpi', h('span', 'Taux proposé'), h('strong', `${(rate * 100).toFixed(2)} %`), h('small', 'taux fixe annuel')),
+        h('div.kpi.credit', h('span', 'Note de la dette'), h('strong', { class: `grade grade-${gradeClass(rating.grade)}` }, rating.grade), h('small', rating.provisional ? 'note provisoire (aucun mois clos)' : `score ${rating.score}/100`))
       ),
+      creditDetails(rating),
       h('form.loan-form', { on: { submit: (e) => {
         e.preventDefault();
         const r = this.execute({ type: 'loan', amountEuros: Number(amount.value), months: Number(months.value) });
         this.notify(r.ok ? 'success' : 'warning', r.ok ? `Emprunt souscrit : ${formatMoney(r.loan.principal)}` : r.reason);
         rerender();
       } } },
-        h('label', 'Montant (€)', amount), h('label', 'Durée', months), h('button.btn.primary', { type: 'submit' }, 'Emprunter')
+        h('label', 'Montant (€)', h('span.loan-amount', amount, maxBtn)), h('label', 'Durée', months), h('button.btn.primary', { type: 'submit', disabled: maxEuros <= 0 }, 'Emprunter')
       ),
       preview,
       s.economy.loans.length
@@ -315,4 +325,24 @@ export class FinancePanel {
       h('tbody', tx.map((t) => h('tr', h('td', String(t.id)), h('td', `${monthLabel(Math.floor(t.tick / 30))} j${(t.tick % 30) + 1}`), h('td', KIND[t.kind] ?? t.kind), h('td', t.label), money(t.amount, t.amount < 0 ? 'neg' : 'pos'))))
     ), h('p.hint', `${formatNumber(s.economy.ledger.length)} opérations conservées.`));
   }
+}
+
+/** Classe de couleur d'une note : bonne (A…), moyenne (BBB/BB), risquée (B et moins). */
+function gradeClass(grade) {
+  if (grade.startsWith('A')) return 'good';
+  if (grade === 'BBB' || grade === 'BB') return 'mid';
+  return 'bad';
+}
+
+/** Détail des critères de la note de crédit. */
+function creditDetails(rating) {
+  const SCALE = 'AAA · AA · A · BBB · BB · B · CCC · D';
+  return h('details.credit-details',
+    h('summary', `Pourquoi la note ${rating.grade} ? (prime de risque ${rating.spread >= 0 ? '+' : ''}${(rating.spread * 100).toFixed(1).replace('.', ',')} pt)`),
+    h('table.fin',
+      h('thead', h('tr', h('th', 'Critère'), h('th.num', 'Valeur'), h('th.num', 'Pénalité'))),
+      h('tbody', rating.factors.map((f) => h('tr', h('td', f.label), h('td.num', f.value), h('td.num', { class: f.penalty ? 'neg' : '' }, f.penalty ? `−${f.penalty}` : '0'))))
+    ),
+    h('p.hint', `Échelle : ${SCALE}. Une bonne note abaisse le taux des nouveaux emprunts ; au-delà de 12 ans de capacité de désendettement, la note se dégrade fortement.`)
+  );
 }
