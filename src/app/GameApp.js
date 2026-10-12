@@ -16,6 +16,7 @@ import { FinancePanel } from '../ui/FinancePanel.js';
 import { TechPanel } from '../ui/TechPanel.js';
 import { CityPanel } from '../ui/CityPanel.js';
 import { OverlayManager } from '../ui/OverlayManager.js';
+import { DemandPanel } from '../ui/DemandPanel.js';
 import { Notifications } from '../ui/Notifications.js';
 import { HelpPanel, SavesPanel, SettingsPanel, SoundPanel, StartMenu } from '../ui/MenuPanels.js';
 import { ObjectivesCard } from '../ui/ObjectivesCard.js';
@@ -71,6 +72,7 @@ export class GameApp {
       onFullscreen: () => this.fullscreen.toggle(),
       onMute: () => this.togglePanel('sound'),
       onAlert: (kind) => this.locateAlert(kind),
+      onDemand: (k) => (this.panelHost.openId === 'demand' && this.panelHost.tab === k ? this.panelHost.close() : this.openPanel('demand', k)),
       onWeather: () => this.openPanel('city', 'risks')
     });
     this.toolbar = new Toolbar(this.$('#toolbar'), {
@@ -108,6 +110,7 @@ export class GameApp {
         onShowObjectives: () => this.objectives.show(),
         onDebug: () => this.togglePanel('debug')
       }),
+      demand: new DemandPanel(),
       sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
       help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
       debug: new DebugPanel({ getRenderer: () => this.renderer, getLoop: () => this.loop, settings: this.settings, apply: () => this.applySettings(), notify })

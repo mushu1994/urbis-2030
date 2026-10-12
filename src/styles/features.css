@@ -575,3 +575,134 @@ details.factors summary {
   cursor: pointer;
   color: var(--ink-dim);
 }
+
+/* ---------- v0.4 : panneau « Besoins de la ville » ---------- */
+.demand-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.demand-warn {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--warn);
+  color: var(--sign-ink, #222);
+  font-weight: 600;
+}
+
+.demand-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.demand-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.demand-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.demand-card header .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  align-self: center;
+}
+
+.demand-card header small {
+  margin-left: auto;
+  color: var(--ink-dim);
+}
+
+.demand-value {
+  font-weight: 700;
+}
+
+.demand-card.up .demand-value {
+  color: var(--ok);
+}
+
+.demand-card.down .demand-value {
+  color: var(--bad);
+}
+
+.demand-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.2);
+  overflow: hidden;
+}
+
+.demand-bar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink-dim);
+}
+
+.demand-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.demand-main,
+.demand-free {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 12.5px;
+}
+
+.demand-factors td.fbar {
+  width: 30%;
+}
+
+.demand-factors td.fbar span {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--ok);
+}
+
+.demand-factors td.fbar span.neg {
+  background: var(--bad);
+}
+
+.demand-figures {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.demand-figures dt {
+  color: var(--ink-dim);
+}
+
+.demand-figures dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.demand-advice {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}

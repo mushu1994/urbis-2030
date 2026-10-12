@@ -260,42 +260,69 @@ export class PopulationSystem {
 
   /** Indicateurs de demande résidentielle, commerciale, bureaux et industrielle (−100..100). */
   updateDemand(state) {
-    const s = state.stats;
-    const t = state.economy.taxes;
-    const m = state.modifiers;
     // La ville doit être reliée au réseau régional par au moins une route construite par le joueur.
     const connected = [...this.network.outsideComponents].some((c) => this.network.componentSize[c] > 3);
-    const pop = s.population;
-    const jobVacancy = s.jobs > 0 ? (s.jobs - s.jobsFilled) / Math.max(40, s.jobs) : 0;
-
-    let R = 15 + jobVacancy * 70 + (s.satisfaction - 50) * 0.7 - Math.max(0, s.housingVacancy - 0.05) * 90 - (t.R - 9) * 3.5;
-    R -= s.unemploymentRate * 80;
-    if (pop < 300) R += 45;
-    else if (pop < 1500) R += 20;
-
-    let C = (Math.min(2, s.salesRatio) - 1) * 90 + 8 - (t.C - 9) * 3.5;
-    if (pop < 80) C = Math.min(C, 5);
-
-    const wf = Math.max(60, s.workforce);
-    let O = ((s.unemployedByBracket.mid + s.unemployedByBracket.high * 1.5) / wf) * 160 + (pop > 900 ? 12 : -25) - (t.O - 9) * 3.5;
-    O += (m.compute?.supply > 50 ? 6 : 0);
-
-    let I = (s.unemployedByBracket.low / wf) * 170 + (s.goodsSoldRatio >= 0.95 ? 18 : -10) - (t.I - 9) * 3.5;
-    if (s.goodsProduced < s.goodsNeeded) I += 15;
-    if (pop < 100) I += 20;
-
-    if (!connected) {
-      R = Math.min(R, -40);
-      C = Math.min(C, -40);
-      O = Math.min(O, -40);
-      I = Math.min(I, -40);
-    }
-    const target = {
-      R: clamp(R + (m['demand.R'] ?? 0), -100, 100),
-      C: clamp(C + (m['demand.C'] ?? 0), -100, 100),
-      O: clamp(O + (m['demand.O'] ?? 0), -100, 100),
-      I: clamp(I + (m['demand.I'] ?? 0), -100, 100)
-    };
+    state.stats.regionConnected = connected;
+    const { target } = demandBreakdown(state, connected);
     for (const k of ['R', 'C', 'O', 'I']) state.demand[k] += (target[k] - state.demand[k]) * 0.3;
   }
+}
+
+/**
+ * Décomposition de la demande par secteur : chaque facteur et sa contribution (en points, −100..100).
+ * Sert au calcul de la simulation et au panneau « Besoins de la ville » (même formule, aucune divergence).
+ * @returns {{target: Record<'R'|'C'|'O'|'I', number>, factors: Record<'R'|'C'|'O'|'I', {label:string, value:number}[]>, connected:boolean}}
+ */
+export function demandBreakdown(state, connected = state.stats.regionConnected !== false) {
+  const s = state.stats;
+  const t = state.economy.taxes;
+  const m = state.modifiers;
+  const pop = s.population;
+  const jobVacancy = s.jobs > 0 ? (s.jobs - s.jobsFilled) / Math.max(40, s.jobs) : 0;
+  const wf = Math.max(60, s.workforce);
+  const ub = s.unemployedByBracket ?? { low: 0, mid: 0, high: 0 };
+  const f = { R: [], C: [], O: [], I: [] };
+  const add = (k, label, value) => {
+    if (Math.abs(value) >= 0.05) f[k].push({ label, value });
+  };
+
+  add('R', 'Base', 15);
+  add('R', 'Emplois vacants', jobVacancy * 70);
+  add('R', 'Satisfaction des habitants', (s.satisfaction - 50) * 0.7);
+  add('R', 'Logements vides', -Math.max(0, s.housingVacancy - 0.05) * 90);
+  add('R', 'Taxe d\'habitation', -(t.R - 9) * 3.5);
+  add('R', 'Chômage', -s.unemploymentRate * 80);
+  add('R', 'Jeune ville (attractivité)', pop < 300 ? 45 : pop < 1500 ? 20 : 0);
+
+  add('C', 'Consommation / capacité de vente', (Math.min(2, s.salesRatio) - 1) * 90);
+  add('C', 'Base', 8);
+  add('C', 'Taxe commerciale', -(t.C - 9) * 3.5);
+
+  add('O', 'Actifs qualifiés sans emploi', ((ub.mid + ub.high * 1.5) / wf) * 160);
+  add('O', pop > 900 ? 'Taille de la ville' : 'Ville trop petite (< 900 hab.)', pop > 900 ? 12 : -25);
+  add('O', 'Taxe sur les bureaux', -(t.O - 9) * 3.5);
+  add('O', 'Puissance de calcul disponible', m.compute?.supply > 50 ? 6 : 0);
+
+  add('I', 'Actifs peu qualifiés sans emploi', (ub.low / wf) * 170);
+  add('I', s.goodsSoldRatio >= 0.95 ? 'Production entièrement écoulée' : 'Invendus industriels', s.goodsSoldRatio >= 0.95 ? 18 : -10);
+  add('I', 'Taxe industrielle', -(t.I - 9) * 3.5);
+  add('I', 'Commerces en manque de marchandises', s.goodsProduced < s.goodsNeeded ? 15 : 0);
+  add('I', 'Démarrage de la ville', pop < 100 ? 20 : 0);
+
+  const target = {};
+  for (const k of ['R', 'C', 'O', 'I']) {
+    let v = f[k].reduce((a, x) => a + x.value, 0);
+    if (k === 'C' && pop < 80 && v > 5) {
+      add('C', 'Pas encore assez d\'habitants (< 80)', 5 - v);
+      v = 5;
+    }
+    if (!connected && v > -40) {
+      add(k, 'Ville non reliée au réseau régional', -40 - v);
+      v = -40;
+    }
+    const mod = m['demand.' + k] ?? 0;
+    add(k, 'Politiques, technologies et équipements', mod);
+    target[k] = clamp(v + mod, -100, 100);
+  }
+  return { target, factors: f, connected };
 }
