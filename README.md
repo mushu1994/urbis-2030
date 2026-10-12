@@ -6,6 +6,45 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.4 (retours de jeu)
+
+- **Besoins de la ville** : les jauges R, C, B, I de la barre du haut sont plus grandes, horizontales et chiffrées.
+  Un clic ouvre le panneau « Besoins de la ville » : niveau et tendance de chaque secteur, décomposition de la
+  demande facteur par facteur (même formule que la simulation), chiffres clés (logements vacants, emplois non
+  pourvus, chômage par qualification, ventes, marchandises, taxes, parcelles libres) et conseils concrets.
+- **Industries diversifiées** : deux nouvelles zones s'ajoutent à l'industrie manufacturière (ateliers et usines).
+  *Industrie agricole* : ferme maraîchère → exploitation agricole (silo) → ferme verticale (ère 2), peu polluante,
+  gourmande en eau, sur prairie ou forêt. *Forage et extraction* : puits de forage → carrière et concassage → forage
+  automatisé (ère 2), très productive mais polluante, seulement à deux cases au plus d'un gisement (roche). Les trois
+  filières répondent à la demande industrielle.
+- **Dézonage d'une parcelle bâtie** : « Retirer le zonage » s'applique aussi aux cases occupées. Le bâtiment de zone
+  est alors démoli (frais de démolition, habitants partis) après confirmation ; l'opération s'annule par Ctrl+Z. Les
+  équipements publics ne sont jamais touchés.
+- **Déplacer un équipement** (menu Démolir et déplacer) : toucher l'équipement, puis son nouvel emplacement, puis
+  « Valider ». Il garde ses améliorations, son actif et son historique. Gratuit dans les 30 jours suivant la pose,
+  puis 15 % du coût de construction. Annulable.
+- **Bouton « Valider »** : au doigt, un appui place l'aperçu d'un bâtiment (toucher ailleurs le déplace) et le bandeau
+  d'outil affiche « Valider · coût » (ou « Impossible ici »), « Annuler » et « Pivoter ». Entrée valide aussi. Une
+  option des paramètres l'active à la souris.
+- **Démolir les routes** : outils « Démolir (tout) », « Démolir les routes » (5 € la case, pont ×4, bâtiments
+  épargnés) et « Démolir les bâtiments ». L'accès autoroutier est désormais ignoré au lieu de bloquer tout le rectangle.
+- **Routes en dénivelé** : une route qui franchit une marche de terrain est dessinée en rampe (pente sur toute la case
+  pour une voie droite, sur le seul bras concerné dans un carrefour), avec son talus. Plus de route « coupée ».
+- **Terrassement** (nouveau menu Terrain) : élever, abaisser (pas sous le niveau du sol) ou aplanir à l'altitude de la
+  case de départ (600 € par case et par niveau, roche ×2), défricher (15 €/case), planter une forêt (40 €/case, cases
+  libres et non zonées). Cases bâties et routes ignorées ; tout est annulable.
+- **Éclairage** : nuit nettement plus claire (environ 65 % de luminosité au cœur de la nuit au lieu de 38 %), voile du
+  brouillard allégé et atténué la nuit.
+- **Alertes qui mènent au problème** : le bouton d'alerte centre la vue sur le bâtiment sans électricité (ou sans eau,
+  ou abandonné) le plus proche du centre de l'écran et l'ouvre dans l'inspecteur ; chaque clic suivant passe au
+  suivant. Trésorerie négative → finances ; crise → lieu de la crise. Sur écran étroit, le bouton se réduit à « ⚠ n ».
+- **Emprunts** : bouton « Max » (montant maximal empruntable) et **note de la dette** de AAA à D, calculée sur les
+  trois derniers mois : capacité de désendettement (dette / épargne brute, seuil d'alerte 12 ans), dette rapportée
+  aux recettes annuelles, trésorerie négative, résultat déficitaire. Le détail des critères est dépliable ; la note
+  fixe la prime de risque des nouveaux emprunts (−0,8 point en AAA, +6 points en D).
+- **Notifications discrètes** : compactes (deux lignes au plus, texte complet au survol), au plus trois, rangées dans le
+  coin inférieur droit (au-dessus du dock sur téléphone).
+
 ## Nouveautés de la version 0.3 (retours de jeu)
 
 - **Rythme** : à vitesse normale, un mois de jeu dure une minute (rapide ×3, très rapide ×9). Pendant une crise, le
@@ -88,11 +127,12 @@ coûts que le joueur) puis le simule pendant un an.
 | Flèches, ZQSD ou WASD | Déplacer la caméra |
 | Clic droit / molette enfoncée + glisser | Déplacer la caméra |
 | Molette | Zoom |
-| Clic gauche | Sélectionner ou construire ; glisser pour tracer routes, zones, démolitions |
+| Clic gauche | Sélectionner ou construire ; glisser pour tracer routes, zones, démolitions, terrassement |
+| Entrée | Valider la pose ou le déplacement en attente |
 | Maj (pendant un tracé de route) | Tracer d'abord à la verticale |
 | R | Pivoter le bâtiment (si compatible) |
 | Échap | Annuler le tracé / fermer / revenir à la sélection |
-| Suppr | Outil de démolition |
+| Suppr | Outil de démolition (menu Démolir et déplacer) |
 | Ctrl+Z | Annuler la dernière action (30 jours de jeu, si rien n'a changé depuis) |
 | Espace, 1, 2, 3 | Pause, vitesse normale (un mois par minute), rapide (×3), très rapide (×9) |
 | B, C, I | Finances, tableau de bord de la ville, IA et politiques |
@@ -113,8 +153,8 @@ Toutes ces fonctions sont aussi accessibles à la souris.
 | Pincer | Zoomer / dézoomer |
 | Glisser à deux doigts | Déplacer la carte, quel que soit l'outil (annule un tracé en cours) |
 | Glisser à un doigt | Outil Sélection : déplacer la carte ; route ou zone : tracer |
-| Toucher deux fois au même endroit | Poser un bâtiment (le premier appui montre l'aperçu et le coût) |
-| Bandeau de l'outil actif | Pivoter le bâtiment, revenir à la sélection |
+| Toucher un emplacement, puis « Valider » | Poser ou déplacer un bâtiment (l'aperçu montre le coût ; toucher ailleurs le déplace) |
+| Bandeau de l'outil actif | Valider, annuler, pivoter le bâtiment, revenir à la sélection |
 
 La mise en page s'adapte au portrait et au paysage (dock d'outils en bas, panneaux plein écran, zones sûres
 de l'encoche).
@@ -304,7 +344,8 @@ Pendant la pose, le bandeau de l'outil rappelle les effets principaux.
 
 Un clic ou un appui ferme une notification (bouton × également), un glissement latéral aussi ; « Tout effacer »
 apparaît dès qu'il y en a deux. Les messages identiques sont fusionnés (×2, ×3). Elles passent sous les menus, les
-panneaux et l'inspecteur, ne disparaissent pas tant que le pointeur est dessus, et sont limitées à deux sur téléphone.
+panneaux et l'inspecteur, ne disparaissent pas tant que le pointeur est dessus. Elles sont compactes et rangées dans le
+coin inférieur droit : trois au plus (deux sur téléphone, au-dessus du dock).
 
 ## Architecture
 
@@ -451,18 +492,22 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 233 tests Vitest (23 fichiers, dont le chargement de chacun des 92 modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 244 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
-catalogue des 82 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
+catalogue des 88 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
 accumulation d'objets), invariants sur une ville simulée plusieurs années ; météo (saisons, déterminisme, effets),
 crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, désactivation), scénarios (départ,
-victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements).
-`npm run test:e2e` : 8 parcours Playwright — scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
+victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements) ;
+v0.4 : démolition des routes seules, dézonage d'une parcelle bâtie et annulation, déplacement d'un équipement (coût,
+annulation), terrassement (élever, abaisser, aplanir, planter, défricher), gisements et filières agricole et
+d'extraction, note de la dette et emprunt maximal.
+`npm run test:e2e` : 9 parcours Playwright — besoins de la ville, emprunt Max et note, pose validée, déplacement,
+terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
 gare animée et notifications ; fiche dépliable et notification fermée au doigt ; fonder une ville à la souris ; pont, bus, couches, progression, tutoriel
 et débogage depuis l'interface ; aucun bouton principal décoratif ; pas de duplication d'objets graphiques ni de fuite
-mémoire ; iPhone (gestes, pose au double appui, mode immersif).
+mémoire ; iPhone (gestes, pose validée par bouton, mode immersif).
 
 ## Performances mesurées
 

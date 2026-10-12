@@ -15,6 +15,7 @@ export const SHORTCUTS = [
   ['R', 'Faire pivoter le bâtiment (si compatible)'],
   ['Échap', 'Revenir à l\'outil de sélection / fermer'],
   ['Suppr', 'Outil de démolition'],
+  ['Entrée', 'Valider la pose ou le déplacement en attente'],
   ['Ctrl+Z', 'Annuler la dernière action'],
   ['Espace', 'Pause / reprise'],
   ['1, 2, 3', 'Vitesse normale, rapide, très rapide'],
@@ -36,8 +37,9 @@ export const TOUCH = [
   ['Glisser à deux doigts', 'Déplacer la carte, quel que soit l\'outil'],
   ['Glisser à un doigt', 'Avec l\'outil Sélection : déplacer la carte. Avec une route ou une zone : tracer'],
   ['Toucher un bâtiment', 'L\'inspecter (outil Sélection)'],
-  ['Toucher deux fois au même endroit', 'Poser un bâtiment : le premier appui montre l\'aperçu et le coût'],
-  ['Bandeau de l\'outil', 'Pivoter le bâtiment ou revenir à la sélection'],
+  ['Toucher un emplacement, puis « Valider »', 'Poser ou déplacer un bâtiment : l\'aperçu montre le coût, toucher ailleurs le déplace'],
+  ['Bandeau de l\'outil', 'Valider, annuler, pivoter le bâtiment ou revenir à la sélection'],
+  ['Toucher les jauges R C B I', 'Détail des besoins de la ville'],
   ['Bouton plein écran (en haut à droite)', 'Plein écran, ou interface réduite sur iPhone']
 ];
 

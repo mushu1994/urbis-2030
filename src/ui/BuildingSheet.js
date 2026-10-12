@@ -164,7 +164,7 @@ export function renderToolSheet(tool, catalog, unlock = { ok: true }) {
     return h('div.sheet',
       h('h4', tool.label),
       locked,
-      h('p.sheet-desc', z?.description ?? 'Rend les cases à la nature. Les bâtiments déjà construits restent en place.'),
+      h('p.sheet-desc', z?.description ?? 'Rend les cases à la nature. Les bâtiments de zone présents sont démolis (frais de démolition, après confirmation) ; les équipements publics restent en place.'),
       z ? h('p.sheet-needs', h('strong', 'Besoins : '), 'à 3 cases au plus d\'une route reliée, électricité, puis eau et services pour monter en gamme') : null,
       z ? h('div.sheet-costs', h('span', h('small', 'Zonage'), h('strong', `${formatMoney(z.costCents)} / case`))) : null
     );
