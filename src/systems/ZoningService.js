@@ -1,5 +1,6 @@
 import { REASONS, canZoneTile } from '../world/PlacementSystem.js';
 import { isUnlocked } from './ConstructionService.js';
+import { ZONE_EXTRACT } from '../world/Terrain.js';
 
 /**
  * Zonage (résidentiel, commerce, bureaux, industrie) et zones de desserte autorisées pour les drones.
@@ -36,7 +37,7 @@ export class ZoningService {
     let eligible;
     /** Dézonage : bâtiments de zone présents sur les cases (ils sont démolis avec le zonage). */
     const buildings = [];
-    if (zone) eligible = all.filter((i) => canZoneTile(state, i) && g.zone[i] !== code);
+    if (zone) eligible = all.filter((i) => canZoneTile(state, i, code) && g.zone[i] !== code);
     else {
       const set = new Set();
       for (const i of all) {
@@ -55,7 +56,7 @@ export class ZoningService {
       eligible = [...set].sort((a, z) => a - z);
     }
     const reasons = [];
-    if (!eligible.length) reasons.push(zone ? 'noZone' : 'nothing');
+    if (!eligible.length) reasons.push(zone ? (code === ZONE_EXTRACT && all.some((i) => canZoneTile(state, i) && g.zone[i] !== code) ? 'noDeposit' : 'noZone') : 'nothing');
     let cost = zone ? eligible.length * zone.costCents : 0;
     for (const b of buildings) cost += this.construction.demolitionCost(b);
     if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');

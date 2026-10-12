@@ -105,11 +105,29 @@
     {
       "id": "I",
       "code": 5,
-      "name": "Industrie",
+      "name": "Industrie manufacturière",
       "short": "I",
       "cost": 15,
       "color": "#e0b43c",
-      "description": "Usines et ateliers : beaucoup d'emplois peu qualifiés, mais de la pollution, du bruit et des camions. Tenez-les à l'écart des logements."
+      "description": "Ateliers et usines : beaucoup d'emplois peu qualifiés, mais de la pollution, du bruit et des camions. Tenez-les à l'écart des logements."
+    },
+    {
+      "id": "IA",
+      "code": 6,
+      "name": "Industrie agricole",
+      "short": "Ag",
+      "cost": 8,
+      "color": "#a7c957",
+      "description": "Fermes maraîchères puis exploitations et fermes verticales : peu de pollution, beaucoup d'eau, des emplois peu qualifiés et des denrées pour les commerces. Idéal en périphérie, sur prairie ou forêt. Répond à la demande industrielle (jauge I)."
+    },
+    {
+      "id": "IX",
+      "code": 7,
+      "name": "Forage et extraction",
+      "short": "Fx",
+      "cost": 25,
+      "color": "#b5703f",
+      "description": "Puits de forage, carrières puis sites d'extraction automatisés : forte production mais pollution et bruit élevés. Uniquement à 2 cases au plus d'un gisement (roche). Répond à la demande industrielle (jauge I)."
     }
   ],
   "buildings": [
@@ -1157,6 +1175,256 @@
         "roofColor": "#6ac3d6",
         "detail": "cleanroom",
         "era": 3
+      }
+    },
+    {
+      "id": "agri_1",
+      "name": "Ferme maraîchère",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IA",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 4,
+        "water": 16
+      },
+      "capacity": {
+        "jobs": 7,
+        "qualification": 0.15,
+        "goods": 12
+      },
+      "environment": {
+        "pollution": 1,
+        "noise": 1,
+        "heat": 0,
+        "radius": 3
+      },
+      "growth": {
+        "next": "agri_2",
+        "minLandValue": 0,
+        "requires": [
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 8,
+        "color": "#c94c3c",
+        "roof": "farm",
+        "roofColor": "#7a4a2e",
+        "detail": "crops"
+      }
+    },
+    {
+      "id": "agri_2",
+      "name": "Exploitation agricole",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IA",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 10,
+        "water": 26
+      },
+      "capacity": {
+        "jobs": 14,
+        "qualification": 0.2,
+        "goods": 26
+      },
+      "environment": {
+        "pollution": 3,
+        "noise": 2,
+        "heat": 0,
+        "radius": 3
+      },
+      "growth": {
+        "next": "agri_3",
+        "minLandValue": 10,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 10,
+        "color": "#b8483a",
+        "roof": "farm",
+        "roofColor": "#5e3a26",
+        "detail": "silo"
+      }
+    },
+    {
+      "id": "agri_3",
+      "name": "Ferme verticale",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IA",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 34,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 24,
+        "qualification": 0.45,
+        "goods": 46
+      },
+      "environment": {
+        "pollution": 1,
+        "noise": 1,
+        "heat": 1,
+        "radius": 3
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 26,
+        "color": "#d9eef0",
+        "roof": "greenhouse",
+        "roofColor": "#7cc37a",
+        "detail": "greenhouse",
+        "era": 2
+      }
+    },
+    {
+      "id": "ext_1",
+      "name": "Puits de forage",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IX",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 14,
+        "water": 4
+      },
+      "capacity": {
+        "jobs": 10,
+        "qualification": 0.2,
+        "goods": 26
+      },
+      "environment": {
+        "pollution": 18,
+        "noise": 10,
+        "heat": 2,
+        "radius": 5
+      },
+      "growth": {
+        "next": "ext_2",
+        "minLandValue": 0,
+        "requires": [
+          "power"
+        ]
+      },
+      "visual": {
+        "height": 18,
+        "color": "#3f3f46",
+        "roof": "derrick",
+        "roofColor": "#e0a030",
+        "detail": "pumpjack"
+      }
+    },
+    {
+      "id": "ext_2",
+      "name": "Carrière et concassage",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IX",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 30,
+        "water": 12
+      },
+      "capacity": {
+        "jobs": 20,
+        "qualification": 0.25,
+        "goods": 48
+      },
+      "environment": {
+        "pollution": 24,
+        "noise": 16,
+        "heat": 2,
+        "radius": 5
+      },
+      "growth": {
+        "next": "ext_3",
+        "minLandValue": 5,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 14,
+        "color": "#8a8073",
+        "roof": "quarry",
+        "roofColor": "#c9a35a",
+        "detail": "crusher"
+      }
+    },
+    {
+      "id": "ext_3",
+      "name": "Forage automatisé",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IX",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 60,
+        "water": 14
+      },
+      "capacity": {
+        "jobs": 16,
+        "qualification": 0.55,
+        "goods": 78
+      },
+      "environment": {
+        "pollution": 12,
+        "noise": 8,
+        "heat": 2,
+        "radius": 4
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 30,
+        "color": "#5a6470",
+        "roof": "derrick",
+        "roofColor": "#4fc3d9",
+        "detail": "rig",
+        "era": 2
       }
     },
     {

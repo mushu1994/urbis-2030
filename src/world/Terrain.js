@@ -17,7 +17,32 @@ export function roadAllowedOn(code) {
   return code !== TERRAIN.WATER;
 }
 
-/** Une zone peut-elle être tracée sur ce terrain ? */
-export function zoneAllowedOn(code) {
+/** Codes des zones spécialisées (voir buildings.json). */
+export const ZONE_AGRI = 6;
+export const ZONE_EXTRACT = 7;
+
+/** Rayon (en cases) autour d'un affleurement rocheux où l'on peut exploiter un gisement. */
+export const DEPOSIT_RADIUS = 2;
+
+/**
+ * Une zone peut-elle être tracée sur ce terrain ?
+ * - agriculture : prairie ou forêt (pas de sable ni de roche) ;
+ * - extraction : aussi sur la roche (le gisement lui-même).
+ */
+export function zoneAllowedOn(code, zoneCode = 0) {
+  if (zoneCode === ZONE_AGRI) return code === TERRAIN.GRASS || code === TERRAIN.FOREST;
+  if (zoneCode === ZONE_EXTRACT) return code !== TERRAIN.WATER;
   return code === TERRAIN.GRASS || code === TERRAIN.SAND || code === TERRAIN.FOREST;
+}
+
+/** La case est-elle à portée d'un gisement (roche à DEPOSIT_RADIUS cases au plus) ? */
+export function hasDeposit(grid, i) {
+  const x = grid.xOf(i);
+  const y = grid.yOf(i);
+  for (let dy = -DEPOSIT_RADIUS; dy <= DEPOSIT_RADIUS; dy++) {
+    for (let dx = -DEPOSIT_RADIUS; dx <= DEPOSIT_RADIUS; dx++) {
+      if (grid.inBounds(x + dx, y + dy) && grid.terrain[grid.idx(x + dx, y + dy)] === TERRAIN.ROCK) return true;
+    }
+  }
+  return false;
 }

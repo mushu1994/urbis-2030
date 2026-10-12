@@ -452,7 +452,7 @@ export class CrisisSystem {
     for (const b of [...state.buildings.values()].sort((a, z) => a.id - z.id)) {
       const def = this.catalog.buildingFor(b);
       if (def.category === 'parks' || def.visual.roof === 'park' || def.visual.detail === 'pylon' || b.burnt) continue;
-      let w = def.zone === 'I' ? 3 : def.kind === 'growable' ? 1 : 0.4;
+      let w = def.category === 'industry' ? 3 : def.kind === 'growable' ? 1 : 0.4;
       w *= 1.2 - Math.min(1, g.coverFire[g.idx(b.x, b.y)]);
       if (w <= 0) continue;
       total += w;

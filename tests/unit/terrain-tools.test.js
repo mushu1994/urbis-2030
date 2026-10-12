@@ -148,3 +148,36 @@ describe('Note de la dette (v0.4)', () => {
     expect(r1.factors.find((f) => f.label.startsWith('Capacité')).penalty).toBeGreaterThan(0);
   });
 });
+
+describe('Industries spécialisées (v0.4)', () => {
+  it('l\'extraction exige un gisement (roche à 2 cases au plus), l\'agriculture refuse le sable', () => {
+    const s = flatSession();
+    const g = s.state.grid;
+    g.terrain[g.idx(20, 20)] = TERRAIN.ROCK;
+    g.terrain[g.idx(5, 25)] = TERRAIN.SAND;
+    const far = s.preview({ type: 'zone', zoneId: 'IX', rect: { x0: 10, y0: 25, x1: 11, y1: 25 } });
+    expect(far.ok).toBe(false);
+    expect(far.messages.join()).toMatch(/gisement/);
+    const near = s.preview({ type: 'zone', zoneId: 'IX', rect: { x0: 18, y0: 20, x1: 24, y1: 20 } });
+    expect(near.eligible.length).toBe(5); // x = 18..22 (la roche elle-même comprise)
+    const agri = s.preview({ type: 'zone', zoneId: 'IA', rect: { x0: 4, y0: 25, x1: 6, y1: 25 } });
+    expect(agri.eligible.length).toBe(2);
+  });
+
+  it('fermes et forages forment des filières complètes rattachées à la demande industrielle', () => {
+    const cat = s0().catalog;
+    for (const [code, ids] of [[6, ['agri_1', 'agri_2', 'agri_3']], [7, ['ext_1', 'ext_2', 'ext_3']]]) {
+      expect(cat.firstGrowable(code).id).toBe(ids[0]);
+      expect(cat.building(ids[0]).growth.next).toBe(ids[1]);
+      expect(cat.building(ids[1]).growth.next).toBe(ids[2]);
+      expect(cat.building(ids[2]).category).toBe('industry');
+    }
+    // Agriculture : peu polluante ; extraction : plus productive mais polluante
+    expect(cat.building('agri_1').environment.pollution).toBeLessThan(cat.building('ind_1').environment.pollution);
+    expect(cat.building('ext_1').capacity.goods).toBeGreaterThan(cat.building('ind_1').capacity.goods);
+  });
+});
+
+function s0() {
+  return flatSession();
+}

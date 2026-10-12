@@ -1,4 +1,4 @@
-import { TERRAIN, roadAllowedOn, zoneAllowedOn } from './Terrain.js';
+import { TERRAIN, roadAllowedOn, zoneAllowedOn, hasDeposit, ZONE_EXTRACT } from './Terrain.js';
 
 /** Messages d'explication des refus de placement (affichés au joueur). */
 export const REASONS = {
@@ -20,7 +20,8 @@ export const REASONS = {
   budget: 'Budget insuffisant',
   highway: 'L\'accès autoroutier ne peut pas être modifié',
   nothing: 'Rien à faire ici',
-  noZone: 'Zonage impossible sur cette case'
+  noZone: 'Zonage impossible sur cette case',
+  noDeposit: 'Aucun gisement (roche) à moins de 2 cases'
 };
 
 /** Dimensions effectives selon la rotation. */
@@ -188,7 +189,8 @@ export function checkRoadTile(state, i, roadCode, prevAlt) {
   return { status: 'new' };
 }
 
-export function canZoneTile(state, i) {
+export function canZoneTile(state, i, zoneCode = 0) {
   const g = state.grid;
-  return !g.building[i] && !g.road[i] && zoneAllowedOn(g.terrain[i]);
+  if (g.building[i] || g.road[i] || !zoneAllowedOn(g.terrain[i], zoneCode)) return false;
+  return zoneCode !== ZONE_EXTRACT || hasDeposit(g, i);
 }

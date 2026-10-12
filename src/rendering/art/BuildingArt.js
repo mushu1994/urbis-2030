@@ -124,6 +124,14 @@ function drawBuildingBody(g, def, b, alt) {
       break;
     case 'tank':
       return drawTank(g, T, R, B, L, H, base, roof);
+    case 'farm':
+      return drawFarm(g, b, alt, v, base, roof);
+    case 'greenhouse':
+      return drawGreenhouse(g, b, alt, T, R, B, L, H, base, roof);
+    case 'derrick':
+      return drawDerrick(g, b, alt, v, base, roof);
+    case 'quarry':
+      return drawQuarry(g, b, alt, base, roof);
     default:
       if (FLAT_SITE_ROOFS.has(v.roof)) return drawFlatSite(g, def, b, alt, T, R, B, L);
       break;
@@ -340,3 +348,126 @@ function drawPylon(g, T, R, B, L, H) {
   g.moveTo(c.x - 4, c.y - H * 0.5).lineTo(c.x + 4, c.y - H * 0.5).stroke({ width: 1.1, color: 0x6b6f75 });
 }
 
+
+// ───────────────────── Industries spécialisées (v0.4) ─────────────────────
+
+/** Petit volume parallélépipédique (grange, local technique…). */
+function box(g, x, y, w, h, alt, H, base, roof, gable = false) {
+  const c = footprintCorners(x, y, w, h, alt, 0);
+  g.poly(flat(c.L, c.B, up(c.B, H), up(c.L, H))).fill(shade(base, 0.86));
+  g.poly(flat(c.B, c.R, up(c.R, H), up(c.B, H))).fill(shade(base, 0.68));
+  const Tt = up(c.T, H);
+  const Rt = up(c.R, H);
+  const Bt = up(c.B, H);
+  const Lt = up(c.L, H);
+  if (!gable) {
+    g.poly(flat(Tt, Rt, Bt, Lt)).fill(roof);
+    return;
+  }
+  const rh = Math.max(4, H * 0.6);
+  const A = up(lerp(Tt, Lt, 0.5), rh);
+  const C = up(lerp(Rt, Bt, 0.5), rh);
+  g.poly(flat(Tt, Rt, C, A)).fill(shade(roof, 1.1));
+  g.poly(flat(Rt, Bt, C)).fill(shade(base, 0.68));
+  g.poly(flat(Lt, Bt, C, A)).fill(shade(roof, 0.85));
+}
+
+/** Ferme : sillons cultivés, grange rouge et (niveau 2) silo. */
+function drawFarm(g, b, alt, v, base, roof) {
+  const ab = !!b.abandoned;
+  const soil = ab ? 0x8a7d6a : 0x8b6b42;
+  const crop = ab ? 0x9a9a7a : [0x7fb24a, 0xc9b94a, 0x5f9d3f][b.id % 3];
+  const field = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.04);
+  g.poly(flat(field.T, field.R, field.B, field.L)).fill(soil);
+  const rows = 6;
+  for (let r = 0; r < rows; r++) {
+    const a1 = lerp(field.T, field.L, (r + 0.2) / rows);
+    const a2 = lerp(field.T, field.L, (r + 0.7) / rows);
+    const c1 = lerp(field.R, field.B, (r + 0.2) / rows);
+    const c2 = lerp(field.R, field.B, (r + 0.7) / rows);
+    // Les rangs s'arrêtent avant la cour de ferme (coin arrière)
+    g.poly(flat(lerp(a1, c1, 0.42), lerp(a1, c1, 0.97), lerp(a2, c2, 0.97), lerp(a2, c2, 0.42))).fill(crop);
+  }
+  box(g, b.x + 0.1, b.y + 0.1, 0.36, 0.42, alt, v.height, base, roof, true);
+  if (v.detail === 'silo') {
+    const p = gridToWorld(b.x + 0.32, b.y + 0.72, alt);
+    g.rect(p.x - 3.5, p.y - 20, 7, 20).fill(ab ? 0x8f8f8f : 0xc9ccd1);
+    g.rect(p.x, p.y - 20, 3.5, 20).fill(ab ? 0x777777 : 0xa9adb3);
+    g.ellipse(p.x, p.y - 20, 3.5, 1.8).fill(ab ? 0x6b6b6b : 0x8d949c);
+  }
+}
+
+/** Ferme verticale : serres vitrées étagées. */
+function drawGreenhouse(g, b, alt, T, R, B, L, H, base, roof) {
+  const ab = !!b.abandoned;
+  g.poly(flat(B, R, { x: R.x + 6, y: R.y + 3 }, { x: B.x + 6, y: B.y + 3 })).fill({ color: 0x000000, alpha: 0.12 });
+  const glass = ab ? 0x9aa3a6 : 0xbfe6ea;
+  const plants = ab ? 0x7a7f74 : roof;
+  const floors = 3;
+  for (let f = 0; f < floors; f++) {
+    const h0 = (H / floors) * f;
+    const h1 = (H / floors) * (f + 1) - 1;
+    g.poly(flat(up(L, h0), up(B, h0), up(B, h1), up(L, h1))).fill(shade(glass, 0.9));
+    g.poly(flat(up(B, h0), up(R, h0), up(R, h1), up(B, h1))).fill(shade(glass, 0.75));
+    facePatch(g, L, B, 0.08, 0.92, h0 + 1, h0 + 4, plants, 0.9);
+    facePatch(g, B, R, 0.08, 0.92, h0 + 1, h0 + 4, shade(plants, 0.85), 0.9);
+    g.poly(flat(up(L, h1), up(B, h1), up(B, h1 + 1), up(L, h1 + 1))).fill(base);
+    g.poly(flat(up(B, h1), up(R, h1), up(R, h1 + 1), up(B, h1 + 1))).fill(shade(base, 0.8));
+  }
+  const Tt = up(T, H);
+  const Rt = up(R, H);
+  const Bt = up(B, H);
+  const Lt = up(L, H);
+  g.poly(flat(Tt, Rt, Bt, Lt)).fill(shade(glass, 1.05));
+  for (let k = 1; k < 4; k++) g.moveTo(lerp(Tt, Lt, k / 4).x, lerp(Tt, Lt, k / 4).y).lineTo(lerp(Rt, Bt, k / 4).x, lerp(Rt, Bt, k / 4).y).stroke({ width: 0.8, color: base, alpha: 0.9 });
+}
+
+/** Puits de forage : terre battue, cuve et chevalet de pompage (ou derrick automatisé). */
+function drawDerrick(g, b, alt, v, base, roof) {
+  const ab = !!b.abandoned;
+  const pad = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.06);
+  g.poly(flat(pad.T, pad.R, pad.B, pad.L)).fill(ab ? 0x8c867c : 0x9c8a6e);
+  const tank = gridToWorld(b.x + 0.75, b.y + 0.3, alt);
+  g.rect(tank.x - 5, tank.y - 8, 10, 8).fill(ab ? 0x8a8a8a : 0xd8d2c4);
+  g.rect(tank.x, tank.y - 8, 5, 8).fill(ab ? 0x777777 : 0xb9b2a3);
+  g.ellipse(tank.x, tank.y - 8, 5, 2.4).fill(ab ? 0x6c6c6c : 0xeee8da);
+  const c = gridToWorld(b.x + 0.45, b.y + 0.6, alt);
+  const steel = ab ? 0x6b6b6b : base;
+  const accent = ab ? 0x8f8f8f : hex(v.roofColor);
+  if (v.detail === 'rig') {
+    // Tour de forage automatisée : treillis et balise
+    const H = v.height;
+    g.moveTo(c.x - 7, c.y).lineTo(c.x - 1.2, c.y - H).lineTo(c.x + 1.2, c.y - H).lineTo(c.x + 7, c.y).stroke({ width: 1.6, color: steel });
+    for (let k = 1; k < 4; k++) {
+      const yk = c.y - (H * k) / 4;
+      const half = 7 - (5.8 * k) / 4;
+      g.moveTo(c.x - half, yk).lineTo(c.x + half, yk).stroke({ width: 1, color: steel });
+    }
+    g.rect(c.x - 6, c.y - 5, 12, 5).fill(shade(base, 1.2));
+    if (!ab) g.circle(c.x, c.y - H - 2, 2.2).fill(accent);
+    return;
+  }
+  // Chevalet de pompage
+  g.poly([c.x - 6, c.y, c.x - 1.5, c.y - 11, c.x + 1.5, c.y - 11, c.x + 6, c.y]).fill(steel);
+  g.poly([c.x - 11, c.y - 9, c.x + 10, c.y - 14, c.x + 10, c.y - 11.5, c.x - 11, c.y - 6.5]).fill(accent);
+  g.poly([c.x + 9, c.y - 15, c.x + 14, c.y - 12, c.x + 13, c.y - 7, c.x + 9, c.y - 10]).fill(steel);
+  g.rect(c.x - 11.5, c.y - 8, 1.6, 8).fill(steel);
+}
+
+/** Carrière : fosse en gradins, concasseur et convoyeur. */
+function drawQuarry(g, b, alt, base, roof) {
+  const ab = !!b.abandoned;
+  const rim = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.04);
+  g.poly(flat(rim.T, rim.R, rim.B, rim.L)).fill(ab ? 0x8f8a82 : 0xb9a888);
+  for (let k = 1; k <= 3; k++) {
+    const e = footprintCorners(b.x + 0.05, b.y + 0.05, 0.62, 0.62, alt, 0.06 * k);
+    const d = k * 2.2;
+    const col = shade(ab ? 0x8a857c : 0xa08f73, 1 - k * 0.1);
+    g.poly(flat({ x: e.T.x, y: e.T.y + d }, { x: e.R.x, y: e.R.y + d }, { x: e.B.x, y: e.B.y + d }, { x: e.L.x, y: e.L.y + d })).fill(col);
+  }
+  box(g, b.x + 0.62, b.y + 0.55, 0.3, 0.32, alt, 14, base, roof);
+  const a = gridToWorld(b.x + 0.4, b.y + 0.42, alt);
+  const z = gridToWorld(b.x + 0.7, b.y + 0.62, alt);
+  g.moveTo(a.x, a.y - 2).lineTo(z.x, z.y - 13).stroke({ width: 2.2, color: ab ? 0x777777 : 0x4a4a4a });
+  if (!ab) g.circle(z.x, z.y - 14, 1.6).fill(roof);
+}

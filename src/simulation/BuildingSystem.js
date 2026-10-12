@@ -4,7 +4,9 @@ import { createBuilding, removeBuilding, changeBuildingDef } from '../systems/Bu
 import { constructionDaysFor, isUnderConstruction } from './Construction.js';
 import { findAccess } from '../world/PlacementSystem.js';
 
-const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I' };
+/** Secteur de demande de chaque code de zone (agriculture et extraction relèvent de l'industrie). */
+export const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I', 6: 'I', 7: 'I' };
+const ZONE_CODES = [1, 2, 3, 4, 5, 6, 7];
 
 /** Libellés des conditions d'évolution (affichés dans l'inspecteur). */
 const REQUIREMENT_LABELS = {
@@ -131,12 +133,12 @@ export class BuildingSystem {
   #spawn(state) {
     const g = state.grid;
     const mods = state.modifiers;
-    const candidates = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    const candidates = Object.fromEntries(ZONE_CODES.map((c) => [c, []]));
     for (let i = 0; i < g.size; i++) {
       const z = g.zone[i];
       if (z && this.#canGrowOn(state, i)) candidates[z].push(i);
     }
-    for (const code of [1, 2, 3, 4, 5]) {
+    for (const code of ZONE_CODES) {
       const list = candidates[code];
       if (!list.length) continue;
       const demand = state.demand[ZONE_KEYS[code]];

@@ -195,7 +195,7 @@ export const CHALLENGES = [
       standardTown(session, { months: 10 });
       // Fermeture des industries et hausse brutale des impôts
       const g = s.grid;
-      const industries = [...s.buildings.values()].filter((b) => session.catalog.building(b.defId).zone === 'I');
+      const industries = [...s.buildings.values()].filter((b) => session.catalog.building(b.defId).category === 'industry');
       for (const b of industries) session.execute({ type: 'demolish', rect: { x0: b.x, y0: b.y, x1: b.x + b.w - 1, y1: b.y + b.h - 1 } });
       void g;
       for (const k of ['R', 'C', 'O', 'I']) session.execute({ type: 'tax', key: k, value: 15 });
