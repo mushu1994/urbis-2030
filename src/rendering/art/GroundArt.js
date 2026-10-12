@@ -102,17 +102,32 @@ export function drawRoadTile(g, x, y, alt, conn, visual, { congestion = -1, era 
   const up = [0, 0, 0, 0];
   if (rise) for (let d = 0; d < 4; d++) if (conn & (1 << d)) up[d] = Math.max(0, rise[d]);
   const sloped = up[0] || up[1] || up[2] || up[3];
+  // Voie droite (ou impasse) qui monte d'un seul côté : la rampe occupe toute la case, en pente douce.
+  // Ailleurs (carrefours), seul le bras concerné est incliné, le centre reste à plat.
+  const ups = up.filter((u) => u > 0).length;
+  const fullDir = ups === 1 && (conn === 5 || conn === 10 || [1, 2, 4, 8].includes(conn)) ? up.findIndex((u) => u > 0) : -1;
+  const T_FULL = [(u, v) => 1 - v, (u) => u, (u, v) => v, (u) => 1 - u];
   const altAt = !sloped
     ? () => alt
-    : (u, v) => alt + Math.max(
-      up[0] * Math.max(0, (lo - v) / lo),
-      up[1] * Math.max(0, (u - hi) / (1 - hi)),
-      up[2] * Math.max(0, (v - hi) / (1 - hi)),
-      up[3] * Math.max(0, (lo - u) / lo)
-    );
+    : fullDir >= 0
+      ? (u, v) => alt + up[fullDir] * T_FULL[fullDir](u, v)
+      : (u, v) => alt + Math.max(
+        up[0] * Math.max(0, (lo - v) / lo),
+        up[1] * Math.max(0, (u - hi) / (1 - hi)),
+        up[2] * Math.max(0, (v - hi) / (1 - hi)),
+        up[3] * Math.max(0, (lo - u) / lo)
+      );
   const P = (u, v) => gridToWorld(x + u, y + v, altAt(u, v));
   const road = congestion >= 0 ? congestionColor(congestion) : asphalt;
-  if (sloped) {
+  if (fullDir >= 0) {
+    const G = (u, v) => gridToWorld(x + u, y + v, alt);
+    const wall = shade(CLIFF, 0.8);
+    // Talus visible : face est pour une rampe nord-sud, face sud pour une rampe est-ouest
+    const side = fullDir === 0 || fullDir === 2 ? [[1, 0], [1, 1]] : [[0, 1], [1, 1]];
+    const [a, b] = side;
+    g.poly([...xy(P(...a)), ...xy(P(...b)), ...xy(G(...b)), ...xy(G(...a))]).fill(wall);
+    g.poly([...xy(P(0, 0)), ...xy(P(1, 0)), ...xy(P(1, 1)), ...xy(P(0, 1))]).fill(edge);
+  } else if (sloped) {
     const G = (u, v) => gridToWorld(x + u, y + v, alt);
     const wall = shade(CLIFF, 0.8);
     // Talus visibles (faces est et sud) puis dalle de la rampe, sur toute la largeur de la case

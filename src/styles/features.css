@@ -593,7 +593,7 @@ details.factors summary {
 
 .demand-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -705,4 +705,10 @@ details.factors summary {
   margin: 0;
   padding-left: 18px;
   font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .demand-cards {
+    grid-template-columns: 1fr;
+  }
 }

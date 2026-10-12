@@ -35,6 +35,7 @@ export class HUD {
     this.population = h('strong.hud-value');
     this.popSub = h('span.hud-sub');
     this.demandBars = {};
+    this.demandNums = {};
     // Jauges de demande (v0.4 : plus grandes, cliquables → panneau « Besoins de la ville »)
     const demand = h(
       'div.hud-demand',
@@ -42,13 +43,15 @@ export class HUD {
       DEMANDS.map(([k, label, color]) => {
         const bar = h('div.demand-fill', { style: { background: color } });
         this.demandBars[k] = bar;
+        const num = h('b.demand-num');
+        this.demandNums[k] = num;
         return h('button.demand-col', {
           type: 'button',
           title: label,
           'aria-label': `Demande ${label} : détail`,
           dataset: { label },
           on: { click: () => actions.onDemand?.(k) }
-        }, h('div.demand-track', bar), h('span', k === 'O' ? 'B' : k));
+        }, h('span', k === 'O' ? 'B' : k), h('div.demand-track', bar), num);
       })
     );
     /** Type de la première alerte affichée : le bouton mène directement au problème. */
@@ -121,10 +124,14 @@ export class HUD {
     for (const [k] of DEMANDS) {
       const v = state.demand[k];
       const bar = this.demandBars[k];
+      // Jauge horizontale centrée sur zéro : à droite la demande, à gauche le recul
       const pct = Math.min(50, Math.abs(v) / 2);
-      bar.style.height = `${pct}%`;
-      bar.style.bottom = v >= 0 ? '50%' : `${50 - pct}%`;
+      bar.style.width = `${pct}%`;
+      bar.style.left = v >= 0 ? '50%' : `${50 - pct}%`;
       bar.style.opacity = v >= 0 ? '1' : '0.45';
+      const n = `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v))}`;
+      if (this.demandNums[k].textContent !== n) this.demandNums[k].textContent = n;
+      this.demandNums[k].classList.toggle('neg', v < 0);
       const col = bar.parentElement.parentElement;
       const title = `${col.dataset.label} : ${v >= 0 ? '+' : ''}${v.toFixed(0)} — cliquer pour le détail`;
       if (col.title !== title) col.title = title;

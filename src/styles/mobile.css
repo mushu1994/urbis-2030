@@ -211,8 +211,13 @@ button,
 
   .hud-demand {
     flex: none;
-    padding: 5px 8px;
-    gap: 4px;
+    padding: 3px 6px;
+    gap: 2px 6px;
+  }
+
+  .demand-col {
+    grid-template-columns: 11px 44px 26px;
+    gap: 3px;
   }
 
   .hud-icon {
@@ -527,7 +532,8 @@ button,
 #app.immersive .hud-label,
 #app.immersive .hud-sub,
 #app.immersive .hud-alerts,
-#app.immersive .hud-demand span {
+#app.immersive .hud-demand span,
+#app.immersive .demand-num {
   display: none;
 }
 
