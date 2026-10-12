@@ -260,6 +260,9 @@ button.hud-group:hover {
   width: min(680px, calc(100vw - 96px));
   max-height: calc(100% - 24px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 6px;
   border-radius: var(--radius-m);
   background: var(--panel);

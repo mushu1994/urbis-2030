@@ -129,6 +129,9 @@ export class Toolbar {
     this.flyout = h('div.flyout', { role: 'menu' });
     root.append(tools, panels);
     root.parentElement.append(this.flyout);
+    window.addEventListener('resize', () => {
+      if (this.openCat) this.#placeFlyout(this.catButtons.get(this.openCat));
+    });
     this.#highlight();
   }
 
@@ -152,12 +155,9 @@ export class Toolbar {
     const state = this.getState();
     const btn = this.catButtons.get(catId);
     // Sur ordinateur, le menu s'ouvre à hauteur du bouton ; sur téléphone, il se place au-dessus de la barre (CSS).
-    if (isCompact()) {
-      this.flyout.style.top = '';
-    } else {
-      const top = btn.getBoundingClientRect().top - this.flyout.parentElement.getBoundingClientRect().top;
-      this.flyout.style.top = `${Math.max(8, top - 8)}px`;
-    }
+    // (la position définitive est calculée une fois le contenu en place : voir #placeFlyout)
+    this.flyout.style.top = '';
+    this.flyout.style.maxHeight = '';
     // Fiche descriptive : à droite de la liste sur ordinateur (survol ou focus), dépliable sous l'élément au doigt
     const compact = isCompact();
     const sheet = h('div.flyout-sheet', { 'aria-live': 'polite' });
@@ -220,7 +220,28 @@ export class Toolbar {
       showSheet(first, state ? isUnlocked(state, first.unlock) : { ok: true });
     }
     this.flyout.classList.add('open');
+    this.#placeFlyout(btn);
     this.#highlight();
+  }
+
+  /**
+   * Sur ordinateur et tablette, le menu s'ouvre à hauteur de son bouton mais ne doit jamais dépasser le bas de
+   * l'écran : il remonte autant que nécessaire et, s'il reste plus haut que l'écran, il défile (iPad : la liste des
+   * services publics descendait sous le bord et le lycée était inaccessible).
+   */
+  #placeFlyout(btn) {
+    if (isCompact()) return;
+    const f = this.flyout;
+    const host = f.parentElement.getBoundingClientRect();
+    // L'échelle de l'interface (zoom CSS) s'applique aussi à top et max-height
+    const zoom = parseFloat(getComputedStyle(f).zoom) || 1;
+    const margin = 12;
+    const avail = host.height - 2 * margin;
+    f.style.maxHeight = `${avail / zoom}px`;
+    const height = Math.min(f.getBoundingClientRect().height, avail);
+    let top = btn.getBoundingClientRect().top - host.top - 8;
+    top = Math.min(top, host.height - margin - height);
+    f.style.top = `${Math.max(margin, top) / zoom}px`;
   }
 
   closeFlyout() {

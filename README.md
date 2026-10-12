@@ -42,6 +42,8 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
   trois derniers mois : capacité de désendettement (dette / épargne brute, seuil d'alerte 12 ans), dette rapportée
   aux recettes annuelles, trésorerie négative, résultat déficitaire. Le détail des critères est dépliable ; la note
   fixe la prime de risque des nouveaux emprunts (−0,8 point en AAA, +6 points en D).
+- **Menus sur iPad** : un menu de construction ne dépasse plus le bas de l'écran ; il remonte et défile, le dernier
+  bâtiment de chaque catégorie (le lycée, par exemple) est toujours atteignable.
 - **Notifications discrètes** : compactes (deux lignes au plus, texte complet au survol), au plus trois, rangées dans le
   coin inférieur droit (au-dessus du dock sur téléphone).
 
@@ -502,7 +504,8 @@ victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique
 v0.4 : démolition des routes seules, dézonage d'une parcelle bâtie et annulation, déplacement d'un équipement (coût,
 annulation), terrassement (élever, abaisser, aplanir, planter, défricher), gisements et filières agricole et
 d'extraction, note de la dette et emprunt maximal.
-`npm run test:e2e` : 9 parcours Playwright — besoins de la ville, emprunt Max et note, pose validée, déplacement,
+`npm run test:e2e` : 10 parcours Playwright — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+(paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
 gare animée et notifications ; fiche dépliable et notification fermée au doigt ; fonder une ville à la souris ; pont, bus, couches, progression, tutoriel
