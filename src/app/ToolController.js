@@ -218,12 +218,44 @@ export class ToolController {
         return { type: 'deliveryZone', enabled: t.enabled, rect };
       case 'building': {
         const def = this.getSession().catalog.building(t.defId);
-        const { w, h } = footprintOf(def, def.rotatable ? this.rot : 0);
-        return { type: 'building', defId: t.defId, x: tile.x - Math.floor((w - 1) / 2), y: tile.y - Math.floor((h - 1) / 2), rot: def.rotatable ? this.rot : 0 };
+        const rot = def.rotatable ? this.rot : 0;
+        const { w, h } = footprintOf(def, rot);
+        const cmd = { type: 'building', defId: t.defId, x: tile.x - Math.floor((w - 1) / 2), y: tile.y - Math.floor((h - 1) / 2), rot };
+        return def.placement.adjacentToTerrainCode >= 0 ? this.#snapToShore(cmd, def) : cmd;
       }
       default:
         return null;
     }
+  }
+
+  /**
+   * Bâtiments à poser au bord de l'eau (port, pompe…) : si l'emplacement visé ne convient pas, on propose le plus
+   * proche qui convient, à 4 cases au plus (essayant aussi l'autre orientation pour un bâtiment pivotable).
+   */
+  #snapToShore(cmd, def) {
+    const session = this.getSession();
+    if (session.preview(cmd).ok) return cmd;
+    const key = `${cmd.defId}:${cmd.x}:${cmd.y}:${cmd.rot}`;
+    if (this.snapCache?.key === key && this.snapCache.tick === session.state.time.tick) return this.snapCache.cmd;
+    let best = null;
+    let bestD = Infinity;
+    const rots = def.rotatable ? [cmd.rot, 1 - cmd.rot] : [cmd.rot];
+    for (const rot of rots) {
+      for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+          const d = dx * dx + dy * dy + (rot !== cmd.rot ? 0.5 : 0);
+          if (d >= bestD) continue;
+          const c = { ...cmd, x: cmd.x + dx, y: cmd.y + dy, rot };
+          if (session.preview(c).ok) {
+            best = c;
+            bestD = d;
+          }
+        }
+      }
+    }
+    const out = best ? { ...best, snapped: true } : cmd;
+    this.snapCache = { key, tick: session.state.time.tick, cmd: out };
+    return out;
   }
 
   #refresh() {
@@ -288,6 +320,18 @@ export class ToolController {
     const c = document.createElement('span');
     c.textContent = `${cmd.type === 'demolish' ? 'Coût de démolition' : cmd.type === 'move' ? 'Coût du déplacement' : 'Coût'} : ${cost}${extra}${count}`;
     tip.append(b, c);
+    if (cmd.snapped) {
+      const r = document.createElement('small');
+      r.textContent = 'Emplacement ajusté au rivage le plus proche';
+      tip.append(r);
+    }
+    if (pv.ok && pv.works) {
+      const r = document.createElement('small');
+      const c = pv.check;
+      const parts = [c.forestTiles.length && 'défrichement', c.rockTiles.length && 'dérochage', c.level && 'nivellement'].filter(Boolean);
+      r.textContent = `Dont préparation du terrain (${parts.join(', ')}) : ${formatMoney(pv.works)}`;
+      tip.append(r);
+    }
     if (pv.ok && pv.notes?.length) {
       const r = document.createElement('small');
       r.textContent = pv.notes.join(' · ');

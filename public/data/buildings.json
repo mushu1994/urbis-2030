@@ -1710,11 +1710,13 @@
       "placement": {
         "terrain": [
           "grass",
-          "sand"
+          "sand",
+          "forest"
         ],
         "flat": true,
         "requiresRoadAccess": true,
-        "adjacentToTerrain": "water"
+        "adjacentToTerrain": "water",
+        "autoLevel": true
       },
       "networks": {
         "power": 20
@@ -2070,6 +2072,53 @@
         "detail": "tower"
       },
       "description": "Protège les bâtiments contre les incendies dans son rayon d'action. Les quartiers non couverts attirent moins d'habitants."
+    },
+    {
+      "id": "fire_post",
+      "name": "Poste de pompiers de quartier",
+      "category": "services",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 8000,
+      "upkeep": 400,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 6,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 7,
+        "qualification": 0.45,
+        "service": {
+          "type": "fire",
+          "radius": 8,
+          "strength": 0.75
+        }
+      },
+      "unlock": {
+        "population": 100
+      },
+      "visual": {
+        "height": 13,
+        "color": "#f1d6cc",
+        "roof": "flat",
+        "roofColor": "#b8392f",
+        "detail": "tower"
+      },
+      "description": "Une petite caserne de quartier, bon marché, avec un engin : elle couvre les quartiers éloignés de la grande caserne."
     },
     {
       "id": "clinic",
@@ -2757,8 +2806,8 @@
         "jobs": 15,
         "qualification": 0.25,
         "waste": {
-          "collectRadius": 14,
-          "collect": 350
+          "collectRadius": 18,
+          "collect": 450
         }
       },
       "environment": {
@@ -2801,8 +2850,8 @@
         "jobs": 8,
         "qualification": 0.2,
         "waste": {
-          "collectRadius": 10,
-          "collect": 200,
+          "collectRadius": 14,
+          "collect": 300,
           "process": 400,
           "storage": 220000,
           "kind": "landfill"
@@ -2854,8 +2903,8 @@
         "qualification": 0.4,
         "powerSource": "waste",
         "waste": {
-          "collectRadius": 8,
-          "collect": 150,
+          "collectRadius": 14,
+          "collect": 300,
           "process": 600,
           "kind": "incinerator",
           "powerPerUnit": 0.3
@@ -2881,16 +2930,16 @@
     },
     {
       "id": "recycling",
-      "name": "Centre de tri et de recyclage",
+      "name": "Grand centre de tri et de recyclage",
       "category": "waste",
       "kind": "plop",
       "footprint": {
-        "w": 2,
-        "h": 2
+        "w": 3,
+        "h": 3
       },
       "rotatable": false,
-      "cost": 35000,
-      "upkeep": 900,
+      "cost": 45000,
+      "upkeep": 1300,
       "lifeYears": 30,
       "placement": {
         "terrain": [
@@ -2906,10 +2955,12 @@
         "water": 10
       },
       "capacity": {
-        "jobs": 30,
+        "jobs": 40,
         "qualification": 0.35,
         "waste": {
-          "process": 300,
+          "collectRadius": 24,
+          "collect": 900,
+          "process": 800,
           "kind": "recycling",
           "revenuePerUnit": 0.25
         }
@@ -2919,16 +2970,16 @@
         "radius": 3
       },
       "unlock": {
-        "population": 800
+        "population": 400
       },
       "visual": {
-        "height": 14,
+        "height": 16,
         "color": "#e1e6d8",
         "roof": "flat",
         "roofColor": "#3f9a5a",
         "detail": "recycle"
       },
-      "description": "Trie les déchets et revend les matériaux : le traitement le plus vertueux, traité en priorité, et une source de recettes."
+      "description": "Le grand centre de la ville : ses propres bennes collectent les déchets dans un large rayon (24 cases), puis il les trie et revend les matériaux. À lui seul, il suffit à une ville de plusieurs milliers d'habitants."
     },
     {
       "id": "biogas",
@@ -3013,8 +3064,8 @@
         "qualification": 0.82,
         "powerSource": "waste",
         "waste": {
-          "collectRadius": 18,
-          "collect": 500,
+          "collectRadius": 28,
+          "collect": 1200,
           "process": 1000,
           "kind": "valorisation",
           "powerPerUnit": 0.15,
@@ -4050,18 +4101,20 @@
       "kind": "plop",
       "footprint": {
         "w": 3,
-        "h": 3
+        "h": 2
       },
-      "rotatable": false,
+      "rotatable": true,
       "cost": 160000,
       "upkeep": 3000,
       "lifeYears": 50,
       "placement": {
         "terrain": [
           "grass",
-          "sand"
+          "sand",
+          "forest"
         ],
         "flat": true,
+        "autoLevel": true,
         "requiresRoadAccess": true,
         "adjacentToTerrain": "water"
       },
@@ -4092,7 +4145,7 @@
         "roofColor": "#4f6a80",
         "detail": "cranes"
       },
-      "description": "Débouchés maritimes pour l'industrie : la demande industrielle grimpe et les marchandises arrivent sans traverser la région. Au bord de l'eau.",
+      "description": "Débouchés maritimes pour l'industrie : la demande industrielle grimpe et les marchandises arrivent sans traverser la région. Au bord de l'eau : l'emplacement s'aimante au rivage le plus proche, le terrain est nivelé et la roche ou la forêt retirées automatiquement (coût affiché).",
       "cityEffects": [
         {
           "key": "demand.I",

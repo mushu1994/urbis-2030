@@ -17,6 +17,17 @@ const update = (s, months = 1) => {
 };
 
 describe('Gestion des déchets', () => {
+  it('v0.5 : un seul grand centre de tri collecte et traite tout un quartier', () => {
+    const s = flatSession();
+    town(s, { houses: 24, residents: 120 }); // 288 u/j répartis sur 24 cases de large
+    spawn(s, 'recycling', 14, 16, { access: s.state.grid.idx(14, 15), jobsFilled: 40, powered: true });
+    update(s, 2);
+    const ws = s.state.waste.stats;
+    expect(ws.collectionRate).toBeGreaterThan(0.99);
+    expect(ws.limitedBy).toBeNull();
+    expect(ws.byKind.recycling).toBeCloseTo(ws.generated, 5);
+  });
+
   it('sans installation, rien n\'est collecté : les déchets s\'accumulent et bloquent l\'évolution', () => {
     const s = flatSession();
     const houses = town(s);
@@ -59,15 +70,15 @@ describe('Gestion des déchets', () => {
 
   it('l\'incinérateur et le méthaniseur produisent de l\'électricité ; le recyclage passe en premier et rapporte', () => {
     const s = flatSession();
-    town(s, { houses: 24, residents: 300 });
+    town(s, { houses: 24, residents: 600 });
     spawn(s, 'waste_depot', 14, 16, { access: s.state.grid.idx(14, 15), jobsFilled: 15, powered: true });
     const inc = spawn(s, 'incinerator', 10, 16, { access: s.state.grid.idx(10, 15), jobsFilled: 25 });
-    const rec = spawn(s, 'recycling', 20, 16, { access: s.state.grid.idx(20, 15), jobsFilled: 30, powered: true });
+    const rec = spawn(s, 'recycling', 20, 16, { access: s.state.grid.idx(20, 15), jobsFilled: 40, powered: true });
     update(s, 1);
     const ws = s.state.waste.stats;
-    expect(ws.collected).toBeGreaterThan(300);
-    expect(rec.wasteProcessed).toBeCloseTo(300, 5); // le recyclage est saturé en premier
-    expect(inc.wasteProcessed).toBeCloseTo(ws.collected - 300, 5);
+    expect(ws.collected).toBeGreaterThan(800);
+    expect(rec.wasteProcessed).toBeCloseTo(800, 5); // le recyclage est saturé en premier
+    expect(inc.wasteProcessed).toBeCloseTo(ws.collected - 800, 5);
     expect(ws.recycledPerDay).toBeGreaterThan(0);
     s.sim.utilities.update(s.state);
     expect(inc.output).toBeCloseTo(inc.wasteProcessed * 0.3, 5);
@@ -80,10 +91,11 @@ describe('Gestion des déchets', () => {
 
   it('la capacité de collecte limite la collecte ; la technologie de collecte IA l\'augmente de 25 %', () => {
     const s = flatSession();
-    town(s, { houses: 6, residents: 1000 }); // 600 u/j concentrés près du dépôt : la collecte sature
+    town(s, { houses: 6, residents: 2000 }); // 1 200 u/j concentrés près du dépôt : la collecte sature
     spawn(s, 'waste_depot', 8, 16, { access: s.state.grid.idx(8, 15), jobsFilled: 15, powered: true });
-    spawn(s, 'incinerator', 12, 16, { access: s.state.grid.idx(12, 15), jobsFilled: 25 }); // 350 + 150 u/j de bennes < 600 u/j
-    spawn(s, 'recycling', 16, 16, { access: s.state.grid.idx(16, 15), jobsFilled: 30, powered: true });
+    spawn(s, 'incinerator', 12, 16, { access: s.state.grid.idx(12, 15), jobsFilled: 25 }); // 450 + 300 u/j de bennes < 1 200 u/j
+    spawn(s, 'landfill', 16, 17, { access: s.state.grid.idx(16, 15), jobsFilled: 8 });
+    spawn(s, 'biogas', 20, 16, { access: s.state.grid.idx(20, 15), jobsFilled: 12 }); // traitement 1 250 u/j > collecte 1 050 u/j
     s.state.tech.researched = {};
     s.sim.ai.refreshModifiers(s.state);
     update(s, 1);

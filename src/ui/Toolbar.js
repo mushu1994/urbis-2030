@@ -7,7 +7,7 @@ const TERRAFORM_DESC = {
   raise: 'Glissez pour élever les cases d\'un niveau (roche : coût doublé). Les cases bâties et les routes sont ignorées.',
   lower: 'Glissez pour abaisser les cases d\'un niveau, sans descendre sous le niveau du sol.',
   level: 'Glissez depuis une case : tout le rectangle prend son altitude. Coût par niveau déplacé.',
-  clear: 'Glissez pour abattre les forêts du rectangle.',
+  clear: 'Glissez pour abattre les forêts (15 €/case) et retirer la roche (60 €/case) du rectangle.',
   plant: 'Glissez pour planter une forêt sur les cases libres et non zonées : fraîcheur, verdure, bruit et pollution réduits.'
 };
 import { isCompact } from './layout.js';

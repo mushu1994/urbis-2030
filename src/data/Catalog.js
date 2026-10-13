@@ -184,6 +184,7 @@ function normalizeBuilding(raw, zoneById) {
     placement: {
       terrainCodes,
       flat: raw.placement?.flat ?? true,
+      autoLevel: !!raw.placement?.autoLevel,
       requiresRoadAccess: raw.placement?.requiresRoadAccess ?? true,
       adjacentToTerrainCode: adj ? TERRAIN_NAMES.indexOf(adj) : -1,
       unique: !!raw.placement?.unique

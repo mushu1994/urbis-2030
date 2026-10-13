@@ -6,6 +6,21 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.5 (retours de jeu)
+
+- **Déchets simplifiés** : le *Grand centre de tri et de recyclage* (3 × 3, 45 000 €, dès 400 habitants) a désormais
+  ses propres bennes : il collecte dans un rayon de 24 cases (900 u./jour) et trie lui-même (800 u./jour). Un seul
+  centre suffit à une ville de plusieurs milliers d'habitants. Les autres installations collectent plus loin (centre de
+  collecte 18 cases, décharge et incinérateur 14, valorisation IA 28) et la collecte est complète jusqu'aux 4/5 du
+  rayon (3/5 auparavant).
+- **Poste de pompiers de quartier** : 1 × 1, 8 000 €, rayon 8 cases, pour couvrir les quartiers éloignés de la caserne.
+- **Roche** : elle ne bloque plus rien. Un équipement s'y construit et une zone s'y trace : la roche est dérochée
+  (60 € la case, montant affiché avant de valider). L'outil Terrain « Défricher et dérocher » la retire aussi. La zone
+  d'extraction, elle, garde la roche qu'elle exploite.
+- **Ports** : emprise 3 × 2 pivotable, posée sur prairie, sable ou forêt. Le terrain inégal est nivelé automatiquement
+  (2 niveaux au plus, 600 € par case et par niveau). L'emplacement s'aimante au rivage valable le plus proche
+  (4 cases au plus, dans les deux orientations). La station de pompage profite du même aimant et du nivellement.
+
 ## Nouveautés de la version 0.4 (retours de jeu)
 
 - **Besoins de la ville** : les jauges R, C, B, I de la barre du haut sont plus grandes, horizontales et chiffrées.
@@ -494,10 +509,10 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 244 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 248 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
-catalogue des 88 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
+catalogue des 89 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
 accumulation d'objets), invariants sur une ville simulée plusieurs années ; météo (saisons, déterminisme, effets),
 crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, désactivation), scénarios (départ,
 victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements) ;

@@ -181,3 +181,60 @@ describe('Industries spécialisées (v0.4)', () => {
 function s0() {
   return flatSession();
 }
+
+describe('Roche, ports et petites casernes (v0.5)', () => {
+  it('la roche ne bloque plus : un équipement s\'y construit (dérochage payant), une zone aussi', () => {
+    const s = flatSession();
+    const g = s.state.grid;
+    s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y: 15 }, to: { x: 20, y: 15 } });
+    for (const [x, y] of [[8, 13], [9, 13], [8, 14], [9, 14]]) g.terrain[g.idx(x, y)] = TERRAIN.ROCK;
+    const pv = s.preview({ type: 'building', defId: 'fire', x: 8, y: 13 });
+    expect(pv.ok).toBe(true);
+    expect(pv.works).toBe(4 * 6000);
+    expect(pv.cost).toBe(s.catalog.building('fire').costCents + 4 * 6000);
+    expect(s.execute({ type: 'building', defId: 'fire', x: 8, y: 13 }).ok).toBe(true);
+    expect(g.terrain[g.idx(8, 13)]).toBe(TERRAIN.GRASS);
+    expect(s.execute({ type: 'undo' }).ok).toBe(true);
+    expect(g.terrain[g.idx(8, 13)]).toBe(TERRAIN.ROCK);
+    // Zonage résidentiel sur la roche : dérochée au moment du zonage
+    const z = s.preview({ type: 'zone', zoneId: 'R_LOW', rect: { x0: 8, y0: 14, x1: 9, y1: 14 } });
+    expect(z.eligible.length).toBe(2);
+    expect(z.rocks.length).toBe(2);
+    expect(s.execute({ type: 'zone', zoneId: 'R_LOW', rect: { x0: 8, y0: 14, x1: 9, y1: 14 } }).ok).toBe(true);
+    expect(g.terrain[g.idx(8, 14)]).toBe(TERRAIN.GRASS);
+    // Défricher et dérocher
+    expect(s.execute({ type: 'terraform', op: 'clear', rect: { x0: 8, y0: 13, x1: 9, y1: 13 } }).ok).toBe(true);
+    expect(g.terrain[g.idx(9, 13)]).toBe(TERRAIN.GRASS);
+  });
+
+  it('le port se pose au bord de l\'eau sur un terrain inégal (nivellement automatique) et pivote', () => {
+    const s = flatSession();
+    const g = s.state.grid;
+    for (let y = 0; y < g.height; y++) for (let x = 20; x < g.width; x++) {
+      g.terrain[g.idx(x, y)] = TERRAIN.WATER;
+      g.altitude[g.idx(x, y)] = 0;
+    }
+    s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y: 15 }, to: { x: 19, y: 15 } });
+    g.altitude[g.idx(18, 17)] = 2; // une butte dans l'emprise
+    const def = s.catalog.building('seaport');
+    expect(def.footprint).toEqual({ w: 3, h: 2 });
+    const pv = s.preview({ type: 'building', defId: 'seaport', x: 17, y: 16 });
+    expect(pv.ok).toBe(true);
+    expect(pv.check.level).toEqual({ target: 1, units: 1 });
+    expect(pv.works).toBe(60000);
+    expect(s.execute({ type: 'building', defId: 'seaport', x: 17, y: 16 }).ok).toBe(true);
+    expect(g.altitude[g.idx(18, 17)]).toBe(1);
+    // Pivoté (2 × 3) le long de la rive
+    expect(s.preview({ type: 'building', defId: 'seaport', x: 18, y: 12, rot: 1 }).ok).toBe(true);
+  });
+
+  it('le poste de pompiers de quartier couvre un petit rayon pour un coût modeste', () => {
+    const cat = flatSession().catalog;
+    const post = cat.building('fire_post');
+    const big = cat.building('fire');
+    expect(post.footprint).toEqual({ w: 1, h: 1 });
+    expect(post.capacity.service.type).toBe('fire');
+    expect(post.capacity.service.radius).toBeLessThan(big.capacity.service.radius);
+    expect(post.costCents).toBeLessThan(big.costCents / 2);
+  });
+});

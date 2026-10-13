@@ -1,6 +1,6 @@
 import { toCents } from '../util/money.js';
-import { TERRAIN, CLEARING_COST_EUROS, MAX_ALTITUDE } from '../world/Terrain.js';
-import { REASONS, checkBuildingPlacement, checkRoadTile, roadPath, planBridges, footprintOf, findAccess } from '../world/PlacementSystem.js';
+import { TERRAIN, CLEARING_COST_EUROS, ROCK_CLEARING_COST_EUROS, MAX_ALTITUDE } from '../world/Terrain.js';
+import { REASONS, checkBuildingPlacement, checkRoadTile, roadPath, planBridges, footprintOf, findAccess, siteWorksCents, prepareSite } from '../world/PlacementSystem.js';
 import { createBuilding, removeBuilding, markNetworksDirty } from './BuildingFactory.js';
 import { accountForCategory } from '../simulation/EconomySystem.js';
 
@@ -17,7 +17,7 @@ export const TERRAFORM = {
   raise: { label: 'Élever le terrain', euros: 600 },
   lower: { label: 'Abaisser le terrain', euros: 600 },
   level: { label: 'Aplanir le terrain', euros: 600 },
-  clear: { label: 'Défricher', euros: CLEARING_COST_EUROS },
+  clear: { label: 'Défricher et dérocher', euros: CLEARING_COST_EUROS },
   plant: { label: 'Planter une forêt', euros: 40 }
 };
 
@@ -157,11 +157,14 @@ export class ConstructionService {
     const reasons = [...check.reasons];
     const unlock = isUnlocked(state, def.unlock);
     if (!unlock.ok) reasons.push('locked');
-    const cost = def.costCents + check.forestTiles.length * toCents(CLEARING_COST_EUROS);
+    const works = siteWorksCents(check);
+    const cost = def.costCents + works;
     if (reasons.length === 0 && !this.economy.canAfford(state, cost)) reasons.push('budget');
     return {
       ok: reasons.length === 0,
       cost,
+      works,
+      check,
       upkeep: def.upkeepCents,
       tiles: check.tiles,
       w: check.w,
@@ -184,6 +187,7 @@ export class ConstructionService {
       lifeYears: def.lifeYears
     });
     if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
+    prepareSite(state, pv.check);
     const b = createBuilding(state, def, params.x, params.y, rot, 'player');
     b.assetId = pay.assetId;
     const asset = state.economy.assets.find((a) => a.id === pay.assetId);
@@ -193,7 +197,8 @@ export class ConstructionService {
       assetsAdded: pay.assetId ? [pay.assetId] : []
     });
     this.bus?.emit('building:added', { building: b });
-    this.bus?.emit('world:changed', { tiles: pv.tiles, reason: 'building' });
+    // Nivellement : les falaises dessinées par les cases voisines changent aussi
+    this.bus?.emit('world:changed', { tiles: pv.check.level ? withNeighbors(state, pv.tiles) : pv.tiles, reason: 'building' });
     return { ...pv, ok: true, building: b };
   }
 
@@ -392,9 +397,9 @@ export class ConstructionService {
       for (const i of own) g.building[i] = b.id;
     }
     const reasons = check.reasons.filter((k) => k !== 'unique');
-    const cost = this.moveCost(state, b) + check.forestTiles.length * toCents(CLEARING_COST_EUROS);
+    const cost = this.moveCost(state, b) + siteWorksCents(check);
     if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');
-    return { ok: reasons.length === 0, cost, tiles: check.tiles, w: check.w, h: check.h, reasons, messages: reasons.map((k) => REASONS[k]) };
+    return { ok: reasons.length === 0, cost, check, tiles: check.tiles, w: check.w, h: check.h, reasons, messages: reasons.map((k) => REASONS[k]) };
   }
 
   moveBuilding(state, params) {
@@ -419,6 +424,7 @@ export class ConstructionService {
       g.touch(i);
     }
     const { w, h } = footprintOf(def, rot);
+    prepareSite(state, pv.check);
     for (let dy = 0; dy < h; dy++) {
       for (let dx = 0; dx < w; dx++) {
         const i = g.idx(params.x + dx, params.y + dy);
@@ -461,9 +467,9 @@ export class ConstructionService {
           continue;
         }
         if (op === 'clear') {
-          if (terr !== TERRAIN.FOREST || g.building[i] || g.road[i]) continue;
+          if ((terr !== TERRAIN.FOREST && terr !== TERRAIN.ROCK) || g.building[i] || g.road[i]) continue;
           eligible.push(i);
-          cost += toCents(spec.euros);
+          cost += toCents(terr === TERRAIN.ROCK ? ROCK_CLEARING_COST_EUROS : spec.euros);
           continue;
         }
         if (op === 'plant') {
@@ -664,4 +670,19 @@ function footprintTiles(state, b) {
   const out = [];
   for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) out.push(g.idx(b.x + dx, b.y + dy));
   return out;
+}
+
+/** Cases et leurs voisines directes (redessin des falaises après un nivellement). */
+function withNeighbors(state, tiles) {
+  const g = state.grid;
+  const out = new Set(tiles);
+  for (const i of tiles) {
+    const x = g.xOf(i);
+    const y = g.yOf(i);
+    if (x > 0) out.add(i - 1);
+    if (y > 0) out.add(i - g.width);
+    if (x < g.width - 1) out.add(i + 1);
+    if (y < g.height - 1) out.add(i + g.width);
+  }
+  return [...out];
 }

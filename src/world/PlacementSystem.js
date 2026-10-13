@@ -1,4 +1,4 @@
-import { TERRAIN, roadAllowedOn, zoneAllowedOn, hasDeposit, ZONE_EXTRACT } from './Terrain.js';
+import { TERRAIN, roadAllowedOn, zoneAllowedOn, hasDeposit, ZONE_EXTRACT, CLEARING_COST_EUROS, ROCK_CLEARING_COST_EUROS, LEVELING_COST_EUROS } from './Terrain.js';
 
 /** Messages d'explication des refus de placement (affichés au joueur). */
 export const REASONS = {
@@ -8,6 +8,7 @@ export const REASONS = {
   terrain: 'Terrain incompatible',
   water: 'Impossible de construire sur l\'eau',
   slope: 'Terrain non plat',
+  levelTooHigh: 'Dénivelé trop important (2 niveaux au plus pour un nivellement automatique)',
   steep: 'Pente trop forte',
   noRoad: 'Absence de raccordement routier',
   needWater: 'Doit être construit au bord de l\'eau',
@@ -33,7 +34,9 @@ export function footprintOf(def, rot = 0) {
  * Vérifie l'emprise d'un bâtiment à poser (sans effet de bord).
  * @param {import('../app/GameState.js').GameState} state
  * @param {import('../data/Catalog.js').BuildingDef} def
- * @returns {{ok:boolean, reasons:string[], tiles:number[], forestTiles:number[], access:number, w:number, h:number}}
+ * Forêt et roche ne bloquent plus : elles sont défrichées ou dérochées (coût ajouté par le service de construction).
+ * Un bâtiment « autoLevel » (port, pompe…) accepte un terrain inégal : il est nivelé à l'altitude la plus basse.
+ * @returns {{ok:boolean, reasons:string[], tiles:number[], forestTiles:number[], rockTiles:number[], level:{target:number, units:number}|null, access:number, w:number, h:number}}
  */
 export function checkBuildingPlacement(state, def, x, y, rot = 0) {
   const g = state.grid;
@@ -41,7 +44,10 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
   const reasons = new Set();
   const tiles = [];
   const forestTiles = [];
+  const rockTiles = [];
   let alt = -1;
+  let minAlt = Infinity;
+  let maxAlt = -Infinity;
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
       const tx = x + dx;
@@ -56,10 +62,24 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
       if (g.building[i]) reasons.add('occupied');
       if (g.road[i]) reasons.add('road');
       if (terr === TERRAIN.WATER) reasons.add('water');
+      else if (terr === TERRAIN.FOREST) forestTiles.push(i);
+      else if (terr === TERRAIN.ROCK && !def.placement.terrainCodes.includes(terr)) rockTiles.push(i);
       else if (!def.placement.terrainCodes.includes(terr)) reasons.add('terrain');
-      if (terr === TERRAIN.FOREST) forestTiles.push(i);
+      if (terr !== TERRAIN.WATER) {
+        minAlt = Math.min(minAlt, g.altitude[i]);
+        maxAlt = Math.max(maxAlt, g.altitude[i]);
+      }
       if (alt < 0) alt = g.altitude[i];
-      else if (def.placement.flat && g.altitude[i] !== alt) reasons.add('slope');
+      else if (def.placement.flat && !def.placement.autoLevel && g.altitude[i] !== alt) reasons.add('slope');
+    }
+  }
+  let level = null;
+  if (def.placement.autoLevel && maxAlt > minAlt) {
+    if (maxAlt - minAlt > 2) reasons.add('levelTooHigh');
+    else {
+      let units = 0;
+      for (const i of tiles) if (g.terrain[i] !== TERRAIN.WATER) units += g.altitude[i] - minAlt;
+      level = { target: minAlt, units };
     }
   }
   const access = findAccess(state, x, y, w, h);
@@ -70,7 +90,21 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
   if (def.placement.unique) {
     for (const b of state.buildings.values()) if (b.defId === def.id) reasons.add('unique');
   }
-  return { ok: reasons.size === 0, reasons: [...reasons], tiles, forestTiles, access, w, h };
+  return { ok: reasons.size === 0, reasons: [...reasons], tiles, forestTiles, rockTiles, level, access, w, h };
+}
+
+/** Surcoût de préparation du terrain d'une emprise (défrichement, dérochage, nivellement), en centimes. */
+export function siteWorksCents(check) {
+  return Math.round(
+    (check.forestTiles.length * CLEARING_COST_EUROS + check.rockTiles.length * ROCK_CLEARING_COST_EUROS + (check.level?.units ?? 0) * LEVELING_COST_EUROS) * 100
+  );
+}
+
+/** Applique la préparation du terrain (avant la pose) : roche → prairie, nivellement de l'emprise. */
+export function prepareSite(state, check) {
+  const g = state.grid;
+  for (const i of check.rockTiles) g.terrain[i] = TERRAIN.GRASS;
+  if (check.level) for (const i of check.tiles) if (g.terrain[i] !== TERRAIN.WATER) g.altitude[i] = check.level.target;
 }
 
 /**

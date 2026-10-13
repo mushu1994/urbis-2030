@@ -1,6 +1,7 @@
 import { REASONS, canZoneTile } from '../world/PlacementSystem.js';
 import { isUnlocked } from './ConstructionService.js';
-import { ZONE_EXTRACT } from '../world/Terrain.js';
+import { ZONE_EXTRACT, TERRAIN, ROCK_CLEARING_COST_EUROS } from '../world/Terrain.js';
+import { toCents } from '../util/money.js';
 
 /**
  * Zonage (résidentiel, commerce, bureaux, industrie) et zones de desserte autorisées pour les drones.
@@ -58,6 +59,9 @@ export class ZoningService {
     const reasons = [];
     if (!eligible.length) reasons.push(zone ? (code === ZONE_EXTRACT && all.some((i) => canZoneTile(state, i) && g.zone[i] !== code) ? 'noDeposit' : 'noZone') : 'nothing');
     let cost = zone ? eligible.length * zone.costCents : 0;
+    // Roche : dérochée (payante) au moment du zonage, sauf pour l'extraction qui l'exploite
+    const rocks = zone && code !== ZONE_EXTRACT ? eligible.filter((i) => g.terrain[i] === TERRAIN.ROCK) : [];
+    cost += rocks.length * toCents(ROCK_CLEARING_COST_EUROS);
     for (const b of buildings) cost += this.construction.demolitionCost(b);
     if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');
     return {
@@ -66,6 +70,7 @@ export class ZoningService {
       tiles: all,
       eligible,
       buildings: buildings.map((b) => b.id),
+      rocks,
       residents: buildings.reduce((n, b) => n + (b.residents ?? 0), 0),
       reasons,
       messages: reasons.map((r) => REASONS[r])
@@ -94,6 +99,7 @@ export class ZoningService {
       if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
       txs.push(pay.tx);
     }
+    for (const i of pv.rocks ?? []) g.terrain[i] = TERRAIN.GRASS;
     for (const i of pv.eligible) {
       g.zone[i] = zone ? zone.code : 0;
       g.touch(i);

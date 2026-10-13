@@ -69,7 +69,8 @@ export class WasteSystem {
       if (!active) continue;
       if (w.collect) {
         collectCap += w.collect * staffing * (mods['waste.collectMult'] ?? 1);
-        EnvironmentSystem.splat(g, g.wasteCover, b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, 2.5 * staffing, w.collectRadius ?? 8);
+        // v0.5 : collecte complète jusqu'aux 4/5 du rayon (au lieu des 3/5), puis dégressive
+        EnvironmentSystem.splat(g, g.wasteCover, b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, 5 * staffing, w.collectRadius ?? 8);
       }
     }
     for (let i = 0; i < g.size; i++) if (g.wasteCover[i] > 1) g.wasteCover[i] = 1;

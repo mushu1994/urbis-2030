@@ -6,6 +6,12 @@ export const TERRAIN_LABELS = ['Prairie', 'Eau', 'Forêt', 'Sable', 'Roche'];
 /** Coût de défrichement d'une case de forêt avant construction (euros). */
 export const CLEARING_COST_EUROS = 15;
 
+/** Coût de dérochage d'une case de roche avant construction ou zonage (euros). */
+export const ROCK_CLEARING_COST_EUROS = 60;
+
+/** Coût du nivellement automatique (euros par case et par niveau déplacé). */
+export const LEVELING_COST_EUROS = 600;
+
 export const MAX_ALTITUDE = 4;
 
 export function isWater(code) {
@@ -30,9 +36,10 @@ export const DEPOSIT_RADIUS = 2;
  * - extraction : aussi sur la roche (le gisement lui-même).
  */
 export function zoneAllowedOn(code, zoneCode = 0) {
-  if (zoneCode === ZONE_AGRI) return code === TERRAIN.GRASS || code === TERRAIN.FOREST;
   if (zoneCode === ZONE_EXTRACT) return code !== TERRAIN.WATER;
-  return code === TERRAIN.GRASS || code === TERRAIN.SAND || code === TERRAIN.FOREST;
+  // v0.5 : la roche n'est plus un obstacle, elle est dérochée (payante) au moment du zonage
+  if (zoneCode === ZONE_AGRI) return code === TERRAIN.GRASS || code === TERRAIN.FOREST || code === TERRAIN.ROCK;
+  return code !== TERRAIN.WATER;
 }
 
 /** La case est-elle à portée d'un gisement (roche à DEPOSIT_RADIUS cases au plus) ? */
