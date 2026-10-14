@@ -1,3 +1,4 @@
+import { policyMonthlyCents } from '../simulation/EconomySystem.js';
 import { h } from './dom.js';
 import { meter } from './charts.js';
 import { formatMoney, formatNumber } from '../util/money.js';
@@ -83,14 +84,14 @@ export class TechPanel {
   #policies(session, rerender) {
     const s = session.state;
     return [
-      h('p.hint', 'Les politiques ont un coût mensuel et des effets durables sur la ville. Elles peuvent être modifiées à tout moment.'),
+      h('p.hint', 'Les politiques ont un coût mensuel (une part fixe et une part par habitant) et des effets durables sur la ville. Elles peuvent être modifiées à tout moment, mais l\'opinion n\'aime pas les revirements : abroger une politique adoptée depuis moins d\'un an coûte un peu de popularité.'),
       h('div.cards', session.catalog.policies.map((p) => {
         const on = !!s.policies.active[p.id];
         const u = isUnlocked(s, p.unlock);
         return h('article.card', { class: on ? 'deployed' : '' },
           h('header', h('h4', p.name), on ? h('span.badge.ok', 'Active') : null),
           h('p', p.description),
-          h('div.card-costs', h('span', `${formatMoney(p.monthlyCostCents)}/mois`)),
+          h('div.card-costs', h('span', `${formatMoney(policyMonthlyCents(p, s.stats.population))}/mois`), p.costPer1000Cents ? h('small', ` (${formatMoney(p.monthlyCostCents)} + ${formatMoney(p.costPer1000Cents)} par millier d'habitants)`) : null),
           effectList(p.effects.map((e) => ({ ...e, side: (e.op === 'add' && e.value < 0 && e.key.startsWith('satisfaction')) || e.key.startsWith('demand') || e.key.startsWith('growth') || (e.key === 'noise.traffic' && e.value > 0) }))),
           h('footer', h('button.btn', { class: on ? '' : 'primary', disabled: !u.ok, on: { click: () => { const r = this.execute({ type: 'policy', policyId: p.id, enabled: !on }); if (!r.ok) this.notify('warning', r.reason); rerender(); } } }, !u.ok ? u.reason : on ? 'Abroger' : 'Adopter'))
         );

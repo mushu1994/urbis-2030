@@ -50,7 +50,18 @@ export const DEFAULT_MODIFIERS = Object.freeze({
   'risk.cyber': 1,
   'risk.blackout': 1,
   'risk.strike': 1,
-  'risk.fire': 1
+  'risk.fire': 1,
+  /** v0.7 : emploi. Bonus de qualification visé, part des actifs requalifiés vers l'échelon supérieur, part des
+   *  emplois vacants pourvus par des navetteurs de la région. */
+  'jobs.qualification': 0,
+  'jobs.upskill': 0,
+  'jobs.commuters': 0.25,
+  /** v0.7 : risques sociaux (manifestations, émeutes, épidémies). */
+  'risk.protest': 1,
+  'risk.riot': 1,
+  'risk.epidemic': 1,
+  /** v0.7 : opinion (points de popularité par mois). */
+  'approval.add': 0
 });
 
 /** Un bâtiment est-il en état de fonctionner (ni abandonné, ni arrêté par un incident) ? */

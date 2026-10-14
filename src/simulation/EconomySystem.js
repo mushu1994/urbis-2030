@@ -361,7 +361,7 @@ export class EconomySystem {
     for (const id of Object.keys(state.tech.researched)) techCost += cat.techById.get(id)?.upkeepCents ?? 0;
     if (techCost) this.post(state, { kind: 'opex', category: 'technology', label: 'Exploitation des systèmes IA', amount: -techCost });
     let polCost = 0;
-    for (const id of Object.keys(state.policies.active)) polCost += cat.policyById.get(id)?.monthlyCostCents ?? 0;
+    for (const id of Object.keys(state.policies.active)) polCost += policyMonthlyCents(cat.policyById.get(id), state.stats.population);
     if (polCost) this.post(state, { kind: 'opex', category: 'policies', label: 'Politiques publiques', amount: -polCost });
 
     // Service de la dette (annuités constantes)
@@ -562,4 +562,10 @@ export class EconomySystem {
     }
     return { months, trend };
   }
+}
+
+/** Coût mensuel d'une politique (v0.7) : part fixe plus une part par tranche de 1 000 habitants. */
+export function policyMonthlyCents(pol, population = 0) {
+  if (!pol) return 0;
+  return pol.monthlyCostCents + Math.round(((pol.costPer1000Cents ?? 0) * Math.max(0, population)) / 1000);
 }

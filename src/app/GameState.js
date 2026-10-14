@@ -1,7 +1,7 @@
 import { Grid } from '../world/Grid.js';
 import { Rng } from '../util/rng.js';
-import { generateWorld } from '../world/WorldGenerator.js';
-import { defaultLand } from '../world/Land.js';
+import { generateFullWorld, copyRegion, placeEntry } from '../world/WorldGenerator.js';
+import { defaultLand, PARCEL, MAX_WORLD } from '../world/Land.js';
 import { SIM } from '../simulation/config.js';
 import { toCents } from '../util/money.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
@@ -114,10 +114,18 @@ export class GameState {
    * @param {{catalog: import('../data/Catalog.js').Catalog, seed?:number, width?:number, height?:number, name?:string}} p
    */
   static createNew({ catalog, seed = 2030, width = 64, height = 64, name = 'Nouvelle ville', mapParams = null }) {
+    // v0.7 : le monde complet (256 × 256) est généré d'emblée ; la carte de départ en est découpée et les parcelles
+    // achetées ensuite en recopient les cases, sans couture de relief ni d'eau.
     const grid = new Grid(width, height);
-    const { entries } = generateWorld(grid, { seed, highwayRoadCode: catalog.road('road_highway').code, params: mapParams ?? {} });
+    const land = defaultLand(width, height);
+    const core = { x: land.box.x0 * PARCEL, y: land.box.y0 * PARCEL, width, height };
+    const world = generateFullWorld(Grid, { seed, params: mapParams ?? {}, core, size: MAX_WORLD });
+    copyRegion(world, grid, core.x, core.y);
+    const entries = placeEntry(grid, catalog.road('road_highway').code);
     const s = new GameState({ grid, seed, name });
     s.entries = entries;
+    s.meta.worldGen = 2;
+    s.meta.worldCore = core;
     if (mapParams) s.meta.mapParams = { ...mapParams };
     return s;
   }

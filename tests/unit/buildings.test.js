@@ -3,7 +3,7 @@ import { getCatalog, newSession } from '../helpers/session.js';
 import { Catalog } from '../../src/data/Catalog.js';
 import { defaultData } from '../../src/data/defaultData.js';
 import { computeModifiers } from '../../src/simulation/Modifiers.js';
-import { TERRAIN, CLEARING_COST_EUROS } from '../../src/world/Terrain.js';
+import { TERRAIN, CLEARING_COST_EUROS, ROCK_CLEARING_COST_EUROS } from '../../src/world/Terrain.js';
 import { toCents } from '../../src/util/money.js';
 
 /** Partie de 64×64 où tout est débloqué, avec un quadrillage de rues pour desservir les emplacements. */
@@ -43,9 +43,12 @@ describe('Catalogue des équipements', () => {
       expect(spot, `aucun emplacement pour ${id}`).not.toBeNull();
       const before = s.state.economy.treasury;
       const forest = spot.pv.tiles.filter((i) => g.terrain[i] === TERRAIN.FOREST).length;
+      const rock = spot.pv.tiles.filter((i) => g.terrain[i] === TERRAIN.ROCK).length;
       const r = s.execute({ type: 'building', defId: id, x: spot.x, y: spot.y });
       expect(r.ok, id).toBe(true);
-      expect(before - s.state.economy.treasury).toBe(def.costCents + forest * toCents(CLEARING_COST_EUROS));
+      expect(before - s.state.economy.treasury).toBe(spot.pv.cost);
+      // Coût = prix catalogue + travaux de terrain (défrichage, dérochage, nivellement) seulement
+      expect(spot.pv.cost).toBeGreaterThanOrEqual(def.costCents + forest * toCents(CLEARING_COST_EUROS) + rock * toCents(ROCK_CLEARING_COST_EUROS));
       let tiles = 0;
       for (let i = 0; i < g.size; i++) if (g.building[i] === r.building.id) tiles++;
       expect(tiles, id).toBe(def.footprint.w * def.footprint.h);

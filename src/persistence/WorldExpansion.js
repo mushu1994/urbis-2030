@@ -1,5 +1,5 @@
 import { Grid, LAYER_SPECS } from '../world/Grid.js';
-import { generateWorld } from '../world/WorldGenerator.js';
+import { generateWorld, generateFullWorld, copyRegion } from '../world/WorldGenerator.js';
 import { TERRAIN } from '../world/Terrain.js';
 import { PARCEL, MAX_WORLD } from '../world/Land.js';
 import { TRAFFIC_ARRAYS } from './SaveService.js';
@@ -7,7 +7,8 @@ import { TRAFFIC_ARRAYS } from './SaveService.js';
 /**
  * Agrandit une partie sauvegardée (v0.6) : la grille passe au rectangle englobant `box` (en parcelles du monde
  * possible). L'ancienne carte est recopiée à l'identique ; les nouvelles cases viennent du générateur, calculé dans
- * le repère du monde complet (même graine, mêmes paramètres de carte), puis raccordées en douceur au relief existant.
+ * le monde complet généré à la création (v0.7, sans couture) ou, pour les parties plus anciennes, du générateur
+ * calculé dans le repère du monde complet puis raccordé en douceur au relief existant.
  * Toutes les coordonnées et tous les indices de case enregistrés sont décalés.
  *
  * Fonction pure sur les données de sauvegarde : la partie est ensuite rechargée normalement.
@@ -27,12 +28,19 @@ export function expandSave(data, { catalog, box }) {
 
   const before = Grid.deserialize(out.world);
   const grid = new Grid(W1, H1);
-  generateWorld(grid, {
-    seed: out.meta.seed,
-    highwayRoadCode: catalog.road('road_highway').code,
-    params: out.meta.mapParams ?? {},
-    frame: { x: box.x0 * PARCEL, y: box.y0 * PARCEL, width: MAX_WORLD, height: MAX_WORLD }
-  });
+  // v0.7 : le monde complet a été généré à la création de la partie ; on en recopie simplement les cases
+  const seamless = out.meta.worldGen === 2 && out.meta.worldCore;
+  if (seamless) {
+    const world = generateFullWorld(Grid, { seed: out.meta.seed, params: out.meta.mapParams ?? {}, core: out.meta.worldCore, size: MAX_WORLD });
+    copyRegion(world, grid, box.x0 * PARCEL, box.y0 * PARCEL);
+  } else {
+    generateWorld(grid, {
+      seed: out.meta.seed,
+      highwayRoadCode: catalog.road('road_highway').code,
+      params: out.meta.mapParams ?? {},
+      frame: { x: box.x0 * PARCEL, y: box.y0 * PARCEL, width: MAX_WORLD, height: MAX_WORLD }
+    });
+  }
   const fresh = new Uint8Array(grid.size).fill(1);
   for (const name of Object.keys(LAYER_SPECS)) {
     const src = before[name];
@@ -45,27 +53,6 @@ export function expandSave(data, { catalog, box }) {
   }
   for (let y = 0; y < H0; y++) for (let x = 0; x < W0; x++) fresh[(y + dy) * W1 + dx + x] = 0;
 
-  // Raccord du relief : au plus un niveau d'écart entre voisins, les cases anciennes ne bougent pas
-  const nb = new Int32Array(4);
-  for (let pass = 0; pass < 8; pass++) {
-    for (let i = 0; i < grid.size; i++) {
-      if (!fresh[i] || grid.terrain[i] === TERRAIN.WATER) continue;
-      const n = grid.neighbors4(i, nb);
-      let lo = 99;
-      let hi = 0;
-      for (let k = 0; k < n; k++) {
-        const j = nb[k];
-        if (grid.terrain[j] === TERRAIN.WATER) continue;
-        lo = Math.min(lo, grid.altitude[j]);
-        hi = Math.max(hi, grid.altitude[j]);
-      }
-      if (lo === 99) continue;
-      let a = grid.altitude[i];
-      if (a > lo + 1) a = lo + 1;
-      if (a < hi - 1) a = hi - 1;
-      grid.altitude[i] = Math.max(1, a);
-    }
-  }
   for (let i = 0; i < grid.size; i++) if (fresh[i]) grid.tileVersion[i] = 1;
 
   const remap = (i) => {
@@ -86,11 +73,18 @@ export function expandSave(data, { catalog, box }) {
         x += sx;
         y += sy;
         const i = y * W1 + x;
+        fresh[i] = 0;
+        grid.road[i] = highway;
+        grid.zone[i] = 0;
+        if (seamless && grid.terrain[i] === TERRAIN.WATER) {
+          // Pont au-dessus de l'eau : le plan d'eau du monde reste intact
+          grid.altitude[i] = 0;
+          grid.bridge[i] = alt + 1;
+          continue;
+        }
         grid.terrain[i] = TERRAIN.GRASS;
         grid.altitude[i] = alt;
-        grid.road[i] = highway;
         grid.bridge[i] = 0;
-        grid.zone[i] = 0;
       }
     };
     if (ox === 0 && dx > 0) stepTo(0, y, -1, 0);
@@ -100,6 +94,28 @@ export function expandSave(data, { catalog, box }) {
     return y * W1 + x;
   });
 
+  // Raccord du relief : au plus un niveau d'écart entre voisins ; les cases anciennes et l'autoroute ne bougent pas.
+  // (Avec le monde complet de la v0.7, seules les abords de l'autoroute prolongée et les bords terrassés sont concernés.)
+  const nb = new Int32Array(4);
+  for (let pass = 0; pass < 8; pass++) {
+    for (let i = 0; i < grid.size; i++) {
+      if (!fresh[i] || grid.terrain[i] === TERRAIN.WATER) continue;
+      const n = grid.neighbors4(i, nb);
+      let lo = 99;
+      let hi = 0;
+      for (let k = 0; k < n; k++) {
+        const j = nb[k];
+        if (grid.terrain[j] === TERRAIN.WATER) continue;
+        lo = Math.min(lo, grid.altitude[j]);
+        hi = Math.max(hi, grid.altitude[j]);
+      }
+      if (lo === 99) continue;
+      let a = grid.altitude[i];
+      if (a > lo + 1) a = lo + 1;
+      if (a < hi - 1) a = hi - 1;
+      grid.altitude[i] = Math.max(1, a);
+    }
+  }
   out.world = grid.serialize();
   for (const b of out.buildings) {
     b.x += dx;

@@ -46,12 +46,15 @@ function fbm(x, y, seed, octaves = 4) {
  *   centres sont calculés dans le repère de ce monde.
  * @returns {{entries:number[]}}
  */
-export function generateWorld(grid, { seed, highwayRoadCode, river = true, params = {}, frame = null }) {
+export function generateWorld(grid, { seed, highwayRoadCode, river = true, params = {}, frame = null, core = null }) {
   const { width: W0, height: H0 } = grid;
   const fx = frame?.x ?? 0;
   const fy = frame?.y ?? 0;
-  const W = frame?.width ?? W0;
-  const H = frame?.height ?? H0;
+  // core (v0.7) : zone de départ dans un monde plus grand ; l'aplanissement du centre et la rivière s'y rapportent
+  const W = core?.width ?? frame?.width ?? W0;
+  const H = core?.height ?? frame?.height ?? H0;
+  const ox = core?.x ?? 0;
+  const oy = core?.y ?? 0;
   const p = { water: 50, relief: 50, rock: 50, forest: 50, ...params };
   const waterLevel = p.water === 50 ? 0.3 : 0.16 + (p.water / 100) * 0.28;
   const reliefScale = p.relief === 50 ? 7 : 1 + (p.relief / 100) * 12;
@@ -60,8 +63,8 @@ export function generateWorld(grid, { seed, highwayRoadCode, river = true, param
   const forestThreshold = p.forest === 50 ? 0.58 : 0.72 - (p.forest / 100) * 0.28;
   if (p.water < 8) river = false;
   const rng = new Rng(seed ^ 0x5eed);
-  const cx = W / 2;
-  const cy = H / 2;
+  const cx = ox + W / 2;
+  const cy = oy + H / 2;
   const scale = 22;
 
   // 1. Relief brut
@@ -93,11 +96,21 @@ export function generateWorld(grid, { seed, highwayRoadCode, river = true, param
 
   // 3. Rivière sinueuse du nord au sud, décalée du centre
   if (river) {
-    let x = Math.floor(W * (0.62 + rng.next() * 0.15));
+    const target = ox + Math.floor(W * (0.62 + rng.next() * 0.15));
     const extra = p.water > 75 ? 1 : 0;
-    for (let y = 0; y < H; y++) {
-      const drift = valueNoise(y / 9, 3.7, seed + 77) - 0.5;
-      x = Math.max(3, Math.min(W - 4, x + Math.round(drift * 2.2)));
+    const worldW = core ? (frame?.width ?? W0) : W;
+    const worldH = core ? (frame?.height ?? H0) : H;
+    // Tracé sur toute la hauteur du monde, recalé pour passer à la position voulue au haut de la zone de départ
+    const xs = new Float64Array(worldH);
+    let acc = 0;
+    for (let y = 0; y < worldH; y++) {
+      acc += Math.round((valueNoise(y / 9, 3.7, seed + 77) - 0.5) * 2.2);
+      xs[y] = acc;
+    }
+    const shift = core ? target - xs[Math.min(worldH - 1, oy)] : 0;
+    let x = target;
+    for (let y = 0; y < worldH; y++) {
+      x = core ? Math.max(3, Math.min(worldW - 4, xs[y] + shift)) : Math.max(3, Math.min(worldW - 4, x + Math.round((valueNoise(y / 9, 3.7, seed + 77) - 0.5) * 2.2)));
       const width = 2 + extra + (valueNoise(y / 6, 9.1, seed + 13) > 0.6 ? 1 : 0);
       if (y < fy || y >= fy + H0) continue;
       for (let k = 0; k < width; k++) {
@@ -138,9 +151,17 @@ export function generateWorld(grid, { seed, highwayRoadCode, river = true, param
       else if (fbm(x / 9, y / 9, seed + 333, 3) > forestThreshold && d > 6) grid.terrain[i] = TERRAIN.FOREST;
     }
   }
-  if (frame) return { entries: [] };
+  if (frame || core) return { entries: [] };
+  return { entries: placeEntry(grid, highwayRoadCode) };
+}
 
-  // 6. Accès autoroutier sur le bord ouest, sur la ligne terrestre la plus proche du centre
+/**
+ * Accès autoroutier sur le bord ouest, sur la ligne terrestre la plus proche du centre.
+ * @returns {number[]} indices des cases d'entrée
+ */
+export function placeEntry(grid, highwayRoadCode) {
+  const H = grid.height;
+  const cy = H / 2;
   const entries = [];
   const entryLen = 3;
   let row = -1;
@@ -164,5 +185,34 @@ export function generateWorld(grid, { seed, highwayRoadCode, river = true, param
     grid.road[i] = highwayRoadCode;
     if (x === 0) entries.push(i);
   }
-  return { entries };
+  return entries;
+}
+
+/**
+ * Monde complet (v0.7) : 256 × 256 cases générées d'un seul tenant, la zone de départ au centre.
+ * La carte de départ est découpée dans ce monde, et chaque extension achetée en recopie les cases :
+ * relief, eau et forêts se raccordent sans couture. Déterministe (graine, paramètres, taille de départ).
+ * @returns {import('./Grid.js').Grid}
+ */
+export function generateFullWorld(GridCtor, { seed, params = {}, core, size = 256 }) {
+  const world = new GridCtor(size, size);
+  generateWorld(world, { seed, highwayRoadCode: 0, params, frame: { x: 0, y: 0, width: size, height: size }, core });
+  return world;
+}
+
+/** Recopie le terrain et l'altitude du monde complet (à partir de la case (ox, oy) du monde) dans `grid`. */
+export function copyRegion(world, grid, ox, oy, { onlyIf = null } = {}) {
+  for (let y = 0; y < grid.height; y++) {
+    const wy = y + oy;
+    if (wy < 0 || wy >= world.height) continue;
+    for (let x = 0; x < grid.width; x++) {
+      const wx = x + ox;
+      if (wx < 0 || wx >= world.width) continue;
+      const i = y * grid.width + x;
+      if (onlyIf && !onlyIf(i)) continue;
+      const j = wy * world.width + wx;
+      grid.terrain[i] = world.terrain[j];
+      grid.altitude[i] = world.altitude[j];
+    }
+  }
 }

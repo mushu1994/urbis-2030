@@ -112,9 +112,10 @@ export class PopulationSystem {
       const adult = Math.max(0, b.residents - young - senior);
       b.ages = { young, adult, senior };
       b.workforce = Math.round(adult * SIM.PARTICIPATION);
-      const qTarget = Math.min(0.95, SIM.QUALIFICATION[cls] + 0.22 * g.coverEducation[i]);
+      const qBonus = mods['jobs.qualification'] ?? 0;
+      const qTarget = Math.min(0.95, SIM.QUALIFICATION[cls] + 0.22 * g.coverEducation[i] + qBonus);
       if (!b.qualification) b.qualification = SIM.QUALIFICATION[cls];
-      b.qualification += (qTarget - b.qualification) * 0.02;
+      b.qualification += (qTarget - b.qualification) * (qBonus > 0 ? 0.035 : 0.02);
 
       st.population += b.residents;
       st.housingCapacity += b.abandoned ? 0 : cap;
@@ -154,6 +155,9 @@ export class PopulationSystem {
     const fill = new Map();
     let commutersIn = 0;
     let commutersOut = 0;
+    let upskilled = 0;
+    let vacantIsolated = 0;
+    st.vacantByBracket = { low: 0, mid: 0, high: 0 };
     for (const [k, p] of pools) {
       const w = { ...p.workers };
       const j = { ...p.jobs };
@@ -172,10 +176,25 @@ export class PopulationSystem {
       take('low', 'low');
       take('mid', 'low');
       take('high', 'low');
+      // Formation professionnelle (v0.7) : une part des actifs encore sans emploi est requalifiée vers l'échelon supérieur
+      const upskill = mods['jobs.upskill'] ?? 0;
+      if (upskill > 0) {
+        for (const [wb, jb] of [['mid', 'high'], ['low', 'mid']]) {
+          const n = Math.min(w[wb] * upskill, j[jb]);
+          w[wb] -= n;
+          j[jb] -= n;
+          filled[jb] += n;
+          employed[wb] += n;
+          upskilled += n;
+        }
+      }
+      if (k !== 'ext') for (const x of BRACKETS) vacantIsolated += j[x];
       if (k === 'ext') {
         // Navetteurs : une partie des emplois vacants est pourvue de l'extérieur, et une partie des chômeurs travaille à l'extérieur.
+        const share = Math.min(0.85, mods['jobs.commuters'] ?? 0.25);
         for (const jb of BRACKETS) {
-          const n = j[jb] * 0.25;
+          const n = j[jb] * share;
+          j[jb] -= n;
           filled[jb] += n;
           commutersIn += n;
         }
@@ -186,6 +205,7 @@ export class PopulationSystem {
           w[wb] -= n;
         }
       }
+      for (const x of BRACKETS) st.vacantByBracket[x] += j[x];
       const ratios = { jobs: {}, workers: {} };
       for (const x of BRACKETS) {
         ratios.jobs[x] = p.jobs[x] > 0 ? filled[x] / p.jobs[x] : 0;
@@ -211,6 +231,9 @@ export class PopulationSystem {
     st.unemploymentRate = st.workforce > 0 ? st.unemployed / st.workforce : 0;
     st.commutersIn = Math.round(commutersIn);
     st.commutersOut = Math.round(commutersOut);
+    st.upskilled = Math.round(upskilled);
+    st.vacantIsolated = Math.round(vacantIsolated);
+    for (const x of BRACKETS) st.vacantByBracket[x] = Math.round(st.vacantByBracket[x]);
 
     // 3. Consommation, ventes, production industrielle
     let consumption = 0;
@@ -326,4 +349,51 @@ export function demandBreakdown(state, connected = state.stats.regionConnected !
     target[k] = clamp(v + mod, -100, 100);
   }
   return { target, factors: f, connected };
+}
+
+const BRACKET_LABELS = { low: 'peu qualifiés', mid: 'qualifiés', high: 'très qualifiés' };
+
+/**
+ * Diagnostic des emplois non pourvus (v0.7) : combien, de quel niveau, et pourquoi.
+ * @returns {{vacant:number, share:number, rows:{k:string,label:string,vacant:number,workers:number,jobs:number}[], isolated:number, causes:string[], advice:{text:string, policy?:string}[]}}
+ */
+export function jobsDiagnosis(state) {
+  const s = state.stats;
+  const jobs = Math.round(s.jobs ?? 0);
+  const vacant = Math.max(0, jobs - Math.round(s.jobsFilled ?? 0));
+  const vb = s.vacantByBracket ?? { low: 0, mid: 0, high: 0 };
+  const ub = s.unemployedByBracket ?? { low: 0, mid: 0, high: 0 };
+  const wb = s.workersByBracket ?? { low: 0, mid: 0, high: 0 };
+  const jb = s.jobsByBracket ?? { low: 0, mid: 0, high: 0 };
+  const rows = BRACKETS.map((k) => ({ k, label: BRACKET_LABELS[k], vacant: Math.round(vb[k] ?? 0), unemployed: Math.round(ub[k] ?? 0), workers: Math.round(wb[k] ?? 0), jobs: Math.round(jb[k] ?? 0) }));
+  const active = state.policies?.active ?? {};
+  const causes = [];
+  const advice = [];
+  const share = jobs > 0 ? vacant / jobs : 0;
+  const unemployed = Math.round(s.unemployed ?? 0);
+  if (vacant < 20 || share < 0.03) return { vacant, share, rows, isolated: s.vacantIsolated ?? 0, causes, advice };
+  if ((s.vacantIsolated ?? 0) > vacant * 0.2) {
+    causes.push(`${formatInt(s.vacantIsolated)} emplois sont dans des quartiers dont les routes ne rejoignent pas l'autoroute : ni habitants des autres quartiers ni navetteurs n'y accèdent.`);
+    advice.push({ text: 'Reliez ces quartiers au réseau principal (la couche « Accessibilité » les montre en rouge).' });
+  }
+  const skilled = (vb.mid ?? 0) + (vb.high ?? 0);
+  const lowJobless = ub.low ?? 0;
+  if (skilled > vacant * 0.35 && lowJobless > skilled * 0.15) {
+    causes.push(`Inadéquation des qualifications : ${formatInt(skilled)} postes qualifiés vacants alors que ${formatInt(lowJobless)} actifs peu qualifiés cherchent un emploi.`);
+    advice.push({ text: 'Adoptez la « Formation professionnelle » : une partie des chômeurs est requalifiée vers ces postes.', policy: active.job_training === undefined ? 'job_training' : undefined });
+    advice.push({ text: 'Couvrez les quartiers par des écoles, lycées et une université : la qualification des habitants monte avec la couverture éducative.' });
+  }
+  if (unemployed < vacant * 0.5) {
+    causes.push(`Pénurie de main-d'œuvre : ${formatInt(vacant)} postes vacants pour seulement ${formatInt(unemployed)} chômeurs. La ville manque d'actifs, pas de qualifications.`);
+    advice.push({ text: 'Zonez du logement près des zones d\'emploi (et améliorez la satisfaction pour remplir les logements existants).' });
+    if (active.worker_housing === undefined) advice.push({ text: 'Adoptez le « Logement des actifs » : la demande résidentielle augmente.', policy: 'worker_housing' });
+    if (active.regional_commuters === undefined) advice.push({ text: 'Adoptez l\'« Accueil des navetteurs régionaux » : plus d\'emplois vacants pourvus par des actifs des communes voisines (25 % → 60 %), au prix d\'un peu plus de trafic.', policy: 'regional_commuters' });
+    advice.push({ text: 'Évitez de zoner davantage d\'industrie ou de bureaux tant que les postes existants ne sont pas pourvus.' });
+  }
+  if ((s.housingVacancy ?? 0) > 0.12) advice.push({ text: `${Math.round((s.housingVacancy ?? 0) * 100)} % des logements sont vides : la satisfaction des quartiers (services, pollution, loyers) freine l'arrivée de ménages.` });
+  return { vacant, share, rows, isolated: s.vacantIsolated ?? 0, causes, advice };
+}
+
+function formatInt(n) {
+  return Math.round(n).toLocaleString('fr-FR');
 }

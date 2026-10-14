@@ -1,6 +1,6 @@
 import { h } from './dom.js';
 import { formatNumber } from '../util/money.js';
-import { demandBreakdown } from '../simulation/PopulationSystem.js';
+import { demandBreakdown, jobsDiagnosis } from '../simulation/PopulationSystem.js';
 
 /** Secteurs affichés : clé de demande, libellé, couleur, codes de zone concernés. */
 export const SECTORS = [
@@ -28,21 +28,25 @@ const pts = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(0)}`;
  * Ouvert d'un clic sur les jauges de la barre du haut.
  */
 export class DemandPanel {
-  constructor({ onZoneTool } = {}) {
+  constructor({ onZoneTool, execute, notify } = {}) {
     this.id = 'demand';
     this.title = 'Besoins de la ville';
-    this.tabs = [{ id: 'all', label: 'Vue d\'ensemble' }, ...SECTORS.map((s) => ({ id: s.k, label: s.label }))];
+    this.tabs = [{ id: 'all', label: 'Vue d\'ensemble' }, ...SECTORS.map((s) => ({ id: s.k, label: s.label })), { id: 'jobs', label: 'Emploi' }];
     this.onZoneTool = onZoneTool;
+    this.execute = execute;
+    this.notify = notify;
   }
 
-  render(session, tab = 'all') {
+  render(session, tab = 'all', rerender) {
     const state = session.state;
+    if (tab === 'jobs') return h('div.demand-panel', this.#jobs(session, rerender, false));
     const bd = demandBreakdown(state);
     const parcels = emptyParcels(state);
     if (tab === 'all') {
       return h('div.demand-panel',
         !bd.connected ? h('p.demand-warn', '⚠ La ville n\'est pas reliée au réseau régional : aucune demande tant qu\'une route ne rejoint pas l\'accès autoroutier.') : null,
         h('div.demand-cards', SECTORS.map((s) => this.#card(state, s, bd, parcels, true))),
+        this.#jobs(session, rerender, true),
         h('p.hint', 'Les jauges vont de −100 (le secteur se vide) à +100 (forte demande). Une demande positive fait pousser des bâtiments sur les parcelles zonées, reliées à la route et à l\'électricité. Cliquez un onglet pour le détail des causes.')
       );
     }
@@ -83,6 +87,44 @@ export class DemandPanel {
       compact ? null : h('dl.demand-figures', figuresFor(s.k, state, free).flatMap(([a, b]) => [h('dt', a), h('dd', b)])),
       advice.length ? h('ul.demand-advice', advice.map((a) => h('li', a))) : null,
       compact ? h('small.demand-free', `${formatNumber(free)} parcelle${free > 1 ? 's' : ''} zonée${free > 1 ? 's' : ''} libre${free > 1 ? 's' : ''}`) : null
+    );
+  }
+
+  /** Emplois non pourvus (v0.7) : niveaux de qualification, causes et remèdes, dont les politiques d'emploi. */
+  #jobs(session, rerender, compact) {
+    const state = session.state;
+    const d = jobsDiagnosis(state);
+    const s = state.stats;
+    if (compact && !d.causes.length) return null;
+    const adopt = (id) => {
+      const r = this.execute?.({ type: 'policy', policyId: id, enabled: true });
+      if (r && !r.ok) this.notify?.('warning', r.reason);
+      else this.notify?.('success', `Politique adoptée : ${session.catalog.policyById.get(id)?.name}`);
+      rerender?.();
+    };
+    const advice = d.advice.length
+      ? h('ul.demand-advice', d.advice.map((a) => h('li', a.text, a.policy ? h('button.btn.small.primary', { type: 'button', on: { click: () => adopt(a.policy) } }, 'Adopter') : null)))
+      : null;
+    if (compact) {
+      return h('section.demand-card.jobs-alert', { class: 'down' },
+        h('header', h('strong', '⚠ Emplois non pourvus'), h('span.demand-value', `${formatNumber(d.vacant)} postes · ${pct(d.share)}`)),
+        h('p.demand-main', d.causes[0]),
+        advice);
+    }
+    return h('section.demand-card.jobs',
+      h('header', h('strong', 'Marché du travail'), h('span.demand-value', `${formatNumber(d.vacant)} postes vacants · ${pct(d.share)}`)),
+      h('table.fin',
+        h('thead', h('tr', h('th', 'Niveau'), h('th.num', 'Emplois'), h('th.num', 'Actifs'), h('th.num', 'Postes vacants'), h('th.num', 'Chômeurs'))),
+        h('tbody', d.rows.map((r) => h('tr', h('td', r.label), h('td.num', formatNumber(r.jobs)), h('td.num', formatNumber(r.workers)), h('td.num', { class: r.vacant > 0 ? 'neg' : '' }, formatNumber(r.vacant)), h('td.num', formatNumber(r.unemployed)))))),
+      h('dl.demand-figures',
+        h('dt', 'Navetteurs entrants (emplois pourvus de l\'extérieur)'), h('dd', formatNumber(s.commutersIn ?? 0)),
+        h('dt', 'Habitants travaillant à l\'extérieur'), h('dd', formatNumber(s.commutersOut ?? 0)),
+        h('dt', 'Chômeurs requalifiés (formation)'), h('dd', formatNumber(s.upskilled ?? 0)),
+        h('dt', 'Postes dans des quartiers isolés'), h('dd', formatNumber(d.isolated)),
+        h('dt', 'Taux de chômage'), h('dd', pct(s.unemploymentRate ?? 0))),
+      d.causes.length ? h('div', h('h4', 'Pourquoi ces postes restent vacants'), h('ul', d.causes.map((c) => h('li', c)))) : h('p.hint', 'Les postes vacants restent marginaux : rien d\'alarmant.'),
+      advice,
+      h('p.hint', 'Un poste n\'est pourvu que par un actif du même bassin routier et d\'une qualification suffisante (un actif très qualifié peut occuper un poste moins qualifié, pas l\'inverse). Une partie des postes restants est occupée par des navetteurs de la région.')
     );
   }
 }

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { flatSession, spawn, getCatalog } from '../helpers/session.js';
+import { flatSession, spawn, getCatalog, newSession } from '../helpers/session.js';
 import { serializeState, deserializeState } from '../../src/persistence/SaveService.js';
 import { expandSave } from '../../src/persistence/WorldExpansion.js';
 import { GameSession } from '../../src/app/GameSession.js';
 import { defaultLand, isOwned, parcelPrice, parcelMap } from '../../src/world/Land.js';
 import { EconomySystem } from '../../src/simulation/EconomySystem.js';
 import { checkInvariants } from '../../src/debug/Invariants.js';
-import { generateWorld } from '../../src/world/WorldGenerator.js';
+import { generateWorld, generateFullWorld } from '../../src/world/WorldGenerator.js';
 import { Grid } from '../../src/world/Grid.js';
 import { TERRAIN } from '../../src/world/Terrain.js';
 
@@ -58,6 +58,42 @@ describe('Territoire et extensions (v0.6)', () => {
     west.s2.run(40);
     expect(checkInvariants(st, getCatalog()).filter((m) => !/trésorerie/i.test(m))).toEqual([]);
     expect(st.stats.regionConnected).toBe(true);
+  });
+
+  it('v0.7 : le monde complet est généré à la fondation ; les extensions en recopient les cases, sans couture', () => {
+    const s = newSession({ seed: 77 });
+    const st0 = s.state;
+    expect(st0.meta.worldGen).toBe(2);
+    expect(st0.meta.worldCore).toEqual({ x: 96, y: 96, width: 64, height: 64 });
+    const world = generateFullWorld(Grid, { seed: 77, core: st0.meta.worldCore });
+    // La carte de départ est un découpage du monde (hors accès autoroutier)
+    let same = 0;
+    for (let y = 0; y < 64; y++) for (let x = 3; x < 64; x++) {
+      const i = st0.grid.idx(x, y);
+      const j = (y + 96) * 256 + x + 96;
+      if (st0.grid.altitude[i] === world.altitude[j] && st0.grid.terrain[i] === world.terrain[j]) same++;
+    }
+    expect(same).toBe(64 * 61);
+    st0.economy.treasury = 1e10;
+    const { s2 } = grow(s, 2, 3); // à l'ouest
+    const g = s2.state.grid;
+    expect([g.width, g.height]).toEqual([96, 64]);
+    // Nouvelles cases = monde complet (à part l'autoroute prolongée et ses abords immédiats)
+    let diff = 0;
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 32; x++) {
+      const i = g.idx(x, y);
+      const j = (y + 96) * 256 + x + 64;
+      if (g.altitude[i] !== world.altitude[j] || g.terrain[i] !== world.terrain[j]) diff++;
+    }
+    expect(diff).toBeLessThan(32 * 3 + 40);
+    // Pas de marche de plus d'un niveau ni d'eau « suspendue » le long de la couture
+    for (let y = 0; y < 64; y++) {
+      const a = g.idx(31, y);
+      const b = g.idx(32, y);
+      if (g.terrain[a] !== TERRAIN.WATER && g.terrain[b] !== TERRAIN.WATER) expect(Math.abs(g.altitude[a] - g.altitude[b])).toBeLessThanOrEqual(1);
+      if (g.terrain[a] === TERRAIN.WATER) expect(g.altitude[a]).toBe(0);
+    }
+    expect(s2.state.grid.xOf(s2.state.entries[0])).toBe(0);
   });
 
   it('une parcelle d\'un territoire en « L » reste verrouillée tant qu\'elle n\'est pas achetée', () => {

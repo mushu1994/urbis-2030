@@ -90,7 +90,7 @@ export class GameApp {
       onClose: () => this.select(null)
     });
     this.panelHost = new PanelHost(this.$('#panel-host'));
-    this.overlays = new OverlayManager(this.$('#overlays'), { onChange: (id) => this.renderer.setOverlay(id) });
+    this.overlays = new OverlayManager(this.$('#overlays'), { onChange: (id) => this.renderer.setOverlay(id), onUser: () => { this.autoOverlay = false; } });
     const execute = (cmd) => this.execute(cmd);
     const notify = (level, message) => this.notifications.push({ level, message });
     this.fullscreen = new FullscreenController(this.root, {
@@ -112,7 +112,7 @@ export class GameApp {
         onShowObjectives: () => this.objectives.show(),
         onDebug: () => this.togglePanel('debug')
       }),
-      demand: new DemandPanel(),
+      demand: new DemandPanel({ execute, notify }),
       territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price) }),
       sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
       help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
@@ -144,7 +144,10 @@ export class GameApp {
       notify,
       needsConfirm: (cents) => this.settings.get('confirmDemolish') && cents >= 500000,
       confirm: (message) => confirmDialog(message, { confirmLabel: 'Démolir', danger: true }),
-      onChange: (tool) => this.#updateToolChip(tool),
+      onChange: (tool) => {
+        this.#updateToolChip(tool);
+        this.#autoServiceOverlay(tool);
+      },
       confirmPlacement: () => !!this.settings.get('confirmPlacement')
     });
     this.input = new InputController({
@@ -228,6 +231,23 @@ export class GameApp {
   }
 
   /** Bandeau de l'outil actif : nom, bouton Pivoter (si possible) et bouton Terminer — utile surtout au doigt. */
+  /**
+   * v0.7 : choisir un équipement de service public (école, commissariat, hôpital…) affiche la couche de ce service,
+   * pour voir d'un coup d'œil les quartiers mal desservis ; la couche se retire quand on change d'outil.
+   */
+  #autoServiceOverlay(tool) {
+    const type = tool?.defId ? this.catalog.building(tool.defId)?.capacity?.service?.type : null;
+    if (type) {
+      if (!this.overlays.current || this.autoOverlay) {
+        this.autoOverlay = true;
+        this.overlays.set(`svc_${type}`);
+      }
+    } else if (this.autoOverlay) {
+      this.autoOverlay = false;
+      if (this.overlays.current?.startsWith('svc_')) this.overlays.set(null);
+    }
+  }
+
   #updateToolChip(tool) {
     const chip = this.$('#tool-chip');
     if (!tool || tool.kind === 'select') {

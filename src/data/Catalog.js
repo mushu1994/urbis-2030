@@ -88,6 +88,7 @@ export class Catalog {
     this.policies = policiesData.policies.map((p) => ({
       ...p,
       monthlyCostCents: toCents(p.monthlyCost),
+      costPer1000Cents: toCents(p.costPer1000 ?? 0),
       unlock: p.unlock ?? {},
       effects: p.effects ?? []
     }));

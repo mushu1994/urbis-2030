@@ -414,7 +414,7 @@ export class Renderer {
     for (let y = 0; y < grid.height; y++) {
       for (let x = 0; x < grid.width; x++) {
         const i = grid.idx(x, y);
-        const c = ov.color(state, i);
+        const c = ov.color(state, i, this.catalog);
         if (c < 0) continue;
         const [T, R, B, L] = corners(x, y, grid.surfaceAlt(i));
         g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).fill({ color: c, alpha: 0.78 });

@@ -28,7 +28,8 @@
           "value": -1,
           "label": "Contrainte pour les ménages modestes"
         }
-      ]
+      ],
+      "costPer1000": 40
     },
     {
       "id": "rent_control",
@@ -57,7 +58,8 @@
           "value": -0.2,
           "label": "Construction résidentielle −20 %"
         }
-      ]
+      ],
+      "costPer1000": 60
     },
     {
       "id": "remote_work",
@@ -89,7 +91,8 @@
           "value": 1,
           "label": "Satisfaction +1"
         }
-      ]
+      ],
+      "costPer1000": 15
     },
     {
       "id": "solar_subsidy",
@@ -112,7 +115,8 @@
           "value": 0.5,
           "label": "Satisfaction +0,5"
         }
-      ]
+      ],
+      "costPer1000": 50
     },
     {
       "id": "green_roofs",
@@ -135,7 +139,8 @@
           "value": -0.06,
           "label": "Construction −6 % (surcoût)"
         }
-      ]
+      ],
+      "costPer1000": 25
     },
     {
       "id": "night_delivery",
@@ -164,7 +169,8 @@
           "value": -0.5,
           "label": "Nuisances nocturnes"
         }
-      ]
+      ],
+      "costPer1000": 10
     },
     {
       "id": "free_transit",
@@ -193,7 +199,8 @@
           "value": 2,
           "label": "Satisfaction des ménages modestes +2"
         }
-      ]
+      ],
+      "costPer1000": 120
     },
     {
       "id": "waste_sorting",
@@ -222,7 +229,8 @@
           "value": -0.5,
           "label": "Contrainte pour les habitants"
         }
-      ]
+      ],
+      "costPer1000": 30
     },
     {
       "id": "flood_plan",
@@ -245,7 +253,8 @@
           "value": -0.04,
           "label": "Constructibilité des berges réduite"
         }
-      ]
+      ],
+      "costPer1000": 20
     },
     {
       "id": "heat_plan",
@@ -268,7 +277,8 @@
           "value": -0.08,
           "label": "Îlots de chaleur −8 %"
         }
-      ]
+      ],
+      "costPer1000": 20
     },
     {
       "id": "cyber_defense",
@@ -291,7 +301,8 @@
           "value": -0.2,
           "label": "Pilotage du réseau électrique sécurisé (−20 % de pannes)"
         }
-      ]
+      ],
+      "costPer1000": 30
     },
     {
       "id": "social_dialogue",
@@ -313,6 +324,97 @@
           "op": "mul",
           "value": 0.03,
           "label": "Coût d'exploitation des transports +3 %"
+        }
+      ],
+      "costPer1000": 35
+    },
+    {
+      "id": "job_training",
+      "name": "Formation professionnelle",
+      "description": "Écoles de la deuxième chance, apprentissage et reconversion vers les métiers de l'IA et de la logistique : les chômeurs se qualifient pour les emplois vacants.",
+      "monthlyCost": 2500,
+      "costPer1000": 90,
+      "unlock": {
+        "population": 1500
+      },
+      "effects": [
+        {
+          "key": "jobs.upskill",
+          "op": "add",
+          "value": 0.35,
+          "label": "35 % des chômeurs requalifiés vers les emplois vacants plus qualifiés"
+        },
+        {
+          "key": "jobs.qualification",
+          "op": "add",
+          "value": 0.08,
+          "label": "Qualification des habitants +8 points"
+        },
+        {
+          "key": "satisfaction.low",
+          "op": "add",
+          "value": 1.5,
+          "label": "Satisfaction des ménages modestes +1,5"
+        }
+      ]
+    },
+    {
+      "id": "regional_commuters",
+      "name": "Accueil des navetteurs régionaux",
+      "description": "Cars express, covoiturage organisé et parkings relais : les actifs des communes voisines viennent occuper les emplois vacants.",
+      "monthlyCost": 3000,
+      "costPer1000": 40,
+      "unlock": {
+        "population": 1000
+      },
+      "effects": [
+        {
+          "key": "jobs.commuters",
+          "op": "add",
+          "value": 0.35,
+          "label": "Emplois vacants pourvus par des navetteurs : 25 % → 60 %"
+        },
+        {
+          "key": "tripGenerationMult",
+          "op": "mul",
+          "value": 0.06,
+          "label": "Trafic +6 %"
+        },
+        {
+          "key": "demand.C",
+          "op": "add",
+          "value": 2,
+          "label": "Demande commerciale +2 (dépenses des navetteurs)"
+        }
+      ]
+    },
+    {
+      "id": "worker_housing",
+      "name": "Logement des actifs",
+      "description": "Prime d'installation, foncier réservé et garantie de loyer pour les nouveaux salariés : de nouveaux ménages viennent habiter près des emplois vacants.",
+      "monthlyCost": 2000,
+      "costPer1000": 70,
+      "unlock": {
+        "population": 1500
+      },
+      "effects": [
+        {
+          "key": "demand.R",
+          "op": "add",
+          "value": 10,
+          "label": "Demande de logements +10"
+        },
+        {
+          "key": "growth.R",
+          "op": "mul",
+          "value": 0.2,
+          "label": "Construction résidentielle +20 %"
+        },
+        {
+          "key": "satisfaction.mid",
+          "op": "add",
+          "value": 1,
+          "label": "Satisfaction des classes moyennes +1"
         }
       ]
     }
