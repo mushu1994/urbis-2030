@@ -282,3 +282,42 @@ export function drawBridgeTile(g, x, y, alt, conn, visual) {
 }
 
 export { corners };
+
+const RAIL_VISUAL = { color: '#6f6658', edge: '#8c8476', marking: '#d8d2b0', width: 0.5 };
+
+/**
+ * Voie ferrée (v0.6) : ballast, traverses et deux files de rails vers chaque voisin relié (masque N, E, S, O).
+ * Sur l'eau, un tablier de pont porte la voie ; sur une route, le passage à niveau est marqué de bandes.
+ */
+export function drawRailTile(g, x, y, alt, conn, { bridge = false, crossing = false } = {}) {
+  const P = (u, v) => gridToWorld(x + u, y + v, alt);
+  if (bridge && !crossing) drawBridgeTile(g, x, y, alt, conn, RAIL_VISUAL);
+  const dirs = [];
+  if (conn & 1) dirs.push([0.5, 0]);
+  if (conn & 2) dirs.push([1, 0.5]);
+  if (conn & 4) dirs.push([0.5, 1]);
+  if (conn & 8) dirs.push([0, 0.5]);
+  if (!dirs.length) dirs.push([0.5, 0], [0.5, 1]);
+  if (dirs.length === 1) dirs.push([1 - dirs[0][0], 1 - dirs[0][1]]);
+  const ballast = 0x8a8072;
+  const sleeper = 0x6b4a2b;
+  const steel = 0xc9ced4;
+  for (const [u, v] of dirs) {
+    const a = P(0.5, 0.5);
+    const b = P(u, v);
+    // Demi-voie du centre vers le bord : ballast, traverses, rails
+    const horiz = v === 0.5; // vers l'est ou l'ouest (axe u)
+    const off = (k) => (horiz ? [0, k] : [k, 0]);
+    const q = (s, k) => P(0.5 + (u - 0.5) * s + off(k)[0], 0.5 + (v - 0.5) * s + off(k)[1]);
+    if (!crossing) g.poly([...xy(q(0, -0.22)), ...xy(q(1, -0.22)), ...xy(q(1, 0.22)), ...xy(q(0, 0.22))]).fill(ballast);
+    for (let s = 0.1; s < 1; s += 0.22) g.moveTo(q(s, -0.16).x, q(s, -0.16).y).lineTo(q(s, 0.16).x, q(s, 0.16).y).stroke({ width: 1.6, color: sleeper });
+    for (const k of [-0.09, 0.09]) g.moveTo(q(0, k).x, q(0, k).y).lineTo(q(1, k).x, q(1, k).y).stroke({ width: 1, color: steel });
+    void a;
+    void b;
+  }
+  if (crossing) {
+    const c = P(0.5, 0.5);
+    g.rect(c.x - 7, c.y - 1, 3, 2).fill(0xf2f2f2);
+    g.rect(c.x + 4, c.y - 1, 3, 2).fill(0xd9473a);
+  }
+}

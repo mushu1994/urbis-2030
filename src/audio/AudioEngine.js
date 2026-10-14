@@ -193,7 +193,7 @@ export class AudioEngine {
   play(name) {
     if (!this.ready || this.#muted() || this.ctx.state !== 'running') return;
     const now = this.ctx.currentTime;
-    const minGap = { click: 0.04, build: 0.08, road: 0.12, zone: 0.12, info: 0.6, success: 0.5, warning: 0.5, danger: 0.8, thunder: 1.5 }[name] ?? 0.1;
+    const minGap = { click: 0.04, build: 0.08, road: 0.12, zone: 0.12, info: 0.6, success: 0.5, warning: 0.5, danger: 0.8, thunder: 1.5, jet: 12, horn: 15 }[name] ?? 0.1;
     if (now - (this.lastPlay[name] ?? -9) < minGap) return;
     this.lastPlay[name] = now;
     const d = this.busSfx;
@@ -285,6 +285,16 @@ export class AudioEngine {
         [[0, 0], [4, 0.14], [7, 0.28], [12, 0.42], [7, 0.62], [12, 0.76]].forEach(([s, dt]) =>
           this.#tone(d, { freq: NOTE(67 + s), start: t + dt, dur: 0.5, gain: 0.1, type: 'triangle', reverb: 0.5 })
         );
+        break;
+      case 'jet':
+        // Décollage au loin (v0.6) : souffle large qui monte puis s'éloigne
+        this.#burst(d, { start: t, dur: 4.2, gain: 0.22, type: 'bandpass', freq: 300, endFreq: 1500, q: 0.7, buffer: this.brown, attack: 0.8, reverb: 0.4 });
+        this.#burst(d, { start: t + 0.4, dur: 3.4, gain: 0.08, type: 'highpass', freq: 2500, endFreq: 5000, attack: 0.6 });
+        break;
+      case 'horn':
+        // Corne de navire : deux notes graves tenues
+        this.#tone(d, { freq: 98, start: t, dur: 1.6, gain: 0.16, type: 'sawtooth', attack: 0.12, reverb: 0.6 });
+        this.#tone(d, { freq: 147, start: t, dur: 1.6, gain: 0.08, type: 'sawtooth', attack: 0.12, reverb: 0.6 });
         break;
       case 'fail':
         [[0, 0], [-3, 0.3], [-7, 0.6]].forEach(([s, dt]) => this.#tone(d, { freq: NOTE(64 + s), start: t + dt, dur: 0.6, gain: 0.1, type: 'triangle', reverb: 0.5 }));

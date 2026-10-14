@@ -63,6 +63,54 @@
         "width": 0.92
       },
       "description": "Connexion au réseau régional. Permet l'arrivée d'habitants, les navettes et le fret."
+    },
+    {
+      "id": "road_boulevard",
+      "name": "Grand boulevard",
+      "category": "roads",
+      "cost": 330,
+      "upkeep": 2.6,
+      "bridgeCost": 3800,
+      "bridgeUpkeep": 16,
+      "capacity": 3200,
+      "speedKmh": 50,
+      "lanes": 6,
+      "buildable": true,
+      "unlock": {
+        "population": 3000
+      },
+      "visual": {
+        "color": "#44484f",
+        "edge": "#b3b8bf",
+        "marking": "#f5f5f5",
+        "width": 0.97,
+        "median": "#5d9048"
+      },
+      "description": "Grand axe à 2 × 3 voies et large terre-plein planté : presque deux fois le débit d'une avenue, pour les artères d'une métropole."
+    },
+    {
+      "id": "road_motorway",
+      "name": "Autoroute (seconde sortie)",
+      "category": "roads",
+      "cost": 900,
+      "upkeep": 6,
+      "bridgeCost": 6000,
+      "bridgeUpkeep": 30,
+      "capacity": 5000,
+      "speedKmh": 110,
+      "lanes": 4,
+      "buildable": true,
+      "exit": true,
+      "unlock": {
+        "population": 15000
+      },
+      "visual": {
+        "color": "#3f434a",
+        "edge": "#c9a227",
+        "marking": "#ffffff",
+        "width": 0.92
+      },
+      "description": "Fin de partie : une autoroute tracée jusqu'au bord de la carte ouvre un nouvel accès au réseau régional (habitants, navetteurs, fret) et soulage l'accès d'origine."
     }
   ],
   "zones": [

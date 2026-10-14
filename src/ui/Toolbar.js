@@ -1,6 +1,6 @@
 import { h, icon, setChildren } from './dom.js';
 import { formatMoney } from '../util/money.js';
-import { isUnlocked, TERRAFORM, ROAD_DEMOLITION_CENTS } from '../systems/ConstructionService.js';
+import { isUnlocked, TERRAFORM, ROAD_DEMOLITION_CENTS, RAIL } from '../systems/ConstructionService.js';
 import { toCents } from '../util/money.js';
 
 const TERRAFORM_DESC = {
@@ -35,7 +35,10 @@ export class Toolbar {
         id: 'roads',
         label: 'Routes',
         icon: 'road',
-        tools: catalog.roads.filter((r) => r.buildable).map((r) => ({ id: `road:${r.id}`, kind: 'road', roadId: r.id, label: r.name, cost: r.costCents, costUnit: '/case', unlock: r.unlock, desc: r.description }))
+        tools: [
+          ...catalog.roads.filter((r) => r.buildable).map((r) => ({ id: `road:${r.id}`, kind: 'road', roadId: r.id, label: r.name, cost: r.costCents, costUnit: '/case', unlock: r.unlock, desc: r.description })),
+          { id: 'rail', kind: 'rail', label: 'Voie ferrée', cost: toCents(RAIL.cost), costUnit: '/case', unlock: RAIL.unlock, desc: 'Glissez pour poser des rails (ponts droits sur l\'eau, passages à niveau sur les routes). Une gare reliée par les rails au bord de la carte accueille des trains régionaux : capacité +50 %.' }
+        ]
       },
       {
         id: 'zones',

@@ -6,6 +6,9 @@ import { isOwnedIndex, fullyOwned, landOf, parcelMap, parcelPrice, parcelKey } f
 import { EconomySystem } from '../simulation/EconomySystem.js';
 import { accountForCategory } from '../simulation/EconomySystem.js';
 
+/** Voie ferrée (v0.6) : coûts en euros par case, entretien mensuel, déblocage. */
+export const RAIL = { cost: 250, bridgeCost: 2500, upkeep: 1.5, bridgeUpkeep: 8, unlock: { population: 2000 } };
+
 /** Coût de démolition d'une case de route (centimes). */
 export const ROAD_DEMOLITION_CENTS = 1000;
 
@@ -119,6 +122,73 @@ export class ConstructionService {
     return { ok: reasons.size === 0, cost, tiles, reasons: [...reasons], messages: [...reasons].map((r) => REASONS[r] ?? unlock.reason) };
   }
 
+  // ───────────────────────────── Voies ferrées ─────────────────────────────
+
+  /**
+   * Tracé d'une voie ferrée (comme une route) : sur la terre, pente d'un niveau au plus, ponts rectilignes sur l'eau ;
+   * elle peut croiser une route (passage à niveau) mais pas un bâtiment.
+   * @param {{from:{x:number,y:number}, to:{x:number,y:number}, verticalFirst?:boolean}} p
+   */
+  previewRail(state, { from, to, verticalFirst = false }) {
+    const g = state.grid;
+    const reasons = new Set();
+    const unlock = isUnlocked(state, RAIL.unlock);
+    if (!unlock.ok) reasons.add('locked');
+    const pts = [];
+    for (const p of roadPath(from.x, from.y, to.x, to.y, verticalFirst)) {
+      if (!g.inBounds(p.x, p.y)) reasons.add('bounds');
+      else pts.push({ x: p.x, y: p.y, i: g.idx(p.x, p.y) });
+    }
+    const bridges = planBridges(state, pts);
+    for (const r of bridges.reasons) reasons.add(r);
+    const tiles = [];
+    let cost = 0;
+    let prevAlt = -1;
+    const checkOwned = !fullyOwned(state);
+    for (const p of pts) {
+      const i = p.i;
+      const water = g.terrain[i] === TERRAIN.WATER;
+      const deck = water ? bridges.deck.get(i) : undefined;
+      let status = g.rail[i] ? 'same' : 'new';
+      let reason;
+      if (checkOwned && !isOwnedIndex(state, i)) [status, reason] = ['invalid', 'notOwned'];
+      else if (g.building[i]) [status, reason] = ['invalid', 'occupied'];
+      else if (water && deck === undefined) [status, reason] = ['invalid', 'water'];
+      else if (!water && prevAlt >= 0 && Math.abs(g.altitude[i] - prevAlt) > 1) [status, reason] = ['invalid', 'steep'];
+      if (reason) reasons.add(reason);
+      if (status === 'new') cost += toCents(water ? RAIL.bridgeCost : RAIL.cost);
+      tiles.push({ i, x: p.x, y: p.y, status, reason, bridge: deck !== undefined, deck });
+      prevAlt = deck ?? (g.bridge[i] ? g.bridge[i] - 1 : g.altitude[i]);
+    }
+    if (tiles.length && tiles.every((t) => t.status === 'same')) reasons.add('nothing');
+    if (!reasons.size && !this.economy.canAfford(state, cost)) reasons.add('budget');
+    return { ok: reasons.size === 0, cost, tiles, reasons: [...reasons], messages: [...reasons].map((r) => (r === 'locked' ? unlock.reason : REASONS[r])) };
+  }
+
+  buildRail(state, params) {
+    const pv = this.previewRail(state, params);
+    if (!pv.ok) return pv;
+    const g = state.grid;
+    const changed = pv.tiles.filter((t) => t.status === 'new').map((t) => t.i);
+    const snapshot = this.#snapshotTiles(state, changed);
+    const pay = this.economy.payCapex(state, { amount: pv.cost, category: 'roads', label: `Voie ferrée (${changed.length} case${changed.length > 1 ? 's' : ''})`, lifeYears: 40 });
+    if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
+    for (const t of pv.tiles) {
+      if (t.status !== 'new') continue;
+      g.rail[t.i] = 1;
+      if (t.bridge && !g.bridge[t.i]) g.bridge[t.i] = t.deck + 1;
+      g.zone[t.i] = 0;
+      if (g.terrain[t.i] === TERRAIN.FOREST) g.terrain[t.i] = TERRAIN.GRASS;
+      g.touch(t.i);
+    }
+    state.revisions.rail = (state.revisions.rail ?? 0) + 1;
+    state.dirty.utilities = true;
+    this.#record(state, 'Construire : voie ferrée', snapshot, changed, [pay.tx], { assetsAdded: pay.assetId ? [pay.assetId] : [] });
+    this.bus?.emit('world:changed', { tiles: changed, reason: 'rail' });
+    this.bus?.emit('network:changed', { kind: 'rail' });
+    return { ...pv, ok: true };
+  }
+
   buildRoad(state, params) {
     const pv = this.previewRoad(state, params);
     if (!pv.ok) return pv;
@@ -142,6 +212,18 @@ export class ConstructionService {
       g.bridge[i] = t.bridge ? t.deck + 1 : 0;
       if (g.terrain[i] === TERRAIN.FOREST) g.terrain[i] = TERRAIN.GRASS;
       g.touch(i);
+    }
+    // Autoroute de sortie (v0.6) : une case posée au bord de la carte devient un nouvel accès régional
+    if (road.exit) {
+      for (const i of changed) {
+        const x = g.xOf(i);
+        const y = g.yOf(i);
+        const border = x === 0 || y === 0 || x === g.width - 1 || y === g.height - 1;
+        if (border && !state.entries.includes(i)) {
+          state.entries = [...state.entries, i];
+          this.bus?.emit('notify', { level: 'success', message: 'Nouvel accès autoroutier ouvert : la ville a une seconde sortie vers la région.', x, y });
+        }
+      }
     }
     this.#afterNetworkChange(state);
     const bridgeTiles = pv.tiles.filter((t) => t.bridge && t.status !== 'same').length;
@@ -277,13 +359,15 @@ export class ConstructionService {
     // L'accès autoroutier est simplement ignoré (il n'empêche plus de démolir le reste du rectangle)
     const highway = all.roads.filter((i) => g.road[i] === this.highwayCode);
     const roads = filter === 'buildings' ? [] : all.roads.filter((i) => g.road[i] !== this.highwayCode);
+    const rails = filter === 'buildings' ? [] : all.rails;
     const reasons = [];
     let cost = 0;
     for (const b of buildings) cost += this.demolitionCost(b);
     cost += forests.length * toCents(CLEARING_COST_EUROS);
     // Routes : petit coût de chantier (gratuit auparavant), ponts plus chers
     for (const i of roads) cost += g.bridge[i] ? ROAD_DEMOLITION_CENTS * 4 : ROAD_DEMOLITION_CENTS;
-    if (!buildings.length && !roads.length && !forests.length) reasons.push(highway.length && filter !== 'buildings' ? 'highway' : 'nothing');
+    for (const i of rails) cost += g.bridge[i] ? ROAD_DEMOLITION_CENTS * 4 : ROAD_DEMOLITION_CENTS;
+    if (!buildings.length && !roads.length && !rails.length && !forests.length) reasons.push(highway.length && filter !== 'buildings' ? 'highway' : 'nothing');
     if (!reasons.length && !this.economy.canAfford(state, cost)) reasons.push('budget');
     return {
       ok: reasons.length === 0,
@@ -291,6 +375,7 @@ export class ConstructionService {
       tiles,
       buildings: buildings.map((b) => b.id),
       roads,
+      rails,
       forests,
       reasons,
       messages: reasons.map((r) => REASONS[r])
@@ -302,7 +387,7 @@ export class ConstructionService {
     if (!pv.ok) return pv;
     const g = state.grid;
     const buildings = pv.buildings.map((id) => state.buildings.get(id));
-    const touched = new Set([...pv.roads, ...pv.forests]);
+    const touched = new Set([...pv.roads, ...pv.rails, ...pv.forests]);
     for (const b of buildings) for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) touched.add(g.idx(b.x + dx, b.y + dy));
     const tiles = [...touched];
     const snapshot = this.#snapshotTiles(state, tiles);
@@ -313,9 +398,15 @@ export class ConstructionService {
     const { removedBuildings, removedAssets, writeOffs } = this.removeBuildings(state, buildings);
     for (const i of pv.roads) {
       g.road[i] = 0;
-      g.bridge[i] = 0;
+      if (!g.rail[i] || pv.rails.includes(i)) g.bridge[i] = 0;
       g.touch(i);
     }
+    for (const i of pv.rails) {
+      g.rail[i] = 0;
+      if (!g.road[i]) g.bridge[i] = 0;
+      g.touch(i);
+    }
+    if (pv.rails.length) state.revisions.rail = (state.revisions.rail ?? 0) + 1;
     for (const i of pv.forests) {
       g.terrain[i] = TERRAIN.GRASS;
       g.touch(i);
@@ -353,6 +444,7 @@ export class ConstructionService {
     const tiles = [];
     const ids = new Set();
     const roads = [];
+    const rails = [];
     const forests = [];
     for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
       for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
@@ -360,12 +452,14 @@ export class ConstructionService {
         const i = g.idx(x, y);
         tiles.push(i);
         if (g.building[i]) ids.add(g.building[i]);
-        else if (g.road[i]) roads.push(i);
-        else if (g.terrain[i] === TERRAIN.FOREST) forests.push(i);
+        else if (g.road[i] || g.rail[i]) {
+          if (g.road[i]) roads.push(i);
+          if (g.rail[i]) rails.push(i);
+        } else if (g.terrain[i] === TERRAIN.FOREST) forests.push(i);
       }
     }
     const buildings = [...ids].map((id) => state.buildings.get(id)).filter(Boolean);
-    return { tiles, buildings, roads, forests };
+    return { tiles, buildings, roads, rails, forests };
   }
 
   // ───────────────────────────── Déplacement ─────────────────────────────
@@ -491,7 +585,7 @@ export class ConstructionService {
           cost += toCents(spec.euros);
           continue;
         }
-        if (g.building[i] || g.road[i]) {
+        if (g.building[i] || g.road[i] || g.rail[i]) {
           skipped.add('occupied');
           continue;
         }
@@ -630,6 +724,7 @@ export class ConstructionService {
       g.terrain[t.i] = t.terrain;
       g.zone[t.i] = t.zone;
       g.road[t.i] = t.road;
+      if (t.rail !== undefined) g.rail[t.i] = t.rail;
       g.building[t.i] = t.building;
       g.deliveryZone[t.i] = t.deliveryZone;
       g.bridge[t.i] = t.bridgeDeck;
@@ -671,6 +766,7 @@ export class ConstructionService {
       terrain: g.terrain[i],
       zone: g.zone[i],
       road: g.road[i],
+      rail: g.rail[i],
       building: g.building[i],
       deliveryZone: g.deliveryZone[i],
       bridgeDeck: g.bridge[i]
@@ -699,6 +795,9 @@ export class ConstructionService {
   }
 
   #afterNetworkChange(state) {
+    // Un accès supprimé (démolition, annulation) disparaît de la liste ; l'accès d'origine reste toujours
+    const g = state.grid;
+    if (state.entries.some((i) => !g.road[i])) state.entries = state.entries.filter((i, k) => k === 0 || g.road[i]);
     state.dirty.roads = true;
     state.dirty.roadReach = true;
     state.dirty.utilities = true;

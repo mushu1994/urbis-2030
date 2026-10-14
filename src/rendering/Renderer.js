@@ -4,7 +4,9 @@ import { Camera } from './Camera.js';
 import { SelectionRenderer } from './SelectionRenderer.js';
 import { VehicleRenderer } from './VehicleRenderer.js';
 import { TrainRenderer } from './TrainRenderer.js';
+import { AirSeaRenderer } from './AirSeaRenderer.js';
 import { isOwned, fullyOwned } from '../world/Land.js';
+import { drawRailTile } from './art/GroundArt.js';
 import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners, foliageTint } from './art/GroundArt.js';
 import { EffectsRenderer } from './EffectsRenderer.js';
 import { drawConstructionSite } from './art/EffectsArt.js';
@@ -31,6 +33,7 @@ export class Renderer {
     this.selection = new SelectionRenderer(this.layers.selection, this.layers.ghost);
     this.vehicles = new VehicleRenderer(this.layers.vehicles);
     this.trains = new TrainRenderer(this.layers.objects);
+    this.airsea = new AirSeaRenderer(this.layers.objects);
     this.buildingGfx = new Map();
     this.treeGfx = new Map();
     this.overlayId = null;
@@ -104,6 +107,7 @@ export class Renderer {
     this.effects?.reset();
     this.layers.clear();
     this.trains.reset();
+    this.airsea.reset();
     this.buildingGfx.clear();
     this.treeGfx.clear();
     this.constructing.clear();
@@ -258,7 +262,14 @@ export class Renderer {
         if (x < grid.width - 1 && linked(i + 1)) conn |= 2;
         if (y < grid.height - 1 && linked(i + grid.width)) conn |= 4;
         if (x > 0 && linked(i - 1)) conn |= 8;
+        // Accès régionaux : la chaussée file vers l'extérieur de la carte
         if (x === 0 && road.id === 'road_highway') conn |= 8;
+        if (state.entries.includes(i)) {
+          if (x === 0) conn |= 8;
+          else if (x === grid.width - 1) conn |= 2;
+          else if (y === 0) conn |= 1;
+          else if (y === grid.height - 1) conn |= 4;
+        }
         if (grid.bridge[i]) drawBridgeTile(g, x, y, alt, conn, road.visual);
         else {
           // Dénivelé vers chaque voisin relié (rampe dessinée côté case basse)
@@ -266,7 +277,23 @@ export class Renderer {
           const rise = [conn & 1 ? d(i - grid.width) : 0, conn & 2 ? d(i + 1) : 0, conn & 4 ? d(i + grid.width) : 0, conn & 8 && x > 0 ? d(i - 1) : 0];
           drawRoadTile(g, x, y, alt, conn, road.visual, { era: state.progression?.era ?? 1, rise: rise.some((r) => r > 0) ? rise : null });
         }
-      } else if (grid.zone[i] && !grid.building[i]) {
+      }
+      if (grid.rail[i]) {
+        // Voie ferrée : reliée aux rails voisins d'au plus un niveau d'écart
+        const ra = grid.surfaceAlt(i);
+        const on = (n) => grid.rail[n] && Math.abs(grid.surfaceAlt(n) - ra) <= 1;
+        let rc = 0;
+        if (y > 0 && on(i - grid.width)) rc |= 1;
+        if (x < grid.width - 1 && on(i + 1)) rc |= 2;
+        if (y < grid.height - 1 && on(i + grid.width)) rc |= 4;
+        if (x > 0 && on(i - 1)) rc |= 8;
+        // Au bord de la carte, la voie file vers la région
+        if (x === 0) rc |= 8;
+        if (x === grid.width - 1) rc |= 2;
+        if (y === 0) rc |= 1;
+        if (y === grid.height - 1) rc |= 4;
+        drawRailTile(g, x, y, ra, rc, { bridge: !!grid.bridge[i] && grid.terrain[i] === 1, crossing: !!grid.road[i] });
+      } else if (grid.zone[i] && !grid.building[i] && !grid.road[i]) {
         const z = cat.zoneByCode.get(grid.zone[i]);
         drawZoneTile(g, x, y, alt, z.color, { reachable: grid.roadDist[i] <= ROAD_REACH });
       }
@@ -602,6 +629,7 @@ export class Renderer {
     this.vehicles.night = this.effects?.night ?? 0;
     this.vehicles.update(state, dtMs, rect, paused);
     this.trains.update(state, this.catalog, rect, dtMs, paused);
+    this.airsea.update(state, this.catalog, rect, dtMs, paused);
     this.effects?.update({ state, catalog: this.catalog, camera: cam, view: this.view, rect, dtMs, paused, speedIndex: this.speedIndex ?? 1, ticksPerSecond: SPEEDS[this.speedIndex ?? 1]?.ticksPerSecond ?? 0.5, buildingGfx: this.buildingGfx });
     this.app.renderer.render(this.app.stage);
     const frame = performance.now() - t0;

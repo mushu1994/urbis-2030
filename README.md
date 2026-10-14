@@ -8,6 +8,19 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
 
 ## Nouveautés de la version 0.6 (analyse d'une partie de 27 ans, 88 000 habitants)
 
+### Lot D — transports
+
+- **Grand boulevard** (dès 3 000 habitants) : 2 × 3 voies et large terre-plein planté, 3 200 véhicules par jour.
+- **Voie ferrée** (menu Routes, dès 2 000 habitants) : se trace comme une route, franchit l'eau par des ponts droits,
+  croise les routes par des passages à niveau, se démolit avec l'outil « Démolir les routes » et s'annule. Une gare
+  qui touche une voie reliée au bord de la carte accueille des trains régionaux : capacité +50 % et une rame visible
+  qui arrive de la région le long des rails, marque l'arrêt puis repart. L'inspecteur indique si la gare est reliée.
+- **Autoroute de seconde sortie** (dès 15 000 habitants) : tracée jusqu'au bord de la carte, elle ouvre un nouvel
+  accès au réseau régional (habitants, navetteurs, fret). La démolir retire cet accès ; l'accès d'origine reste.
+- **Avions et navires** : un avion décolle ou atterrit régulièrement à l'aéroport (ombre au sol, montée, souffle des
+  réacteurs) ; un porte-conteneurs relie le port au bord de la carte par l'eau, fait escale puis repart (corne de
+  brume). Les sons ne jouent que si la scène est à l'écran, au plus toutes les 12 à 15 secondes.
+
 ### Lot C — ville vivante
 
 - **Commerces variés** : en zone commerciale apparaissent aussi un bar de quartier, un salon de coiffure et une
@@ -562,7 +575,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 263 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 268 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune

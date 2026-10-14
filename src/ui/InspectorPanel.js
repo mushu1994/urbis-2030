@@ -162,6 +162,10 @@ export class InspectorPanel {
     if (cap.sewageTreatment) prod.push(row('Capacité d\'épuration', `${cap.sewageTreatment} u.`));
     if (cap.compute) prod.push(row('Puissance de calcul', `${cap.compute} u.`));
     if (cap.service) prod.push(row('Rayon d\'action', `${cap.service.radius} cases`));
+    if (cap.transit?.mode === 'rail') {
+      prod.push(row('Voie ferrée vers la région', b.railLinked ? 'reliée (+50 %)' : 'non reliée', b.railLinked ? 'pos' : ''));
+      if (!b.railLinked) prod.push(h('p.hint', 'Posez une voie ferrée (menu Routes) qui touche la gare et rejoint le bord de la carte : trains régionaux, capacité +50 %.'));
+    }
     if (cap.service?.capacity) {
       const load = b.serviceLoad ?? 0;
       prod.push(row('Habitants servis / capacité', `${Math.round(load * 100)} % de ${formatNumber(cap.service.capacity)}`, load > 1 ? 'neg' : ''));

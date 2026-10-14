@@ -333,6 +333,8 @@ export class EconomySystem {
         roadUpkeep += g.bridge[i] ? r.bridgeUpkeepCents : r.upkeepCents;
       }
     }
+    // Voies ferrées (v0.6)
+    for (let i = 0; i < g.size; i++) if (g.rail[i]) roadUpkeep += Math.round((g.bridge[i] && g.terrain[i] === 1 ? 8 : 1.5) * 100);
     upkeep.roads = roadUpkeep * (mods['upkeep.roads'] ?? 1);
 
     // Exploitation des transports en commun : proportionnelle au nombre de voyageurs

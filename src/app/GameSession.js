@@ -72,6 +72,8 @@ export class GameSession {
         return this.construction.previewTerraform(s, cmd);
       case 'buyParcel':
         return this.construction.previewParcel(s, cmd);
+      case 'rail':
+        return this.construction.previewRail(s, cmd);
       default:
         return { ok: false, reasons: ['unknown'], messages: [`Commande inconnue : ${cmd.type}`] };
     }
@@ -121,6 +123,9 @@ export class GameSession {
         break;
       case 'buyParcel':
         r = this.construction.buyParcel(s, cmd);
+        break;
+      case 'rail':
+        r = this.construction.buildRail(s, cmd);
         break;
       case 'upgrade':
         r = this.construction.applyUpgrade(s, cmd);

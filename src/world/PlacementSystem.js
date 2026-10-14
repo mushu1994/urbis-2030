@@ -6,6 +6,7 @@ export const REASONS = {
   bounds: 'Hors de la carte',
   occupied: 'Emprise occupée',
   road: 'Une route occupe l\'emprise',
+  rail: 'Une voie ferrée occupe l\'emprise',
   terrain: 'Terrain incompatible',
   water: 'Impossible de construire sur l\'eau',
   slope: 'Terrain non plat',
@@ -66,6 +67,7 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
       const terr = g.terrain[i];
       if (g.building[i]) reasons.add('occupied');
       if (g.road[i]) reasons.add('road');
+      if (g.rail[i]) reasons.add('rail');
       if (terr === TERRAIN.WATER) reasons.add('water');
       else if (terr === TERRAIN.FOREST) forestTiles.push(i);
       else if (terr === TERRAIN.ROCK && !def.placement.terrainCodes.includes(terr)) rockTiles.push(i);
@@ -231,7 +233,7 @@ export function checkRoadTile(state, i, roadCode, prevAlt) {
 
 export function canZoneTile(state, i, zoneCode = 0, { ignoreBuilding = false } = {}) {
   const g = state.grid;
-  if ((g.building[i] && !ignoreBuilding) || g.road[i] || !zoneAllowedOn(g.terrain[i], zoneCode)) return false;
+  if ((g.building[i] && !ignoreBuilding) || g.road[i] || g.rail[i] || !zoneAllowedOn(g.terrain[i], zoneCode)) return false;
   if (!fullyOwned(state) && !isOwnedIndex(state, i)) return false;
   if (zoneCode === ZONE_FOREST) return hasForest(g, i);
   return zoneCode !== ZONE_EXTRACT || hasDeposit(g, i);

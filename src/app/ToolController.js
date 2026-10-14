@@ -201,6 +201,8 @@ export class ToolController {
     switch (t.kind) {
       case 'road':
         return { type: 'road', roadId: t.roadId, from: start, to: tile, verticalFirst: this.mods.shift };
+      case 'rail':
+        return { type: 'rail', from: start, to: tile, verticalFirst: this.mods.shift };
       case 'zone':
         return { type: 'zone', zoneId: t.zoneId, rect };
       case 'demolish':
@@ -292,7 +294,7 @@ export class ToolController {
     this.lastKey = key;
     const pv = session.preview(cmd);
     let spec = null;
-    if (cmd.type === 'road') spec = { kind: 'road', ok: pv.ok, tiles: pv.tiles ?? [] };
+    if (cmd.type === 'road' || cmd.type === 'rail') spec = { kind: 'road', ok: pv.ok, tiles: pv.tiles ?? [] };
     else if (cmd.type === 'zone') {
       const zone = cmd.zoneId ? session.catalog.zoneById.get(cmd.zoneId) : null;
       spec = { kind: 'rect', ok: pv.ok, rect: cmd.rect, eligible: pv.eligible, color: zone?.color ?? '#9aa5b1' };

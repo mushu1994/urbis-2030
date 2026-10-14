@@ -20,6 +20,51 @@ export function fareElasticity(fare) {
 
 export const TRANSIT_LABELS = { bus: 'Bus', metro: 'Métro', rail: 'Train et hyperboucle' };
 
+/** Bonus de capacité d'une gare reliée par les rails au réseau régional (bord de la carte). */
+export const RAIL_LINK_BONUS = 1.5;
+
+/** Cases de voie ferrée reliées (par des rails contigus) à une case de rail au bord de la carte. */
+export function linkedRailTiles(g) {
+  const seen = new Uint8Array(g.size);
+  const queue = [];
+  for (let i = 0; i < g.size; i++) {
+    if (!g.rail[i]) continue;
+    const x = g.xOf(i);
+    const y = g.yOf(i);
+    if (x === 0 || y === 0 || x === g.width - 1 || y === g.height - 1) {
+      seen[i] = 1;
+      queue.push(i);
+    }
+  }
+  const nb = new Int32Array(4);
+  while (queue.length) {
+    const i = queue.pop();
+    const n = g.neighbors4(i, nb);
+    for (let k = 0; k < n; k++) {
+      const j = nb[k];
+      if (g.rail[j] && !seen[j]) {
+        seen[j] = 1;
+        queue.push(j);
+      }
+    }
+  }
+  return seen;
+}
+
+/** La gare touche-t-elle (par un côté de son emprise) une voie reliée ? */
+export function touchesRail(g, b, linked) {
+  for (let dy = -1; dy <= b.h; dy++) {
+    for (let dx = -1; dx <= b.w; dx++) {
+      const inside = dx >= 0 && dy >= 0 && dx < b.w && dy < b.h;
+      if (inside) continue;
+      const x = b.x + dx;
+      const y = b.y + dy;
+      if (g.inBounds(x, y) && linked[g.idx(x, y)]) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Transports en commun (agrégés, comme le trafic routier).
  * - Bus : un arrêt dessert un rayon de quelques cases s'il est relié par la route à un dépôt ;
@@ -98,6 +143,12 @@ export class TransitSystem {
         metroCap += s.cap;
         EnvironmentSystem.splat(g, g.transitMetro, cx(s.b), cy(s.b), 1.4, s.tr.radius);
       }
+    }
+    // Voies ferrées (v0.6) : une gare reliée par les rails au bord de la carte reçoit des trains régionaux (+50 %)
+    const linked = railStations.length ? linkedRailTiles(g) : null;
+    for (const s of railStations) {
+      s.b.railLinked = !!linked && touchesRail(g, s.b, linked);
+      if (s.b.railLinked) s.cap *= RAIL_LINK_BONUS;
     }
     for (const s of railStations) {
       s.b.transitActive = true;

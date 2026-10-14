@@ -16,6 +16,8 @@ export const LAYER_SPECS = {
   road: { type: Uint8Array, persistent: true },
   building: { type: Int32Array, persistent: true },
   deliveryZone: { type: Uint8Array, persistent: true },
+  /** Voie ferrée (v0.6) : 1 = voie posée. Peut croiser une route (passage à niveau). */
+  rail: { type: Uint8Array, persistent: true, optional: true },
   /** Pont : altitude du tablier + 1 (0 = pas de pont). */
   bridge: { type: Uint8Array, persistent: true },
   tileVersion: { type: Uint32Array, persistent: true },
@@ -127,7 +129,7 @@ export class Grid {
     for (const [name, spec] of Object.entries(LAYER_SPECS)) {
       const b64 = data.layers[name];
       if (typeof b64 !== 'string') {
-        if (spec.persistent) throw new Error(`Couche persistante manquante : ${name}`);
+        if (spec.persistent && !spec.optional) throw new Error(`Couche persistante manquante : ${name}`);
         continue; // couche dérivée absente : sera recalculée
       }
       const arr = base64ToTyped(b64, spec.type);

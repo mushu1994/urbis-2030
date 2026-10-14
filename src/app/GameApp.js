@@ -184,6 +184,7 @@ export class GameApp {
       if (e.target instanceof Element && e.target.closest('button, .btn, [role="tab"], select')) this.audio.play('click');
     }, { capture: true });
     this.renderer.effects.onThunder = () => this.audio.play('thunder');
+    this.renderer.airsea.onSound = (name) => this.audio.play(name);
     await this.showMenu();
   }
 
@@ -235,6 +236,7 @@ export class GameApp {
     }
     const hint = {
       road: 'Glissez pour tracer',
+      rail: 'Glissez pour poser les rails',
       zone: 'Glissez pour délimiter',
       demolish: 'Glissez pour sélectionner',
       deliveryZone: 'Glissez pour délimiter',
@@ -374,7 +376,7 @@ export class GameApp {
     });
     this.bus.on('sim:month', () => this.panelHost.refresh());
     this.bus.on('command:done', ({ cmd }) => {
-      const sfx = { road: 'road', building: 'build', zone: 'zone', deliveryZone: 'zone', demolish: 'demolish', upgrade: 'money', loan: 'money', research: 'tech', undo: 'undo', crisisResponse: 'money' }[cmd.type];
+      const sfx = { road: 'road', rail: 'road', buyParcel: 'money', building: 'build', zone: 'zone', deliveryZone: 'zone', demolish: 'demolish', upgrade: 'money', loan: 'money', research: 'tech', undo: 'undo', crisisResponse: 'money' }[cmd.type];
       if (sfx) this.audio.play(sfx);
     });
     this.bus.on('era:changed', () => this.audio.play('fanfare'));
