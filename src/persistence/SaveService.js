@@ -8,6 +8,7 @@ import { CURRENT_FORMAT_VERSION, migrate } from './SaveMigration.js';
 import { formatDate } from '../simulation/config.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
 import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
+import { defaultPolitics, LEGACY_FIRST_ELECTION_MONTHS } from '../simulation/PoliticsSystem.js';
 
 export const TRAFFIC_ARRAYS = { acc: Float32Array, cost: Float64Array, jobW: Float64Array, shopW: Float64Array };
 
@@ -48,6 +49,7 @@ export function serializeState(state) {
     scenario: structuredClone(state.scenario ?? null),
     options: structuredClone(state.options ?? null),
     land: structuredClone(state.land ?? null),
+    politics: structuredClone(state.politics ?? null),
     modifiers: { ...mods, disabledModes: { ...(disabledModes ?? {}) }, compute: compute ? { ...compute } : undefined },
     dirty: { ...state.dirty }
   };
@@ -103,6 +105,14 @@ export function deserializeState(raw) {
   s.scenario = data.scenario ?? null;
   s.options = data.options ?? defaultOptions('off');
   s.land = data.land ?? defaultLand(grid.width, grid.height);
+  if (data.politics) s.politics = data.politics;
+  else {
+    // Partie d'avant la v0.7 : la vie politique démarre, premier scrutin dans 3 ans
+    const enabled = s.options.elections ? s.options.elections === 'on' : true;
+    s.options.elections ??= enabled ? 'on' : 'off';
+    s.politics = defaultPolitics(s, { enabled, firstElectionMonths: LEGACY_FIRST_ELECTION_MONTHS });
+    s.politics.announce = enabled;
+  }
   s.modifiers = data.modifiers ?? {};
   s.dirty = { ...s.dirty, ...(data.dirty ?? {}), roads: true, roadReach: true };
   if (!data.modifiers) s.dirty.modifiers = true;

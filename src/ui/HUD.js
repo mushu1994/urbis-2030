@@ -54,6 +54,10 @@ export class HUD {
         }, h('span', k === 'O' ? 'B' : k), h('div.demand-track', bar), num);
       })
     );
+    // v0.7 : popularité du maire et compte à rebours des municipales → panneau « Mairie et élections »
+    this.approval = h('strong.hud-value');
+    this.approvalSub = h('span.hud-sub');
+    this.approvalBtn = h('button.hud-group.hud-approval', { type: 'button', title: 'Mairie et élections (E)', on: { click: () => actions.onOpenPanel('politics') } }, h('span.hud-label', 'Popularité'), this.approval, this.approvalSub);
     /** Type de la première alerte affichée : le bouton mène directement au problème. */
     this.alertKind = null;
     this.alerts = h('button.hud-alerts', {
@@ -71,6 +75,7 @@ export class HUD {
       h('div.hud-break', { 'aria-hidden': 'true' }),
       h('button.hud-group.hud-pop', { on: { click: () => actions.onOpenPanel('city') }, title: 'Ville (C)' }, h('span.hud-label', 'Habitants'), this.population, this.popSub),
       demand,
+      this.approvalBtn,
       h('div.hud-spacer'),
       this.alerts,
       this.undo,
@@ -117,6 +122,17 @@ export class HUD {
     } else {
       this.net.textContent = 'premier mois en cours';
       this.net.className = 'hud-sub';
+    }
+    const pol = state.politics;
+    if (pol) {
+      const a = `${Math.round(pol.approval)} %`;
+      if (this.approval.textContent !== a) this.approval.textContent = a;
+      this.approval.classList.toggle('neg', pol.approval < 45);
+      this.approval.classList.toggle('pos', pol.approval >= 55);
+      const left = pol.nextElection - Math.floor(state.time.tick / 30);
+      const sub = !pol.enabled ? 'sans élections' : pol.defeated ? 'battu(e)' : pol.campaign ? `🗳 vote dans ${Math.max(0, left)} mois` : left <= 24 ? `élection dans ${left} mois` : `${pol.mandate}${pol.mandate === 1 ? 'er' : 'e'} mandat`;
+      if (this.approvalSub.textContent !== sub) this.approvalSub.textContent = sub;
+      this.approvalBtn.classList.toggle('campaign', !!pol.campaign);
     }
     const s = state.stats;
     this.population.textContent = formatNumber(s.population);

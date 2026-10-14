@@ -2,11 +2,12 @@ import { SIM } from './config.js';
 import { hash2 } from '../util/rng.js';
 import { toCents } from '../util/money.js';
 import { TERRAIN } from '../world/Terrain.js';
-import { removeBuilding } from '../systems/BuildingFactory.js';
 
 /**
  * Catastrophes et crises : inondation, canicule extrême, cyberattaque de l'IA municipale, panne géante,
- * grève des transports, incendie.
+ * grève des transports, incendie ; crises sociales (v0.7) : manifestation, émeute, épidémie.
+ * Les catastrophes peuvent laisser des ruines (v0.7) : les propriétaires rebâtissent les bâtiments privés au bout
+ * de quelques semaines ; un équipement public en ruines attend que le maire finance sa reconstruction.
  *
  * - Chaque crise a des conditions d'apparition (pluie récente, chaleur, technologies déployées, marge du réseau
  *   électrique, fréquentation des transports, couverture incendie…), des effets chiffrés (modificateurs,
@@ -94,6 +95,42 @@ export const CRISIS_TYPES = Object.freeze({
       { id: 'hold', label: 'Tenir bon', detail: 'Aucune dépense ; la grève dure et la satisfaction baisse.' }
     ]
   },
+  protest: {
+    name: 'Manifestation',
+    icon: '📣',
+    level: 'warning',
+    summary: 'Des habitants mécontents défilent devant la mairie et bloquent le centre-ville.',
+    factors: 'Popularité du maire faible, hausses d\'impôts récentes, chômage, satisfaction en berne.',
+    mitigation: 'Regagner l\'opinion (Mairie → Opinion). Une bonne présence policière évite que le cortège dégénère.',
+    responses: [
+      { id: 'dialogue', label: 'Recevoir une délégation', detail: 'Le mouvement se calme en deux jours, aucun risque d\'émeute, et l\'opinion apprécie le geste.' },
+      { id: 'ignore', label: 'Laisser passer', detail: 'Aucune dépense ; le cortège dure et peut dégénérer en émeute si la police est peu présente.' }
+    ]
+  },
+  riot: {
+    name: 'Émeute',
+    icon: '🚨',
+    level: 'danger',
+    summary: 'Des violences urbaines éclatent : vitrines brisées, commerces incendiés, quartier bouclé.',
+    factors: 'Manifestation ignorée, popularité très basse, chômage élevé, faible présence policière.',
+    mitigation: 'Couverture police (commissariats, postes de police) : elle contient l\'émeute, réduit sa durée et les dégâts.',
+    responses: [
+      { id: 'police', label: 'Déployer les forces de l\'ordre', detail: 'Renforts de police : l\'émeute est contenue en un à deux jours, les dégâts cessent presque.' },
+      { id: 'mediation', label: 'Envoyer des médiateurs', detail: 'Moins coûteux, mais sans renforts l\'émeute dure et les dégâts dépendent de la police locale.' }
+    ]
+  },
+  epidemic: {
+    name: 'Épidémie',
+    icon: '🦠',
+    level: 'danger',
+    summary: 'Un virus saisonnier se propage : absentéisme au travail, hôpitaux sous tension, commerces désertés.',
+    factors: 'Ville dense, faible couverture santé ou hôpitaux saturés, déchets non collectés, eaux usées non traitées, hiver.',
+    mitigation: 'Hôpitaux et cliniques (couverture santé) en nombre suffisant, collecte des déchets, stations d\'épuration.',
+    responses: [
+      { id: 'vaccinate', label: 'Campagne de vaccination et de dépistage', detail: 'Durée et effets divisés par deux (coût par habitant).' },
+      { id: 'barrier', label: 'Simples gestes barrières', detail: 'Aucune dépense ; l\'épidémie suit son cours.' }
+    ]
+  },
   fire: {
     name: 'Incendie',
     icon: '🔥',
@@ -114,8 +151,8 @@ export function defaultCrises() {
   return { active: [], history: [], nextId: 1, last: {}, ransomsPaid: 0, total: 0 };
 }
 
-export function defaultOptions(disasters = 'normal') {
-  return { disasters };
+export function defaultOptions(disasters = 'normal', elections = 'on') {
+  return { disasters, elections };
 }
 
 const isProne = (g, i) => g.terrain[i] !== TERRAIN.WATER && g.altitude[i] <= 1;
@@ -136,9 +173,54 @@ export function responseCost(state, crisis, optionId) {
       return 12000 + Math.round((state.transit.passengersPerDay ?? 0) * 5);
     case 'fire:reinforce':
       return 8000 + 1500 * Object.keys(crisis.burning ?? {}).length;
+    case 'protest:dialogue':
+      return 2000 + Math.round(pop * 0.05);
+    case 'riot:police':
+      return 15000 + Math.round(pop * 0.2);
+    case 'riot:mediation':
+      return 5000;
+    case 'epidemic:vaccinate':
+      return 5000 + Math.round(pop * 2.5);
     default:
       return 0;
   }
+}
+
+/** Couverture moyenne d'un service pour les habitants (0..1). */
+function residentCover(state, layer) {
+  const g = state.grid;
+  let sum = 0;
+  let n = 0;
+  for (const b of state.buildings.values()) {
+    if (!(b.residents > 0)) continue;
+    sum += Math.min(1, g[layer][g.idx(b.x, b.y)]) * b.residents;
+    n += b.residents;
+  }
+  return n ? sum / n : 0;
+}
+
+/** Délai de reconstruction d'un bâtiment privé en ruines (jours) avant le début du chantier. */
+export const RUIN_REBUILD_DAYS = 30;
+/** Reconstruction d'un équipement public : part du coût d'origine. */
+export const REPAIR_SHARE = 0.35;
+
+/**
+ * Met un bâtiment en ruines : plus d'habitants ni d'emplois. Privé : reconstruit par ses propriétaires après
+ * RUIN_REBUILD_DAYS ; public : hors service jusqu'à ce que le maire finance la reconstruction.
+ */
+export function ruinBuilding(state, b, def, cause) {
+  const t = state.time.tick;
+  const growable = def.kind === 'growable';
+  b.ruins = { since: t, cause, until: growable ? t + RUIN_REBUILD_DAYS : null };
+  b.residents = 0;
+  b.jobsFilled = 0;
+  b.employed = 0;
+  delete b.burning;
+  const until = growable ? t + RUIN_REBUILD_DAYS : 1e9;
+  b.disabledUntil = Math.max(b.disabledUntil ?? 0, until);
+  b.disasterUntil = Math.max(b.disasterUntil ?? 0, until);
+  state.dirty.utilities = true;
+  state.dirty.environment = true;
 }
 
 export class CrisisSystem {
@@ -183,8 +265,10 @@ export class CrisisSystem {
     const t = state.time.tick;
     for (const c of [...cr.active]) {
       if (c.kind === 'fire') this.#fireStep(state, c);
+      if (c.kind === 'riot') this.#riotStep(state, c);
       if (t >= c.until) this.#end(state, c);
     }
+    if (t % 5 === 1) this.#rebuildRuins(state);
     if (t % CHECK_EVERY !== 2) return;
     // Période de grâce : la première année d'une ville, ou quelques mois après le début d'une partie préparée
     if (t < (cr.graceUntil ?? GRACE_DAYS)) return;
@@ -247,6 +331,32 @@ export class CrisisSystem {
         if (pax < 300) return 0;
         return 0.002 * (s.satisfaction < 50 ? 2 : 1) * (state.economy.treasury < 0 ? 1.5 : 1) * risk('strike');
       }
+      case 'protest': {
+        const pol = state.politics;
+        if (!pol || s.population < 1500) return 0;
+        const a = pol.approval ?? 50;
+        const taxes = (pol.factors ?? []).find((f) => f.id === 'taxes')?.value ?? 0;
+        let q = a < 45 ? 0.004 + (45 - a) * 0.0012 : 0;
+        if (taxes < -6) q += 0.004;
+        if ((s.unemploymentRate ?? 0) > 0.15) q += 0.003;
+        return q * risk('protest');
+      }
+      case 'riot': {
+        const a = state.politics?.approval ?? 50;
+        if (s.population < 3000 || a >= 25 || (s.unemploymentRate ?? 0) < 0.12) return 0;
+        return 0.003 * (1 - 0.7 * residentCover(state, 'coverPolice')) * risk('riot');
+      }
+      case 'epidemic': {
+        if (s.population < 3000) return 0;
+        const health = residentCover(state, 'coverHealth');
+        let q = 0.0012 * (1 + (1 - health) * 2);
+        const month = Math.floor(state.time.tick / SIM.DAYS_PER_MONTH) % 12;
+        if (month === 11 || month <= 2) q *= 2;
+        if ((state.waste?.stats?.collectionRate ?? 1) < 0.8) q *= 1.5;
+        if ((state.utilities?.water?.untreatedShare ?? 0) > 0.3) q *= 1.5;
+        if (s.population > 40000) q *= 1.3;
+        return q * risk('epidemic');
+      }
       case 'fire': {
         if (state.buildings.size < 25 || s.population < 200) return 0;
         const g = state.grid;
@@ -276,7 +386,7 @@ export class CrisisSystem {
    * Déclenche une crise (tirage réussi, scénario ou commande du joueur).
    * @returns {{ok:boolean, reason?:string, crisis?:any}}
    */
-  trigger(state, kind, { manual = false } = {}) {
+  trigger(state, kind, { manual = false, from = null } = {}) {
     const cr = this.#ensure(state);
     const type = CRISIS_TYPES[kind];
     if (!type) return { ok: false, reason: 'Type de crise inconnu' };
@@ -354,6 +464,58 @@ export class CrisisSystem {
         ok = this.#startFire(state, c);
         reason = 'Aucun bâtiment exposé';
         break;
+      case 'protest': {
+        const at = this.#civicCenter(state);
+        if (!at) {
+          ok = false;
+          reason = 'Aucun habitant';
+          break;
+        }
+        c.x = at.x;
+        c.y = at.y;
+        c.until = t + 3 + Math.round(4 * sev);
+        c.effects = [
+          { key: 'roadCapacityMult', op: 'mul', value: -0.06 },
+          { key: 'satisfaction.all', op: 'add', value: -1 },
+          { key: 'demand.C', op: 'add', value: -3 }
+        ];
+        break;
+      }
+      case 'riot': {
+        const at = from ?? this.#civicCenter(state, true);
+        if (!at) {
+          ok = false;
+          reason = 'Aucun habitant';
+          break;
+        }
+        c.x = at.x;
+        c.y = at.y;
+        const g = state.grid;
+        c.cover = Math.round(Math.min(1, g.coverPolice[g.idx(c.x, c.y)]) * 100) / 100;
+        c.until = t + Math.max(2, Math.round((3 + 6 * sev) * (1 - 0.6 * c.cover)));
+        c.damaged = [];
+        c.effects = [
+          { key: 'satisfaction.all', op: 'add', value: -4 },
+          { key: 'demand.C', op: 'add', value: -8 },
+          { key: 'demand.O', op: 'add', value: -4 },
+          { key: 'roadCapacityMult', op: 'mul', value: -0.1 }
+        ];
+        break;
+      }
+      case 'epidemic': {
+        const health = residentCover(state, 'coverHealth');
+        c.cover = Math.round(health * 100) / 100;
+        c.until = t + Math.round((20 + 25 * sev) * (1 - 0.4 * health));
+        const k = 1 - 0.5 * health;
+        c.effects = [
+          { key: 'satisfaction.all', op: 'add', value: -3 * k },
+          { key: 'satisfaction.low', op: 'add', value: -2 * k },
+          { key: 'tripGenerationMult', op: 'mul', value: -0.08 },
+          { key: 'demand.C', op: 'add', value: -4 * k },
+          { key: 'jobs.absence', op: 'add', value: Math.round(0.1 * sev * k * 100) / 100 }
+        ];
+        break;
+      }
       default:
         ok = false;
     }
@@ -534,22 +696,110 @@ export class CrisisSystem {
     delete b.burning;
     c.burnt.push(b.id);
     const cover = Math.min(1, g.coverFire[g.idx(b.x, b.y)]);
-    const destroyed = def.kind === 'growable' && c.response !== 'reinforce' && CrisisSystem.roll(state, 601, b.id) < 0.75 - 0.6 * cover;
+    const roll = CrisisSystem.roll(state, 601, b.id);
+    const destroyed = c.response !== 'reinforce' && (def.kind === 'growable' ? roll < 0.75 - 0.6 * cover : roll < 0.22 - 0.2 * cover);
     if (destroyed) {
-      const tiles = [];
-      for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) tiles.push(g.idx(b.x + dx, b.y + dy));
-      removeBuilding(state, b);
-      this.bus?.emit('building:removed', { building: b });
-      this.bus?.emit('world:changed', { tiles, reason: 'fire' });
+      // v0.7 : le bâtiment ne disparaît plus, il reste en ruines (reconstruit ensuite)
+      ruinBuilding(state, b, def, 'fire');
+      this.bus?.emit('building:changed', { building: b });
       c.destroyed = (c.destroyed ?? 0) + 1;
-      state.dirty.utilities = true;
-      state.dirty.environment = true;
     } else {
       // Remise en état : quelques jours d'arrêt supplémentaires et facture pour les équipements publics
       b.disabledUntil = Math.max(b.disabledUntil ?? 0, state.time.tick + (def.kind === 'plop' ? 12 : 4));
       if (def.kind === 'plop') c.damage += toCents(Math.round((def.cost ?? 10000) * 0.18));
       this.bus?.emit('building:changed', { building: b });
     }
+  }
+
+  // ───────────────────────────── Crises sociales ─────────────────────────────
+
+  /**
+   * Lieu d'une manifestation : la mairie si elle existe, sinon le quartier le plus peuplé.
+   * Pour une émeute spontanée (`unhappy`), le quartier habité le plus mécontent.
+   */
+  #civicCenter(state, unhappy = false) {
+    if (!unhappy) {
+      for (const b of [...state.buildings.values()].sort((a, z) => a.id - z.id)) {
+        const id = this.catalog.building(b.defId).id;
+        if (id === 'city_hall' || id === 'mayor_house') return { x: b.x, y: b.y };
+      }
+    }
+    let best = null;
+    let score = -Infinity;
+    for (const b of [...state.buildings.values()].sort((a, z) => a.id - z.id)) {
+      if (!(b.residents > 0)) continue;
+      const v = unhappy ? b.residents * (100 - (b.satisfaction ?? 50)) : b.residents;
+      if (v > score) {
+        score = v;
+        best = b;
+      }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }
+
+  /** Dégâts quotidiens d'une émeute : quelques bâtiments saccagés autour du foyer, moins avec la police. */
+  #riotStep(state, c) {
+    if (state.time.tick >= c.until) return;
+    const police = c.response === 'police';
+    const p = 0.09 * c.severity * (1 - 0.85 * (c.cover ?? 0)) * (police ? 0.25 : 1);
+    if ((c.damaged?.length ?? 0) >= 10) return;
+    const near = [];
+    for (const b of state.buildings.values()) {
+      if (b.ruins || Math.abs(b.x - c.x) > 6 || Math.abs(b.y - c.y) > 6) continue;
+      const def = this.catalog.buildingFor(b);
+      if (def.kind !== 'growable') continue;
+      near.push(b);
+    }
+    near.sort((a, z) => a.id - z.id);
+    let k = 0;
+    for (const b of near) {
+      const def = this.catalog.buildingFor(b);
+      const w = def.category === 'commerce' ? 1.4 : def.category === 'offices' ? 1 : 0.5;
+      if (CrisisSystem.roll(state, 900 + (k++ % 97), b.id) < p * w) {
+        ruinBuilding(state, b, def, 'riot');
+        c.damaged.push(b.id);
+        this.bus?.emit('building:changed', { building: b });
+        if (c.damaged.length >= 10) break;
+      }
+    }
+  }
+
+  // ───────────────────────────── Ruines et reconstruction ─────────────────────────────
+
+  /** Bâtiments privés en ruines : les propriétaires lancent la reconstruction au bout de RUIN_REBUILD_DAYS. */
+  #rebuildRuins(state) {
+    const t = state.time.tick;
+    for (const b of state.buildings.values()) {
+      if (!b.ruins || b.ruins.until === null || t < b.ruins.until) continue;
+      const def = this.catalog.buildingFor(b);
+      delete b.ruins;
+      b.disabledUntil = t;
+      b.disasterUntil = t;
+      b.constructionStart = t;
+      b.constructionUntil = t + Math.max(10, Math.round(12 + 6 * (def.level ?? 1)));
+      this.bus?.emit('building:changed', { building: b });
+    }
+  }
+
+  /** Reconstruction d'un équipement public en ruines, financée par la ville. */
+  repair(state, buildingId) {
+    const b = state.buildings.get(buildingId);
+    if (!b?.ruins) return { ok: false, reason: 'Ce bâtiment n\'est pas en ruines' };
+    const def = this.catalog.buildingFor(b);
+    if (def.kind === 'growable') return { ok: false, reason: 'Les propriétaires reconstruisent eux-mêmes' };
+    const cents = repairCostCents(def);
+    if (!this.economy.canAfford(state, cents)) return { ok: false, reason: 'Budget insuffisant' };
+    this.economy.payOpex(state, { amount: cents, category: 'crisis', label: `Reconstruction : ${def.name}`, ref: `repair-${b.id}` });
+    const t = state.time.tick;
+    delete b.ruins;
+    b.repairStart = t;
+    b.repairUntil = t + 20;
+    b.disabledUntil = t + 20;
+    b.disasterUntil = t;
+    state.dirty.utilities = true;
+    state.dirty.environment = true;
+    this.bus?.emit('building:changed', { building: b });
+    return { ok: true, cost: cents };
   }
 
   // ───────────────────────────── Réponses et fin ─────────────────────────────
@@ -613,6 +863,16 @@ export class CrisisSystem {
       case 'strike:hold':
         c.effects = [...c.effects, { key: 'satisfaction.all', op: 'add', value: -2 }];
         break;
+      case 'protest:dialogue':
+        c.until = Math.min(c.until, t + 2);
+        break;
+      case 'riot:police':
+        c.until = Math.min(c.until, t + 1 + (c.cover < 0.4 ? 1 : 0));
+        break;
+      case 'epidemic:vaccinate':
+        c.until = Math.max(t + 1, t + Math.round((c.until - t) / 2));
+        c.effects = c.effects.map((e) => ({ ...e, value: Math.round((e.value / 2) * 1000) / 1000 }));
+        break;
       case 'fire:reinforce':
         for (const id of Object.keys(c.burning).map(Number)) {
           c.burning[id] = Math.min(c.burning[id], t + 1);
@@ -648,6 +908,21 @@ export class CrisisSystem {
       c.damage += toCents(dmg);
       this.bus?.emit('world:changed', { tiles: c.tiles ?? [], reason: 'flood-end' });
     }
+    if (c.kind === 'flood' && c.severity > 0.5) {
+      // Crue majeure : quelques maisons au ras de l'eau sont détruites
+      for (const id of c.buildings ?? []) {
+        const b = state.buildings.get(id);
+        if (!b || b.ruins) continue;
+        const def = this.catalog.buildingFor(b);
+        if (def.kind !== 'growable') continue;
+        const p = 0.18 * c.severity * (c.response === 'rescue' ? 0.4 : 1);
+        if (CrisisSystem.roll(state, 701, id) < p) {
+          ruinBuilding(state, b, def, 'flood');
+          c.destroyed = (c.destroyed ?? 0) + 1;
+          this.bus?.emit('building:changed', { building: b });
+        }
+      }
+    }
     if (c.kind === 'blackout' && c.response === 'import') {
       state.trade.power.buy = !!c.restoreBuy;
     }
@@ -666,13 +941,28 @@ export class CrisisSystem {
     state.dirty.environment = true;
     this.#notify(state, 'info', `Fin de la crise — ${type.name}${summary ? ` : ${summary}` : ''}`, { kind: 'crisis-end', crisisId: c.id });
     this.bus?.emit('crisis:ended', { crisis: structuredClone(c) });
+    // Une manifestation ignorée peut dégénérer en émeute, surtout si la police est peu présente
+    if (c.kind === 'protest' && c.response !== 'dialogue' && !this.isActive(state, 'riot')) {
+      const g = state.grid;
+      const cover = Math.min(1, g.coverPolice[g.idx(c.x, c.y)]);
+      const a = state.politics?.approval ?? 50;
+      const p = Math.max(0, Math.min(0.85, 0.2 + (40 - a) / 100)) * (1 - 0.8 * cover) * (state.modifiers?.['risk.riot'] ?? 1);
+      if (CrisisSystem.roll(state, 801) < p) this.trigger(state, 'riot', { from: { x: c.x, y: c.y } });
+    }
   }
 
   #summary(c) {
     const parts = [];
     if (c.kind === 'flood') parts.push(`${c.tiles?.length ?? 0} cases inondées, ${c.buildings?.length ?? 0} bâtiments touchés`);
     if (c.kind === 'fire') parts.push(`${c.burnt?.length ?? 0} bâtiment(s) touché(s)${c.destroyed ? `, ${c.destroyed} détruit(s)` : ''}`);
+    if (c.kind === 'flood' && c.destroyed) parts.push(`${c.destroyed} maison(s) détruite(s)`);
+    if (c.kind === 'riot') parts.push(c.damaged?.length ? `${c.damaged.length} bâtiment(s) saccagé(s)` : 'aucun dégât majeur');
     if (c.damage > 0) parts.push(`réparations ${Math.round(c.damage / 100).toLocaleString('fr-FR')} €`);
     return parts.join(' · ');
   }
+}
+
+/** Coût de reconstruction d'un équipement public (centimes). */
+export function repairCostCents(def) {
+  return toCents(Math.round((def.cost ?? 10000) * REPAIR_SHARE));
 }

@@ -6,6 +6,7 @@ import { SIM } from '../simulation/config.js';
 import { toCents } from '../util/money.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
 import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
+import { defaultPolitics } from '../simulation/PoliticsSystem.js';
 
 /**
  * @typedef {Object} Building
@@ -102,6 +103,8 @@ export class GameState {
     this.options = defaultOptions('normal');
     /** Territoire de la commune : parcelles achetées (v0.6). */
     this.land = defaultLand(grid.width, grid.height);
+    /** Vie politique : popularité, mandat, campagne, élections (v0.7). */
+    this.politics = defaultPolitics(this);
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};

@@ -56,6 +56,8 @@ export const DEFAULT_MODIFIERS = Object.freeze({
   'jobs.qualification': 0,
   'jobs.upskill': 0,
   'jobs.commuters': 0.25,
+  /** Part des actifs absents (épidémie). */
+  'jobs.absence': 0,
   /** v0.7 : risques sociaux (manifestations, émeutes, épidémies). */
   'risk.protest': 1,
   'risk.riot': 1,
@@ -155,6 +157,13 @@ export function computeModifiers(state, catalog) {
     const staffing = def.capacity.jobs ? Math.min(1, 0.3 + b.jobsFilled / def.capacity.jobs) : 1;
     const powered = def.networks.power > 0 && !b.powered ? 0.3 : 1;
     applyEffects(mods, def.cityEffects, staffing * powered);
+  }
+
+  // Opinion (v0.7) : une ville où le maire est populaire attire ; une ville en défiance fait fuir.
+  const pol = state.politics;
+  if (pol?.enabled && (state.stats?.population ?? 0) > 0) {
+    const a = pol.approval ?? 50;
+    applyEffects(mods, [{ key: 'demand.R', op: 'add', value: Math.max(-4, Math.min(3, (a - 50) * 0.08)) }]);
   }
 
   // Saisonnalité du solaire (déterministe selon le mois)

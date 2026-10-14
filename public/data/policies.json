@@ -27,6 +27,12 @@
           "op": "add",
           "value": -1,
           "label": "Contrainte pour les ménages modestes"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": -1.5,
+          "label": "Popularité −1,5 (automobilistes mécontents)"
         }
       ],
       "costPer1000": 40
@@ -57,6 +63,12 @@
           "op": "mul",
           "value": -0.2,
           "label": "Construction résidentielle −20 %"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": 1,
+          "label": "Popularité +1"
         }
       ],
       "costPer1000": 60
@@ -90,6 +102,12 @@
           "op": "add",
           "value": 1,
           "label": "Satisfaction +1"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": 0.5,
+          "label": "Popularité +0,5"
         }
       ],
       "costPer1000": 15
@@ -138,6 +156,12 @@
           "op": "mul",
           "value": -0.06,
           "label": "Construction −6 % (surcoût)"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": 0.5,
+          "label": "Popularité +0,5"
         }
       ],
       "costPer1000": 25
@@ -198,6 +222,12 @@
           "op": "add",
           "value": 2,
           "label": "Satisfaction des ménages modestes +2"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": 1.5,
+          "label": "Popularité +1,5"
         }
       ],
       "costPer1000": 120
@@ -228,6 +258,12 @@
           "op": "add",
           "value": -0.5,
           "label": "Contrainte pour les habitants"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": -0.5,
+          "label": "Popularité −0,5 (contraintes du tri)"
         }
       ],
       "costPer1000": 30
@@ -355,6 +391,12 @@
           "op": "add",
           "value": 1.5,
           "label": "Satisfaction des ménages modestes +1,5"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": 1,
+          "label": "Popularité +1"
         }
       ]
     },
@@ -415,6 +457,12 @@
           "op": "add",
           "value": 1,
           "label": "Satisfaction des classes moyennes +1"
+        },
+        {
+          "key": "approval.add",
+          "op": "add",
+          "value": 0.5,
+          "label": "Popularité +0,5"
         }
       ]
     }

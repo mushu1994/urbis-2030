@@ -126,6 +126,7 @@ export class Toolbar {
         ['finance', 'Finances (B)', 'finance'],
         ['city', 'Ville (C)', 'city'],
         ['territory', 'Territoire (T)', 'map'],
+        ['politics', 'Mairie et élections (E)', 'vote'],
         ['ai', 'IA et politiques (I)', 'ai'],
         ['layers', 'Couches de données (L)', 'layers'],
         ['saves', 'Sauvegardes (Ctrl+S)', 'save'],

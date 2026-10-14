@@ -18,6 +18,7 @@ import { FinancePanel } from '../ui/FinancePanel.js';
 import { TechPanel } from '../ui/TechPanel.js';
 import { CityPanel } from '../ui/CityPanel.js';
 import { OverlayManager } from '../ui/OverlayManager.js';
+import { PoliticsPanel, electionDialog } from '../ui/PoliticsPanel.js';
 import { DemandPanel } from '../ui/DemandPanel.js';
 import { Notifications } from '../ui/Notifications.js';
 import { HelpPanel, SavesPanel, SettingsPanel, SoundPanel, StartMenu } from '../ui/MenuPanels.js';
@@ -86,6 +87,12 @@ export class GameApp {
     this.inspector = new InspectorPanel(this.$('#inspector'), {
       onDemolish: (b) => this.demolishBuilding(b),
       onUpgrade: (b, upgradeId) => this.upgradeBuilding(b, upgradeId),
+      onRepair: (b) => {
+        const r = this.execute({ type: 'repair', buildingId: b.id });
+        if (!r?.ok) this.notifications.push({ level: 'warning', message: r?.reason ?? 'Reconstruction impossible' });
+        else this.audio.play('build');
+        this.inspector.update(this.session, { force: true });
+      },
       onFocus: (x, y) => this.focus(x, y),
       onClose: () => this.select(null)
     });
@@ -113,6 +120,7 @@ export class GameApp {
         onDebug: () => this.togglePanel('debug')
       }),
       demand: new DemandPanel({ execute, notify }),
+      politics: new PoliticsPanel({ execute, notify }),
       territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price) }),
       sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
       help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
@@ -214,6 +222,7 @@ export class GameApp {
       b: () => this.togglePanel('finance'),
       c: () => this.togglePanel('city'),
       t: () => this.togglePanel('territory'),
+      e: () => this.togglePanel('politics'),
       i: () => this.togglePanel('ai'),
       h: () => this.togglePanel('help'),
       F1: () => this.togglePanel('help'),
@@ -322,7 +331,7 @@ export class GameApp {
     el.hidden = !text;
   }
 
-  async newGame({ name, seed, size, mode, disasters = 'normal', scenarioId, mapParams = null }) {
+  async newGame({ name, seed, size, mode, disasters = 'normal', elections = 'on', scenarioId, mapParams = null }) {
     this.#busy('Génération du territoire…');
     await new Promise((r) => setTimeout(r, 30));
     const bus = new EventBus();
@@ -334,6 +343,7 @@ export class GameApp {
     }
     const session = GameSession.newGame({ catalog: this.catalog, seed, width: size, height: size, name, bus, mapParams: challenge ? null : mapParams });
     session.state.options.disasters = disasters;
+    session.sim.politics.setEnabled(session.state, elections !== 'off');
     if (challenge) {
       this.#busy(`Préparation du scénario « ${challenge.name} »…`);
       await new Promise((r) => setTimeout(r, 30));
@@ -412,6 +422,19 @@ export class GameApp {
       }
     });
     this.bus.on('crisis:ended', () => this.crisisPanel.update(this.session, { force: true }));
+    this.bus.on('politics:election', ({ result }) => {
+      this.audio.play(result.won ? 'fanfare' : 'fail');
+      this.setSpeed(0);
+      electionDialog(result, {
+        onContinue: () => this.setSpeed(1),
+        onFree: () => {
+          this.execute({ type: 'politics', op: 'continue' });
+          this.notifications.push({ level: 'info', message: 'Vous poursuivez sans élections : la popularité reste suivie, mais plus aucun scrutin n\'aura lieu.' });
+          this.setSpeed(1);
+        },
+        onMenu: () => this.showMenu()
+      });
+    });
     this.bus.on('scenario:ended', ({ scenario }) => {
       this.audio.play(scenario.status === 'won' ? 'fanfare' : 'fail');
       this.setSpeed(0);

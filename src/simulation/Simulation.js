@@ -16,6 +16,7 @@ import { RouteService } from '../systems/RouteService.js';
 import { WeatherSystem } from './WeatherSystem.js';
 import { CrisisSystem } from './CrisisSystem.js';
 import { ScenarioSystem } from './ScenarioSystem.js';
+import { PoliticsSystem } from './PoliticsSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -47,6 +48,7 @@ export class Simulation {
     this.weather = new WeatherSystem({ bus });
     this.crises = new CrisisSystem({ catalog, economy: this.economy, bus });
     this.scenario = new ScenarioSystem({ bus });
+    this.politics = new PoliticsSystem({ catalog, economy: this.economy, bus });
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -155,6 +157,7 @@ export class Simulation {
     this.progression.monthly(state);
     this.events.monthly(state);
     this.scenario.monthly(state);
+    this.#time('politics', () => this.politics.monthly(state));
     state.dirty.modifiers = true;
     this.bus?.emit('sim:month', { period, summary: sum });
   }

@@ -176,3 +176,39 @@ export function roofCenter(def, b, alt) {
   const c = lerp(T, B, 0.5);
   return { x: c.x, y: c.y - def.visual.height, w: Math.abs(B.x - T.x) + 10 * Math.max(b.w, b.h) };
 }
+
+/**
+ * Ruines (v0.7) : sol noirci, pans de murs effondrés et gravats, procédural selon l'identifiant du bâtiment.
+ * @param {{ruins?:{cause:string}}} b
+ */
+export function drawRuins(g, def, b, alt) {
+  const ground = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.03);
+  const cause = b.ruins?.cause ?? 'fire';
+  const soil = cause === 'flood' ? 0x7d7a62 : 0x5d5550;
+  g.poly(flat(ground.T, ground.R, ground.B, ground.L)).fill(soil);
+  const { T, R, B, L } = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.16);
+  const color = cause === 'fire' || cause === 'riot' ? 0x4a4440 : 0x8d8678;
+  const wallH = Math.max(5, Math.min(18, def.visual.height * 0.35));
+  // Deux pans de façade restés debout, déchiquetés
+  for (const [a, c, s] of [[L, B, 0.82], [B, R, 0.66]]) {
+    const n = 5;
+    const pts = [a, c];
+    for (let k = n; k >= 0; k--) {
+      const p = lerp(a, c, k / n);
+      const hgt = wallH * (0.35 + 0.65 * hash2(b.id * 7 + k, k * 3, 41));
+      pts.push(up(p, hgt));
+    }
+    g.poly(flat(...pts)).fill(shade(color, s));
+  }
+  // Gravats
+  const n = 6 + Math.min(10, b.w * b.h * 2);
+  for (let k = 0; k < n; k++) {
+    const u = hash2(b.id, k, 17);
+    const v = hash2(b.id, k, 29);
+    const p = lerp(lerp(T, R, u), lerp(L, B, u), v);
+    const r = 1.6 + hash2(b.id, k, 53) * 2.6;
+    g.poly([p.x - r, p.y, p.x, p.y - r * 0.8, p.x + r, p.y, p.x, p.y + r * 0.45]).fill(shade(0x9a938a, 0.6 + 0.4 * hash2(b.id, k, 71)));
+  }
+  // Ruban de sécurité
+  g.moveTo(ground.L.x, ground.L.y - 2).lineTo(ground.B.x, ground.B.y - 2).lineTo(ground.R.x, ground.R.y - 2).stroke({ width: 1, color: 0xf2c230, alpha: 0.9 });
+}

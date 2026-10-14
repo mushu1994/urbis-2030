@@ -22,6 +22,7 @@ export const SHORTCUTS = [
   ['B', 'Finances'],
   ['C', 'Tableau de bord de la ville'],
   ['T', 'Territoire : acheter des extensions de 32 × 32 cases'],
+  ['E', 'Mairie et élections : popularité, promesses, campagne'],
   ['I', 'IA urbaine et politiques'],
   ['L', 'Couche de données suivante'],
   ['X', 'Rendre translucides les bâtiments devant le curseur'],
@@ -180,6 +181,12 @@ export class SettingsPanel {
       this.onSound ? h('p', h('button.btn', { type: 'button', on: { click: () => this.onSound() } }, 'Réglages du son…')) : null,
       h('h3', 'Partie'),
       disasters,
+      session
+        ? h('label.setting', h('span', 'Élections municipales (partie en cours)'),
+          h('select', { 'aria-label': 'Élections municipales', on: { change: (e) => { this.execute({ type: 'option', key: 'elections', value: e.target.value }); rerender?.(); } } },
+            h('option', { value: 'on', selected: session.state.options?.elections !== 'off' }, 'Activées'),
+            h('option', { value: 'off', selected: session.state.options?.elections === 'off' }, 'Désactivées')))
+        : null,
       toggle('pauseOnCrisis', 'Mettre en pause quand une crise exige une décision', true),
       h('h3', 'Effets visuels'),
       toggle('dayNight', 'Cycle jour et nuit (fenêtres et lampadaires allumés)', true),
@@ -273,6 +280,9 @@ export class StartMenu {
       h('option', { value: 'town' }, 'Bourg existant (déjà construit selon les règles du jeu)'));
     const disasters = h('select', { 'aria-label': 'Catastrophes' },
       Object.entries(DISASTER_LEVEL_LABELS).map(([v, l]) => h('option', { value: v, selected: v === 'normal' }, l)));
+    const elections = h('select', { 'aria-label': 'Élections municipales' },
+      h('option', { value: 'on', selected: true }, 'Activées (mandat de 6 ans)'),
+      h('option', { value: 'off' }, 'Désactivées (partie libre)'));
     let latest = null;
     let items = [];
     try {
@@ -311,12 +321,12 @@ export class StartMenu {
       const p = Object.fromEntries(Object.entries(mapInputs).map(([k, el]) => [k, Number(el.value)]));
       return Object.values(p).every((v) => v === 50) ? null : p;
     };
-    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, mapParams: mapParams() }); } } },
+    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, elections: elections.value, mapParams: mapParams() }); } } },
       h('h2', 'Nouvelle partie'),
       h('label', 'Nom de la ville', name),
       h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
       h('label', 'Départ', mode),
-      h('label', 'Catastrophes', disasters),
+      h('div.row2', h('label', 'Catastrophes', disasters), h('label', 'Élections', elections)),
       mapEditor,
       h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville')
     );

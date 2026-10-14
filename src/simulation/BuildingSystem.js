@@ -261,6 +261,8 @@ export class BuildingSystem {
       const i = g.idx(b.x, b.y);
       const zoneKey = ZONE_KEYS[def.zoneCode];
 
+      // Ruines (v0.7) : rien n'évolue tant que les propriétaires n'ont pas lancé la reconstruction
+      if (b.ruins) continue;
       // Chantier en cours : rien n'évolue ; à la livraison, le bâtiment (ou son nouveau niveau) entre en service
       if (b.constructionUntil !== undefined) {
         if (isUnderConstruction(state, b) && g.zone[i] === def.zoneCode) continue;

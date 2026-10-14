@@ -657,6 +657,28 @@ button,
     order: 9;
   }
 
+  .hud-approval {
+    order: 9;
+    grid-auto-flow: column;
+    align-items: baseline;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .hud-approval .hud-sub {
+    display: none;
+  }
+
+  .hud-approval .hud-value::before {
+    content: '🏛 ';
+    font-size: 12px;
+  }
+
+  /* 9 boutons de panneaux (v0.7) */
+  .toolbar-group:last-child .tool-btn {
+    width: min(44px, calc((100vw - 44px) / 9));
+  }
+
   .hud-demand {
     order: 10;
     margin-left: auto;
@@ -734,6 +756,7 @@ button,
 
   #app.immersive .hud-break,
   #app.immersive .hud-pop,
+  #app.immersive .hud-approval,
   #app.immersive .hud-demand,
   #app.immersive .hud-money .hud-sub {
     display: none;

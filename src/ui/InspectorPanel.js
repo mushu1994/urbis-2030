@@ -8,6 +8,9 @@ import { WASTE_KIND_LABELS } from '../simulation/WasteSystem.js';
 import { TRANSIT_LABELS } from '../simulation/TransitSystem.js';
 import { isUnlocked } from '../systems/ConstructionService.js';
 import { formatUpgradeEffect, isGoodEffect } from '../data/Upgrades.js';
+import { repairCostCents } from '../simulation/CrisisSystem.js';
+
+const RUIN_CAUSES = { fire: 'incendie', flood: 'inondation', riot: 'émeute' };
 
 const CATEGORY_LABELS = {
   residential_low: 'Résidentiel faible densité',
@@ -108,7 +111,11 @@ export class InspectorPanel {
     const i = g.idx(b.x, b.y);
     const blocks = [];
     const halted = b.disabledUntil > state.time.tick;
-    const status = b.abandoned
+    const status = b.ruins
+      ? [`En ruines (${RUIN_CAUSES[b.ruins.cause] ?? 'sinistre'})`, 'neg']
+      : b.repairUntil > state.time.tick
+        ? [`Reconstruction jusqu'au ${formatDate(b.repairUntil)}`, 'warn']
+      : b.abandoned
       ? ['Abandonné', 'neg']
       : b.constructionUntil > state.time.tick && !b.upgradeTo
         ? ['En construction', 'warn']
@@ -123,6 +130,19 @@ export class InspectorPanel {
       h('header.insp-head', h('h2', def.name), h('p', `${CATEGORY_LABELS[def.category] ?? def.category}${def.level ? ` · niveau ${def.level}` : ''} · ${b.w}×${b.h}`)),
       h('div.insp-status', { class: status[1] }, status[0])
     );
+    if (b.ruins) {
+      if (def.kind === 'growable') {
+        blocks.push(h('p.hint', b.ruins.until > state.time.tick
+          ? `Les propriétaires, indemnisés par leur assurance, lanceront la reconstruction le ${formatDate(b.ruins.until)}.`
+          : 'Reconstruction imminente.'));
+      } else {
+        const cost = repairCostCents(def);
+        blocks.push(
+          h('p.hint', 'Équipement public détruit : il ne rend plus aucun service tant que la ville ne finance pas sa reconstruction.'),
+          h('button.btn.primary', { type: 'button', on: { click: () => this.actions.onRepair?.(b) } }, `Reconstruire (${formatMoney(cost)})`)
+        );
+      }
+    }
 
     if (def.capacity.residents) {
       const sat = session.sim.population.satisfactionFactors(state, b, def);

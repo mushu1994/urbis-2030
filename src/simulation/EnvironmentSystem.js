@@ -79,7 +79,7 @@ export class EnvironmentSystem {
     for (const b of state.buildings.values()) {
       const def = this.catalog.buildingFor(b);
       const svc = def.capacity.service;
-      if (!svc || b.abandoned) continue;
+      if (!svc || b.abandoned || b.ruins) continue;
       const staffing = def.capacity.jobs ? Math.min(1, 0.25 + (b.jobsFilled / def.capacity.jobs) * 0.75) : 1;
       const power = b.powered ? 1 : 0.35;
       const cx = b.x + (b.w - 1) / 2;

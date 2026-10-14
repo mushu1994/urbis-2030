@@ -88,6 +88,7 @@ const ICONS = {
   sound: 'M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11',
   mute: 'M4 9v6h4l5 4V5L8 9zM16 9l5 6M21 9l-5 6',
   scenario: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  vote: 'M4 11h16v10H4zM8 11V4h8v7M10 7l1.5 1.5L14 6M8 15h8',
   risk: 'M12 3l10 18H2zM12 10v5M12 18h.01',
   install: 'M12 3v12M7 10l5 5 5-5M4 19h16'
 };

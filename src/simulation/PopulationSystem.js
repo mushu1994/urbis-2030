@@ -93,7 +93,7 @@ export class PopulationSystem {
 
       let target = 0;
       const building = b.constructionUntil !== undefined && !b.upgradeTo;
-      if (!b.abandoned && b.access >= 0 && !building) {
+      if (!b.abandoned && !b.ruins && b.access >= 0 && !building) {
         const attract = clamp((b.satisfaction - 15) / 45, 0.05, 1);
         target = cap * attract;
         if (!net.isConnectedToOutside(b.access)) target *= 0.25;
@@ -111,7 +111,7 @@ export class PopulationSystem {
       const senior = Math.round(b.residents * (cls === 'high' ? SIM.AGE_PROFILE.senior + 0.04 : SIM.AGE_PROFILE.senior));
       const adult = Math.max(0, b.residents - young - senior);
       b.ages = { young, adult, senior };
-      b.workforce = Math.round(adult * SIM.PARTICIPATION);
+      b.workforce = Math.round(adult * SIM.PARTICIPATION * (1 - Math.min(0.5, mods['jobs.absence'] ?? 0)));
       const qBonus = mods['jobs.qualification'] ?? 0;
       const qTarget = Math.min(0.95, SIM.QUALIFICATION[cls] + 0.22 * g.coverEducation[i] + qBonus);
       if (!b.qualification) b.qualification = SIM.QUALIFICATION[cls];
@@ -146,7 +146,7 @@ export class PopulationSystem {
     for (const { b, def } of workplaces) {
       const k = poolOf(b);
       b._jb = jobBracket(def.capacity.qualification);
-      const slots = b.abandoned || (b.constructionUntil !== undefined && !b.upgradeTo) ? 0 : def.capacity.jobs * (b.powered ? 1 : 0.6) * (b.disasterUntil > state.time.tick ? 0.2 : 1);
+      const slots = b.abandoned || b.ruins || (b.constructionUntil !== undefined && !b.upgradeTo) ? 0 : def.capacity.jobs * (b.powered ? 1 : 0.6) * (b.disasterUntil > state.time.tick ? 0.2 : 1);
       b._slots = slots;
       if (k) getPool(k).jobs[b._jb] += slots;
       st.jobs += slots;

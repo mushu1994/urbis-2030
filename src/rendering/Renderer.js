@@ -9,7 +9,7 @@ import { isOwned, fullyOwned } from '../world/Land.js';
 import { drawRailTile } from './art/GroundArt.js';
 import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners, foliageTint } from './art/GroundArt.js';
 import { EffectsRenderer } from './EffectsRenderer.js';
-import { drawConstructionSite } from './art/EffectsArt.js';
+import { drawConstructionSite, drawRuins } from './art/EffectsArt.js';
 import { seasonKey } from '../simulation/WeatherSystem.js';
 import { SPEEDS } from '../simulation/SimulationClock.js';
 import { drawBuilding, drawTree } from './art/BuildingArt.js';
@@ -378,7 +378,22 @@ export class Renderer {
     let end = 0;
     let start = b.builtTick;
     let target = def;
-    if (b.constructionUntil > tick) {
+    if (b.ruins) {
+      drawRuins(g, def, b, alt);
+      this.constructing.delete(id);
+      this.effects?.setCrane(b, def, alt, false, g.zIndex);
+      const Lr = gridToWorld(b.x, b.y + b.h, alt);
+      const Rr = gridToWorld(b.x + b.w, b.y, alt);
+      const Br = gridToWorld(b.x + b.w, b.y + b.h, alt);
+      const Tr = gridToWorld(b.x, b.y, alt);
+      g.__bounds = { x0: Lr.x, x1: Rr.x, y0: Tr.y - 30, y1: Br.y };
+      g.__depth = b.x + b.w - 1 + b.y + b.h - 1;
+      return;
+    }
+    if (b.repairUntil > tick) {
+      end = b.repairUntil;
+      start = b.repairStart ?? tick;
+    } else if (b.constructionUntil > tick) {
       end = b.constructionUntil;
       start = b.constructionStart ?? b.builtTick;
       if (b.upgradeTo) target = this.catalog.building(b.upgradeTo);

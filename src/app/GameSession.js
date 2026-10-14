@@ -136,8 +136,18 @@ export class GameSession {
       case 'decommission':
         r = this.sim.ai.decommission(s, cmd.techId);
         break;
-      case 'policy':
+      case 'policy': {
+        const adopted = s.policies.active[cmd.policyId];
         r = this.sim.ai.togglePolicy(s, cmd.policyId, cmd.enabled);
+        if (r.ok && !cmd.enabled && adopted !== undefined) this.sim.politics.onPolicyRepeal(s, adopted);
+        break;
+      }
+      case 'politics':
+        // Vie politique : programme de campagne, suite d'une défaite, activation des élections
+        if (cmd.op === 'programme') r = this.sim.politics.setProgramme(s, cmd);
+        else if (cmd.op === 'continue') r = this.sim.politics.continueAfterDefeat(s);
+        else if (cmd.op === 'enable') r = this.sim.politics.setEnabled(s, cmd.enabled);
+        else return { ok: false, reasons: ['invalid'], messages: ['Commande politique inconnue'] };
         break;
       case 'tax': {
         const v = Math.max(0, Math.min(cmd.key === 'property' ? 5 : 25, Number(cmd.value)));
@@ -165,6 +175,9 @@ export class GameSession {
         r = { ok: true };
         break;
       }
+      case 'repair':
+        r = this.sim.crises.repair(s, cmd.buildingId);
+        break;
       case 'crisisResponse':
         r = this.sim.crises.respond(s, cmd.crisisId, cmd.option);
         break;
@@ -173,9 +186,10 @@ export class GameSession {
         r = this.sim.crises.trigger(s, cmd.kind, { manual: true });
         break;
       case 'option': {
-        const allowed = { disasters: ['off', 'rare', 'normal', 'frequent'] };
+        const allowed = { disasters: ['off', 'rare', 'normal', 'frequent'], elections: ['on', 'off'] };
         if (!allowed[cmd.key]?.includes(cmd.value)) return { ok: false, reasons: ['invalid'], messages: ['Option inconnue'] };
         s.options[cmd.key] = cmd.value;
+        if (cmd.key === 'elections') this.sim.politics.setEnabled(s, cmd.value === 'on');
         r = { ok: true };
         break;
       }
