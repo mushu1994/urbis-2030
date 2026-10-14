@@ -63,7 +63,7 @@ export const OBJECTIVES = [
   {
     id: 'services',
     title: 'Ouvrir une école et un poste de police',
-    hint: 'Services publics → École, puis Poste de police ou Commissariat. La satisfaction et la valeur foncière augmentent.',
+    hint: 'Éducation et culture → École, puis Police et pompiers → Poste de police ou Commissariat. La satisfaction et la valeur foncière augmentent.',
     done: (s, { catalog }) =>
       count(s, (b) => catalog.building(b.defId).capacity.service?.type === 'education') > 0 &&
       count(s, (b) => catalog.building(b.defId).capacity.service?.type === 'police') > 0

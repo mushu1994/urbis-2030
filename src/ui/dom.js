@@ -58,6 +58,8 @@ const ICONS = {
   demolish: 'M4 20h16M7 20l2-9h6l2 9M9 7l3-4 3 4',
   terrain: 'M2 20l6-9 4 5 3-4 7 8zM8 11l2-3 2 3',
   map: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',
+  school: 'M2 9l10-5 10 5-10 5zM6 11v5c3 3 9 3 12 0v-5M22 9v6',
+  shield: 'M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zM9 12l2 2 4-4',
   move: 'M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3',
   check: 'M4 12l5 5L20 6',
   finance: 'M4 20V10M10 20V4M16 20v-7M22 20H2',

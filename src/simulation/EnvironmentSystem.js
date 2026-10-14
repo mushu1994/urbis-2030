@@ -152,7 +152,7 @@ export class EnvironmentSystem {
       const transit = Math.max(g.transitBus[i] * 0.6, g.transitMetro[i], g.transitRail[i]);
       let v;
       if (z <= 2) v = lv;
-      else if (z === 3) v = 12 + lv * 0.45 + Math.min(32, customers[i] / 25) + access * 0.8 + transit * 8;
+      else if (z === 3 || z === 9) v = 12 + lv * 0.45 + Math.min(32, customers[i] / 25) + access * 0.8 + transit * 8;
       else if (z === 4) v = 10 + lv * 0.5 + g.coverEducation[i] * 16 + transit * 12 + access;
       else v = 14 + access * 1.2 + Math.min(22, logistics[i]) + lv * 0.25 + Math.min(10, customers[i] / 60);
       g.siteValue[i] = Math.max(0, Math.min(100, v));

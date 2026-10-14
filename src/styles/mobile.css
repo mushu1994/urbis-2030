@@ -585,7 +585,7 @@ button,
 @media (max-width: 500px) and (orientation: portrait) {
   :root {
     --hud-h: 88px;
-    --dock-h: 92px;
+    --dock-h: 132px;
   }
 
   #hud {
@@ -709,17 +709,23 @@ button,
     border-top: 1px solid var(--line);
   }
 
-  /* 11 catégories d'outils (v0.4 : Terrain) : la largeur s'adapte à l'écran */
+  /* 13 catégories d'outils (v0.6) : deux rangées de 7 boutons, assez larges pour le doigt */
+  .toolbar-group:first-child {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: 2px;
+  }
+
   .tool-btn,
   #app.immersive .tool-btn {
-    width: min(34px, calc((100vw - 44px) / 11));
+    width: min(44px, calc((100vw - 44px) / 7));
     height: 38px;
   }
 
   /* Mode immersif : une seule ligne en haut (vitesse, trésorerie, annuler, plein écran) */
   #app.immersive {
     --hud-h: 44px;
-    --dock-h: 88px;
+    --dock-h: 128px;
   }
 
   #app.immersive #hud {

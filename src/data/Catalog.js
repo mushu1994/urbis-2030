@@ -157,6 +157,11 @@ export class Catalog {
     return this.growablesByZone.get(zoneCode)?.[0];
   }
 
+  /** Bâtiments de niveau 1 d'une zone (variantes et formats 1 × 1, 2 × 1, 2 × 2), dans l'ordre du fichier. */
+  growableStarts(zoneCode) {
+    return (this.growablesByZone.get(zoneCode) ?? []).filter((d) => d.level === 1);
+  }
+
   /** Bâtiments que le joueur peut poser, par catégorie (ordre du fichier). */
   plopsByCategory() {
     const out = new Map();

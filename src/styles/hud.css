@@ -708,18 +708,12 @@ button.hud-group:hover {
   display: none;
 }
 
-/* Barre d'outils : boutons plus compacts sur les écrans de faible hauteur */
-@media (max-height: 920px) and (min-height: 501px) and (min-width: 761px) {
+/* Barre d'outils : 21 boutons (13 catégories + 8 panneaux, v0.6) ; leur hauteur s'adapte à l'écran pour que
+   tout tienne sans défilement, de 26 px (écran bas) à 42 px. */
+@media (min-height: 501px) and (min-width: 761px) {
   .tool-btn {
     width: 40px;
-    height: 37px;
-  }
-}
-
-@media (max-height: 800px) and (min-height: 501px) and (min-width: 761px) {
-  .tool-btn {
-    width: 38px;
-    height: 31px;
+    height: clamp(26px, calc((100vh - 128px) / 21), 42px);
   }
 
   .toolbar-group {

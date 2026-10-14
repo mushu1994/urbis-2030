@@ -3,10 +3,32 @@ import { ROAD_REACH } from '../world/Grid.js';
 import { createBuilding, removeBuilding, changeBuildingDef } from '../systems/BuildingFactory.js';
 import { constructionDaysFor, isUnderConstruction } from './Construction.js';
 import { findAccess } from '../world/PlacementSystem.js';
+import { hash2 } from '../util/rng.js';
+
+/** Tirage pondéré (champ « weight » des données, 10 par défaut) à partir d'un nombre de 0 à 1. */
+function pickWeighted(list, u) {
+  if (!list.length) return null;
+  const total = list.reduce((s, d) => s + (d.weight ?? 10), 0);
+  let x = u * total;
+  for (const d of list) {
+    x -= d.weight ?? 10;
+    if (x < 0) return d;
+  }
+  return list[list.length - 1];
+}
+
+function footprintTilesOf(g, b) {
+  const out = [];
+  for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) out.push(g.idx(b.x + dx, b.y + dy));
+  return out;
+}
 
 /** Secteur de demande de chaque code de zone (agriculture et extraction relèvent de l'industrie). */
-export const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I', 6: 'I', 7: 'I', 8: 'I' };
-const ZONE_CODES = [1, 2, 3, 4, 5, 6, 7, 8];
+export const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I', 6: 'I', 7: 'I', 8: 'I', 9: 'C' };
+const ZONE_CODES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Part des apparitions qui tentent un grand format (2 × 1, 2 × 2) quand la place le permet. */
+const LARGE_CHANCE = 0.35;
 
 /** Critère d'implantation propre à chaque secteur (v0.6). */
 const SITE_LABELS = {
@@ -16,7 +38,8 @@ const SITE_LABELS = {
   I: 'Attractivité industrielle',
   IA: 'Attractivité agricole',
   IX: 'Attractivité industrielle',
-  IF: 'Attractivité industrielle'
+  IF: 'Attractivité industrielle',
+  CH: 'Attractivité commerciale'
 };
 
 /** Valeur d'implantation d'une case pour un bâtiment : valeur foncière (logement) ou attractivité économique. */
@@ -162,8 +185,10 @@ export class BuildingSystem {
       if (!list.length) continue;
       const demand = state.demand[ZONE_KEYS[code]];
       if (demand <= 3) continue;
-      const def = this.catalog.firstGrowable(code);
-      if (!def) continue;
+      const starts = this.catalog.growableStarts(code);
+      if (!starts.length) continue;
+      const small = starts.filter((d) => d.footprint.w === 1 && d.footprint.h === 1);
+      const large = starts.filter((d) => d.footprint.w * d.footprint.h > 1);
       let growth = mods['growth.all'] ?? 1;
       if (code <= 2) growth *= mods['growth.R'] ?? 1;
       const attempts = Math.min(list.length, 1 + Math.floor(demand / 6));
@@ -173,15 +198,55 @@ export class BuildingSystem {
         if (g.building[i]) continue;
         const lvFactor = 0.55 + (code <= 2 ? g.landValue[i] : g.siteValue[i]) / 110;
         if (!state.rng.chance((demand / 100) * 0.9 * lvFactor * growth)) continue;
-        const b = createBuilding(state, def, g.xOf(i), g.yOf(i), 0, 'growth');
+        // Format et variante (v0.6) : tirages par hachage, pour ne pas perturber le générateur de la partie
+        const t = state.time.tick;
+        let def = null;
+        let rot = 0;
+        if (large.length && (!small.length || hash2(i, t, 91) < LARGE_CHANCE)) {
+          const order = [...large].sort((a, z) => hash2(i, t + a.footprint.w * 7 + a.footprint.h, 13) - hash2(i, t + z.footprint.w * 7 + z.footprint.h, 13));
+          for (const d of order) {
+            for (const r of d.footprint.w === d.footprint.h ? [0] : [0, 1]) {
+              if (this.#fits(state, i, d, r, code)) {
+                def = d;
+                rot = r;
+                break;
+              }
+            }
+            if (def) break;
+          }
+        }
+        if (!def) def = pickWeighted(small, hash2(i, t, 57));
+        if (!def) continue;
+        const b = createBuilding(state, def, g.xOf(i), g.yOf(i), rot, 'growth');
         b.access = BuildingSystem.accessOf(state, b);
         // Chantier : le bâtiment n'est livré qu'après son délai de construction
         b.constructionStart = state.time.tick;
         b.constructionUntil = state.time.tick + constructionDaysFor(def);
         this.bus?.emit('building:added', { building: b });
-        this.bus?.emit('world:changed', { tiles: [i], reason: 'growth' });
+        this.bus?.emit('world:changed', { tiles: footprintTilesOf(g, b), reason: 'growth' });
       }
     }
+  }
+
+  /** L'emprise d'un grand format tient-elle sur des cases zonées libres de la même zone ? */
+  #fits(state, i, def, rot, code) {
+    const g = state.grid;
+    const w = rot % 2 === 0 ? def.footprint.w : def.footprint.h;
+    const h = rot % 2 === 0 ? def.footprint.h : def.footprint.w;
+    const x0 = g.xOf(i);
+    const y0 = g.yOf(i);
+    if (!g.inBounds(x0 + w - 1, y0 + h - 1)) return false;
+    let alt = -1;
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
+        const j = g.idx(x0 + dx, y0 + dy);
+        if (g.zone[j] !== code || g.building[j] || g.road[j]) return false;
+        if (alt < 0) alt = g.altitude[j];
+        else if (g.altitude[j] !== alt) return false;
+      }
+    }
+    // Un grand format doit toucher une route (pas d'allée privée comme pour une maison)
+    return findAccess(state, x0, y0, w, h) >= 0;
   }
 
   #evolve(state, dt) {
@@ -298,7 +363,10 @@ export class BuildingSystem {
 
   #levelDef(def, level) {
     if (level < 1) return null;
-    return this.catalog.growablesByZone.get(def.zoneCode)?.find((d) => d.level === level) ?? null;
+    const list = this.catalog.growablesByZone.get(def.zoneCode) ?? [];
+    // Même filière d'abord (le bâtiment dont celui-ci est l'évolution), sinon même format et même niveau
+    const same = (d) => d.footprint.w === def.footprint.w && d.footprint.h === def.footprint.h;
+    return list.find((d) => d.level === level && d.growth.next === def.id) ?? list.find((d) => d.level === level && same(d)) ?? null;
   }
 
   #abandon(state, b, why) {

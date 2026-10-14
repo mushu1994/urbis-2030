@@ -9,10 +9,15 @@ describe('Catalogue', () => {
     expect(c.building('power_gas').costCents).toBe(8_250_000);
     expect(c.road('road_street').code).toBe(1);
     expect(c.firstGrowable(1).id).toBe('res_low_1');
-    for (const zone of [1, 2, 3, 4, 5]) expect(c.growablesByZone.get(zone).map((d) => d.level)).toEqual([1, 2, 3, 4, 5]);
+    for (const zone of [1, 2, 3, 4, 5]) expect([...new Set(c.growablesByZone.get(zone).map((d) => d.level))]).toEqual([1, 2, 3, 4, 5]);
     // chaque niveau mène au suivant, le dernier n'évolue plus
-    for (const list of c.growablesByZone.values()) {
-      list.forEach((d, k) => expect(d.growth.next).toBe(list[k + 1]?.id));
+    // chaque filière (variantes et grands formats compris) monte d'un niveau à la fois, dans la même zone et au même format
+    for (const d of c.buildings.values()) {
+      if (d.kind !== 'growable' || !d.growth.next) continue;
+      const n = c.building(d.growth.next);
+      expect(n.zoneCode, d.id).toBe(d.zoneCode);
+      expect(n.level, d.id).toBe(d.level + 1);
+      expect([n.footprint.w, n.footprint.h], d.id).toEqual([d.footprint.w, d.footprint.h]);
     }
     for (const d of c.buildings.values()) {
       expect(Number.isInteger(d.costCents)).toBe(true);

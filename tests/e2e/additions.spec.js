@@ -32,7 +32,7 @@ test('fiches du menu, améliorations, échanges régionaux, train et notificatio
   await newTown(page);
 
   // 1. Fiche descriptive avant construction : survol d'un bâtiment dans le menu
-  await page.getByRole('button', { name: 'Services publics', exact: true }).click();
+  await page.getByRole('button', { name: 'Police et pompiers', exact: true }).click();
   await page.locator('.flyout-item', { hasText: 'Commissariat' }).hover();
   await expect(page.locator('.flyout-sheet h4')).toHaveText('Commissariat');
   await expect(page.locator('.flyout-sheet')).toContainText('Sécurité : rayon de 14 cases');

@@ -174,10 +174,11 @@ export class ToolController {
       this.notify('warning', pv.messages?.filter(Boolean).join(' · ') || 'Action impossible');
     } else if (cmd.type === 'demolish' && this.needsConfirm(pv.cost)) {
       this.confirm(`Démolir pour ${formatMoney(pv.cost)} ?`).then((ok) => ok && this.#run(cmd));
-    } else if (cmd.type === 'zone' && !cmd.zoneId && pv.buildings?.length) {
+    } else if (cmd.type === 'zone' && pv.buildings?.length) {
       const n = pv.buildings.length;
       const who = pv.residents ? ` (${pv.residents} habitant${pv.residents > 1 ? 's' : ''} partiront)` : '';
-      this.confirm(`Dézoner démolira ${n} bâtiment${n > 1 ? 's' : ''}${who} pour ${formatMoney(pv.cost)}. Continuer ?`).then((ok) => ok && this.#run(cmd));
+      const what = cmd.zoneId ? 'Changer la zone' : 'Dézoner';
+      this.confirm(`${what} démolira ${n} bâtiment${n > 1 ? 's' : ''}${who} pour ${formatMoney(pv.cost)} au total. Continuer ?`).then((ok) => ok && this.#run(cmd));
     } else {
       this.#run(cmd);
     }
@@ -312,7 +313,7 @@ export class ToolController {
     const label = t.label ?? '';
     const cost = pv.cost ? formatMoney(pv.cost) : 'gratuit';
     const extra = cmd.type === 'building' && pv.upkeep ? ` · entretien ${formatMoney(pv.upkeep)}/mois` : '';
-    const dezoneBuildings = cmd.type === 'zone' && !cmd.zoneId && pv.buildings?.length ? ` · ${pv.buildings.length} bâtiment(s) démoli(s)` : '';
+    const dezoneBuildings = cmd.type === 'zone' && pv.buildings?.length ? ` · ${pv.buildings.length} bâtiment(s) démoli(s)` : '';
     const count = cmd.type === 'zone' || cmd.type === 'deliveryZone' || cmd.type === 'terraform' ? ` · ${pv.eligible?.length ?? 0} case(s)${dezoneBuildings}` : cmd.type === 'demolish' ? ` · ${pv.buildings?.length ?? 0} bât., ${pv.roads?.length ?? 0} routes` : '';
     tip.innerHTML = '';
     const b = document.createElement('strong');

@@ -156,7 +156,7 @@ test('aucun bouton principal n\'est décoratif', async ({ page }) => {
   };
   // Boutons de catégories : ouvrent un menu d'outils ou activent un outil
   const cats = await page.locator('#toolbar .toolbar-group').first().locator('.tool-btn').all();
-  expect(cats.length).toBe(11);
+  expect(cats.length).toBe(13);
   for (const btn of cats) {
     const name = await btn.getAttribute('aria-label');
     await btn.click();

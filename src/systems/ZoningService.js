@@ -39,8 +39,28 @@ export class ZoningService {
     let eligible;
     /** Dézonage : bâtiments de zone présents sur les cases (ils sont démolis avec le zonage). */
     const buildings = [];
-    if (zone) eligible = all.filter((i) => canZoneTile(state, i, code) && g.zone[i] !== code);
-    else {
+    if (zone) {
+      // Sur-zonage (v0.6) : une case déjà bâtie d'une autre zone change de zone ; son bâtiment est démoli
+      const set = new Set();
+      for (const i of all) {
+        if (g.zone[i] === code) continue;
+        const id = g.building[i];
+        if (!id) {
+          if (canZoneTile(state, i, code)) set.add(i);
+          continue;
+        }
+        const b = state.buildings.get(id);
+        if (!b || buildings.includes(b)) continue;
+        const def = this.catalog.building(b.defId);
+        if (def.kind === 'plop' || def.zoneCode === code) continue;
+        const foot = [];
+        for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) foot.push(g.idx(b.x + dx, b.y + dy));
+        if (!foot.every((j) => canZoneTile(state, j, code, { ignoreBuilding: true }))) continue;
+        buildings.push(b);
+        for (const j of foot) set.add(j);
+      }
+      eligible = [...set].sort((a, z) => a - z);
+    } else {
       const set = new Set();
       for (const i of all) {
         if (!g.zone[i]) continue;
@@ -91,6 +111,16 @@ export class ZoningService {
       // Dézonage d'une parcelle bâtie : le bâtiment est démoli (frais de démolition)
       if (pv.cost > 0) txs.push(this.economy.payOpex(state, { amount: pv.cost, category: 'demolition', label: `Dézonage : démolition de ${pv.buildings.length} bâtiment${pv.buildings.length > 1 ? 's' : ''}` }));
       removed = this.construction.removeBuildings(state, pv.buildings.map((id) => state.buildings.get(id)));
+    } else if (zone && pv.buildings.length) {
+      // Sur-zonage : démolition (charge) puis zonage (investissement)
+      const demo = pv.buildings.reduce((s, id) => s + this.construction.demolitionCost(state.buildings.get(id)), 0);
+      if (demo > 0) txs.push(this.economy.payOpex(state, { amount: demo, category: 'demolition', label: `Changement de zone : démolition de ${pv.buildings.length} bâtiment${pv.buildings.length > 1 ? 's' : ''}` }));
+      removed = this.construction.removeBuildings(state, pv.buildings.map((id) => state.buildings.get(id)));
+      const rest = pv.cost - demo;
+      if (rest > 0) {
+        const pay = this.economy.payCapex(state, { amount: rest, category: 'zoning', label: `Zonage ${zone.name} (${pv.eligible.length} cases)`, lifeYears: 0 });
+        if (pay.tx) txs.push(pay.tx);
+      }
     } else if (pv.cost > 0) {
       const pay = this.economy.payCapex(state, {
         amount: pv.cost,

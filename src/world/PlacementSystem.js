@@ -229,9 +229,9 @@ export function checkRoadTile(state, i, roadCode, prevAlt) {
   return { status: 'new' };
 }
 
-export function canZoneTile(state, i, zoneCode = 0) {
+export function canZoneTile(state, i, zoneCode = 0, { ignoreBuilding = false } = {}) {
   const g = state.grid;
-  if (g.building[i] || g.road[i] || !zoneAllowedOn(g.terrain[i], zoneCode)) return false;
+  if ((g.building[i] && !ignoreBuilding) || g.road[i] || !zoneAllowedOn(g.terrain[i], zoneCode)) return false;
   if (!fullyOwned(state) && !isOwnedIndex(state, i)) return false;
   if (zoneCode === ZONE_FOREST) return hasForest(g, i);
   return zoneCode !== ZONE_EXTRACT || hasDeposit(g, i);

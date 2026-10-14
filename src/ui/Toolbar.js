@@ -50,15 +50,18 @@ export class Toolbar {
         ['energy', 'Énergie', 'energy', ['energy']],
         ['water', 'Eau', 'water', ['water']],
         ['waste', 'Déchets', 'waste', ['waste']],
-        ['services', 'Services publics', 'services', ['services']],
+        // v0.6 : les services publics sont répartis en trois menus distincts
+        ['education', 'Éducation et culture', 'school', ['services'], (d) => d.capacity.service?.type === 'education'],
+        ['safety', 'Police et pompiers', 'shield', ['services'], (d) => d.capacity.service?.type === 'police' || d.capacity.service?.type === 'fire'],
+        ['health', 'Santé et administration', 'services', ['services'], (d) => !['education', 'police', 'fire'].includes(d.capacity.service?.type)],
         ['parks', 'Parcs et loisirs', 'parks', ['parks']],
         ['transport', 'Transports et logistique', 'bus', ['transport', 'logistics']]
-      ].map(([cat, label, ic, cats]) => ({
+      ].map(([cat, label, ic, cats, keep = () => true]) => ({
         id: cat,
         label,
         icon: ic,
         tools: [
-          ...cats.flatMap((c) => plops.get(c) ?? []).map((d) => ({
+          ...cats.flatMap((c) => plops.get(c) ?? []).filter(keep).map((d) => ({
             id: `building:${d.id}`,
             kind: 'building',
             defId: d.id,

@@ -8,6 +8,22 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
 
 ## Nouveautés de la version 0.6 (analyse d'une partie de 27 ans, 88 000 habitants)
 
+### Lot C — ville vivante
+
+- **Commerces variés** : en zone commerciale apparaissent aussi un bar de quartier, un salon de coiffure et une
+  boutique de prêt-à-porter. Le bar devient restaurant puis boîte de nuit (bruyante, ère 2) ; la boutique devient une
+  enseigne de commerce de détail. Chaque variante a son allure (couleurs, auvents, toit).
+- **Grandes surfaces commerciales** : nouvelle zone (C+) où poussent, sur des îlots de 2 × 2, un supermarché puis un
+  centre commercial puis un centre commercial connecté XXL (ère 2). Elle répond à la demande commerciale.
+- **Grands formats** : quand la place zonée le permet (cases libres de la même zone, de plain-pied, touchant une
+  route), environ un tiers des constructions prennent un grand format : maisons mitoyennes 2 × 1, îlot résidentiel
+  2 × 2 (jusqu'à l'ensemble de tours), parc d'affaires 2 × 2 (jusqu'au quartier d'affaires), grande usine 2 × 1. Chaque
+  filière garde son format en montant de niveau.
+- **Sur-zonage** : tracer une zone par-dessus une autre la remplace directement. Les bâtiments de l'ancienne zone
+  sont démolis (frais de démolition, confirmation, annulable par Ctrl+Z) ; les équipements publics ne sont pas touchés.
+- **Services distincts** : la barre d'outils sépare « Éducation et culture », « Police et pompiers » et « Santé et
+  administration ». La hauteur des boutons s'adapte à l'écran pour que tout tienne ; sur téléphone, deux rangées.
+
 ### Lot B — territoire
 
 - **Extensions de territoire** (bouton carte de la barre d'outils, touche T) : le monde possible fait 8 × 8 parcelles
@@ -546,10 +562,10 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 261 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 263 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
-catalogue des 94 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
+catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
 accumulation d'objets), invariants sur une ville simulée plusieurs années ; météo (saisons, déterminisme, effets),
 crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, désactivation), scénarios (départ,
 victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements) ;

@@ -137,6 +137,15 @@
       "cost": 12,
       "color": "#6f8f3a",
       "description": "Scieries, panneaux puis bois lamellé-croisé (ère 2) : des emplois et des matériaux, une pollution modérée. Uniquement à 2 cases au plus d'une forêt. Les forêts repoussent d'elles-mêmes autour des massifs ; l'outil Terrain permet d'en planter. Répond à la demande industrielle (jauge I)."
+    },
+    {
+      "id": "CH",
+      "code": 9,
+      "name": "Grandes surfaces commerciales",
+      "short": "C+",
+      "cost": 25,
+      "color": "#2f6fb8",
+      "description": "Supermarchés puis centres commerciaux, sur des îlots de 2 × 2 cases : beaucoup d'emplois et de ventes, du bruit et de la circulation. Répond à la demande commerciale (jauge C)."
     }
   ],
   "buildings": [
@@ -592,7 +601,8 @@
         "roof": "flat",
         "roofColor": "#d06a4e",
         "detail": "awning"
-      }
+      },
+      "weight": 40
     },
     {
       "id": "com_2",
@@ -762,6 +772,256 @@
         "roofColor": "#5be0f0",
         "detail": "hologram",
         "era": 3
+      }
+    },
+    {
+      "id": "com_1_bar",
+      "name": "Bar de quartier",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 5,
+        "water": 5
+      },
+      "capacity": {
+        "jobs": 5,
+        "qualification": 0.25,
+        "sales": 5
+      },
+      "environment": {
+        "noise": 4,
+        "heat": 1
+      },
+      "growth": {
+        "next": "com_2_resto",
+        "minLandValue": 30,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 11,
+        "color": "#e8c9a8",
+        "roof": "flat",
+        "roofColor": "#8a2f2a",
+        "detail": "awning"
+      },
+      "weight": 20
+    },
+    {
+      "id": "com_1_hair",
+      "name": "Salon de coiffure",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 4,
+        "water": 5
+      },
+      "capacity": {
+        "jobs": 4,
+        "qualification": 0.3,
+        "sales": 4
+      },
+      "environment": {
+        "noise": 1,
+        "heat": 1
+      },
+      "growth": {
+        "next": "com_2",
+        "minLandValue": 30,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 11,
+        "color": "#f6e4ea",
+        "roof": "flat",
+        "roofColor": "#c46f93",
+        "detail": "awning"
+      },
+      "weight": 15
+    },
+    {
+      "id": "com_1_shop",
+      "name": "Boutique de prêt-à-porter",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 5,
+        "water": 3
+      },
+      "capacity": {
+        "jobs": 5,
+        "qualification": 0.3,
+        "sales": 6
+      },
+      "environment": {
+        "noise": 2,
+        "heat": 1
+      },
+      "growth": {
+        "next": "com_2_retail",
+        "minLandValue": 30,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 12,
+        "color": "#d6eee9",
+        "roof": "flat",
+        "roofColor": "#2f8f86",
+        "detail": "awning"
+      },
+      "weight": 25
+    },
+    {
+      "id": "com_2_resto",
+      "name": "Restaurant",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 12,
+        "water": 14
+      },
+      "capacity": {
+        "jobs": 14,
+        "qualification": 0.35,
+        "sales": 14
+      },
+      "environment": {
+        "noise": 4,
+        "heat": 2
+      },
+      "growth": {
+        "next": "com_3_club",
+        "minLandValue": 45,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 18,
+        "color": "#f1d2b4",
+        "roof": "gable",
+        "roofColor": "#b4512f",
+        "detail": "awning"
+      }
+    },
+    {
+      "id": "com_2_retail",
+      "name": "Enseigne de commerce de détail",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 14,
+        "water": 8
+      },
+      "capacity": {
+        "jobs": 16,
+        "qualification": 0.4,
+        "sales": 17
+      },
+      "environment": {
+        "noise": 3,
+        "heat": 2
+      },
+      "growth": {
+        "next": "com_3",
+        "minLandValue": 45,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 22,
+        "color": "#e3f1f6",
+        "roof": "flat",
+        "roofColor": "#3c7ea8",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "com_3_club",
+      "name": "Boîte de nuit",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "C",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 30,
+        "water": 10
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.35,
+        "sales": 38
+      },
+      "environment": {
+        "noise": 12,
+        "heat": 3,
+        "radius": 4
+      },
+      "growth": {
+        "next": "com_4",
+        "minLandValue": 55,
+        "minSatisfaction": 56,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "transit",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 24,
+        "color": "#3a2f52",
+        "roof": "flat",
+        "roofColor": "#c23fbf",
+        "detail": "hologram"
       }
     },
     {
@@ -4457,6 +4717,539 @@
         "perMonth": 15000,
         "label": "Redevances aéroportuaires",
         "category": "facilities"
+      }
+    },
+    {
+      "id": "res_low_2x1_1",
+      "name": "Maisons mitoyennes",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 1,
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "networks": {
+        "power": 6,
+        "water": 6
+      },
+      "capacity": {
+        "residents": 10,
+        "incomeClass": "mid"
+      },
+      "environment": {
+        "heat": 1
+      },
+      "growth": {
+        "next": "res_low_2x1_2",
+        "minLandValue": 30,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 11,
+        "color": "#f0e2c4",
+        "roof": "gable",
+        "roofColor": "#b35a3c",
+        "detail": "garden"
+      }
+    },
+    {
+      "id": "res_low_2x1_2",
+      "name": "Maisons de ville",
+      "category": "residential_low",
+      "kind": "growable",
+      "zone": "R_LOW",
+      "level": 2,
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "networks": {
+        "power": 9,
+        "water": 9
+      },
+      "capacity": {
+        "residents": 15,
+        "incomeClass": "mid"
+      },
+      "environment": {
+        "heat": 1
+      },
+      "growth": {
+        "minLandValue": 46,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 15,
+        "color": "#f6f2ea",
+        "roof": "gable",
+        "roofColor": "#6f7c88",
+        "detail": "solar"
+      }
+    },
+    {
+      "id": "res_high_2x2_1",
+      "name": "Îlot résidentiel",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 1,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 30,
+        "water": 30
+      },
+      "capacity": {
+        "residents": 110,
+        "incomeClass": "low"
+      },
+      "environment": {
+        "heat": 3,
+        "noise": 1
+      },
+      "growth": {
+        "next": "res_high_2x2_2",
+        "minLandValue": 34,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 30,
+        "color": "#e2d2b2",
+        "roof": "flat",
+        "roofColor": "#8f8068",
+        "detail": "windows"
+      }
+    },
+    {
+      "id": "res_high_2x2_2",
+      "name": "Résidence avec jardin",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 2,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 70,
+        "water": 70
+      },
+      "capacity": {
+        "residents": 260,
+        "incomeClass": "mid"
+      },
+      "environment": {
+        "heat": 3,
+        "noise": 1,
+        "green": 4,
+        "radius": 2
+      },
+      "growth": {
+        "next": "res_high_2x2_3",
+        "minLandValue": 46,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 48,
+        "color": "#dfe4e8",
+        "roof": "green",
+        "roofColor": "#6f9f5c",
+        "detail": "windows"
+      }
+    },
+    {
+      "id": "res_high_2x2_3",
+      "name": "Ensemble de tours",
+      "category": "residential_high",
+      "kind": "growable",
+      "zone": "R_HIGH",
+      "level": 3,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 150,
+        "water": 150
+      },
+      "capacity": {
+        "residents": 620,
+        "incomeClass": "high"
+      },
+      "environment": {
+        "heat": 4,
+        "noise": 1
+      },
+      "growth": {
+        "minLandValue": 58,
+        "minSatisfaction": 60,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "health",
+          "transit",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 84,
+        "color": "#cddbe8",
+        "roof": "flat",
+        "roofColor": "#4f6a86",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "off_2x2_1",
+      "name": "Parc d'affaires",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 1,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 40,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 50,
+        "qualification": 0.6
+      },
+      "environment": {
+        "heat": 2
+      },
+      "growth": {
+        "next": "off_2x2_2",
+        "minLandValue": 34,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 24,
+        "color": "#ddd8ef",
+        "roof": "flat",
+        "roofColor": "#7469a5",
+        "detail": "windows"
+      }
+    },
+    {
+      "id": "off_2x2_2",
+      "name": "Campus tertiaire",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 2,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 110,
+        "water": 50
+      },
+      "capacity": {
+        "jobs": 160,
+        "qualification": 0.68
+      },
+      "environment": {
+        "heat": 3,
+        "green": 3,
+        "radius": 2
+      },
+      "growth": {
+        "next": "off_2x2_3",
+        "minLandValue": 48,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 52,
+        "color": "#c2bce0",
+        "roof": "flat",
+        "roofColor": "#564a8a",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "off_2x2_3",
+      "name": "Quartier d'affaires",
+      "category": "offices",
+      "kind": "growable",
+      "zone": "O",
+      "level": 3,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 260,
+        "water": 100
+      },
+      "capacity": {
+        "jobs": 380,
+        "qualification": 0.75
+      },
+      "environment": {
+        "heat": 4
+      },
+      "growth": {
+        "minLandValue": 56,
+        "minSatisfaction": 56,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "education",
+          "transit",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 104,
+        "color": "#a7bddb",
+        "roof": "flat",
+        "roofColor": "#38557f",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "ind_2x1_1",
+      "name": "Grande usine",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 1,
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "networks": {
+        "power": 30,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 50,
+        "qualification": 0.25,
+        "goods": 60
+      },
+      "environment": {
+        "pollution": 16,
+        "noise": 9,
+        "heat": 3,
+        "radius": 5
+      },
+      "growth": {
+        "next": "ind_2x1_2",
+        "minLandValue": 20,
+        "requires": [
+          "power"
+        ]
+      },
+      "visual": {
+        "height": 18,
+        "color": "#c2b195",
+        "roof": "saw",
+        "roofColor": "#86745b",
+        "detail": "chimney"
+      }
+    },
+    {
+      "id": "ind_2x1_2",
+      "name": "Complexe industriel",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "I",
+      "level": 2,
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "networks": {
+        "power": 80,
+        "water": 50
+      },
+      "capacity": {
+        "jobs": 90,
+        "qualification": 0.35,
+        "goods": 150
+      },
+      "environment": {
+        "pollution": 24,
+        "noise": 11,
+        "heat": 4,
+        "radius": 6
+      },
+      "growth": {
+        "minLandValue": 25,
+        "requires": [
+          "power",
+          "water",
+          "waste"
+        ]
+      },
+      "visual": {
+        "height": 26,
+        "color": "#aaa08d",
+        "roof": "saw",
+        "roofColor": "#6a5e4d",
+        "detail": "stacks"
+      }
+    },
+    {
+      "id": "mall_1",
+      "name": "Supermarché",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "CH",
+      "level": 1,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 40,
+        "water": 20
+      },
+      "capacity": {
+        "jobs": 40,
+        "qualification": 0.3,
+        "sales": 48
+      },
+      "environment": {
+        "noise": 6,
+        "heat": 3,
+        "radius": 4
+      },
+      "growth": {
+        "next": "mall_2",
+        "minLandValue": 35,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 16,
+        "color": "#eef0f2",
+        "roof": "flat",
+        "roofColor": "#d24a3a",
+        "detail": "awning"
+      }
+    },
+    {
+      "id": "mall_2",
+      "name": "Centre commercial",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "CH",
+      "level": 2,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 110,
+        "water": 40
+      },
+      "capacity": {
+        "jobs": 110,
+        "qualification": 0.4,
+        "sales": 135
+      },
+      "environment": {
+        "noise": 8,
+        "heat": 4,
+        "radius": 5
+      },
+      "growth": {
+        "next": "mall_3",
+        "minLandValue": 50,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "transit"
+        ]
+      },
+      "visual": {
+        "height": 28,
+        "color": "#dfeaf2",
+        "roof": "flat",
+        "roofColor": "#2f78a8",
+        "detail": "glass"
+      }
+    },
+    {
+      "id": "mall_3",
+      "name": "Centre commercial connecté XXL",
+      "category": "commerce",
+      "kind": "growable",
+      "zone": "CH",
+      "level": 3,
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "networks": {
+        "power": 220,
+        "water": 60
+      },
+      "capacity": {
+        "jobs": 220,
+        "qualification": 0.48,
+        "sales": 270
+      },
+      "environment": {
+        "noise": 8,
+        "heat": 4,
+        "radius": 5
+      },
+      "growth": {
+        "minLandValue": 60,
+        "minSatisfaction": 56,
+        "requires": [
+          "power",
+          "water",
+          "waste",
+          "transit",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 40,
+        "color": "#d6f0fb",
+        "roof": "flat",
+        "roofColor": "#2ca0c8",
+        "detail": "hologram"
       }
     }
   ]

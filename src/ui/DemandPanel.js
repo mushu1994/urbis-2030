@@ -5,7 +5,7 @@ import { demandBreakdown } from '../simulation/PopulationSystem.js';
 /** Secteurs affichés : clé de demande, libellé, couleur, codes de zone concernés. */
 export const SECTORS = [
   { k: 'R', label: 'Logement', short: 'R', color: 'var(--zone-r)', zones: [1, 2] },
-  { k: 'C', label: 'Commerce', short: 'C', color: 'var(--zone-c)', zones: [3] },
+  { k: 'C', label: 'Commerce', short: 'C', color: 'var(--zone-c)', zones: [3, 9] },
   { k: 'O', label: 'Bureaux', short: 'B', color: 'var(--zone-o)', zones: [4] },
   { k: 'I', label: 'Industrie', short: 'I', color: 'var(--zone-i)', zones: [5, 6, 7, 8] }
 ];

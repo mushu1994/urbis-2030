@@ -39,7 +39,7 @@ test('iPad : chaque menu de construction tient à l\'écran et défile jusqu\'en
     }
   }
 
-  await page.getByRole('button', { name: 'Services publics', exact: true }).tap();
+  await page.getByRole('button', { name: 'Éducation et culture', exact: true }).tap();
   await page.locator('.flyout-item', { hasText: 'Lycée' }).tap();
   expect(await page.evaluate(() => window.__urbis.tools.tool.defId)).toBe('high_school');
   expect(errors).toEqual([]);
