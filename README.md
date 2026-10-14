@@ -8,6 +8,21 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
 
 ## Nouveautés de la version 0.6 (analyse d'une partie de 27 ans, 88 000 habitants)
 
+### Lot B — territoire
+
+- **Extensions de territoire** (bouton carte de la barre d'outils, touche T) : le monde possible fait 8 × 8 parcelles
+  de 32 × 32 cases, soit 256 × 256 au plus. La carte de départ occupe les parcelles du centre ; chaque parcelle voisine
+  s'achète. Prix : environ une heure de jeu d'épargne (60 mois de variation moyenne de trésorerie sur 12 mois), au moins
+  1,5 M€, +30 % à chaque achat (≈ 5,3 M€ pour la première extension de la partie analysée). La carte grandit au
+  rectangle englobant ; une parcelle comprise dans ce rectangle mais non achetée reste verrouillée (assombrie). Le
+  nouveau terrain prolonge le relief et l'autoroute est prolongée jusqu'au nouveau bord si besoin. Achat suspendu
+  pendant une crise. Les anciennes sauvegardes en profitent.
+- **Éditeur de carte** (écran d'accueil, « Personnaliser la carte ») : curseurs Eau, Relief, Roche et Forêt de 0 à
+  100 % (50 % = carte d'origine). Les extensions suivent les mêmes réglages.
+- **Industrie forestière** : nouvelle zone (scierie → usine de panneaux → bois lamellé-croisé, ère 2), uniquement à
+  2 cases au plus d'une forêt. Les forêts repoussent d'elles-mêmes, une fois par mois, sur les prairies libres
+  entourées d'au moins deux cases boisées.
+
 ### Lot A — équilibrage
 
 - **Attractivité par secteur** : le logement garde la valeur foncière ; le commerce, les bureaux et l'industrie ont
@@ -531,10 +546,10 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 253 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 265 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
-catalogue des 91 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
+catalogue des 94 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
 accumulation d'objets), invariants sur une ville simulée plusieurs années ; météo (saisons, déterminisme, effets),
 crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, désactivation), scénarios (départ,
 victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements) ;

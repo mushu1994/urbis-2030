@@ -4,6 +4,7 @@ import { Camera } from './Camera.js';
 import { SelectionRenderer } from './SelectionRenderer.js';
 import { VehicleRenderer } from './VehicleRenderer.js';
 import { TrainRenderer } from './TrainRenderer.js';
+import { isOwned, fullyOwned } from '../world/Land.js';
 import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners, foliageTint } from './art/GroundArt.js';
 import { EffectsRenderer } from './EffectsRenderer.js';
 import { drawConstructionSite } from './art/EffectsArt.js';
@@ -170,6 +171,7 @@ export class Renderer {
         this.vehicles.refresh(this.session.state);
       }),
       bus.on('weather:changed', () => this.#updateSeason(this.session.state, true)),
+      bus.on('land:changed', () => this.terrainLayer.markAll()),
       bus.on('sim:month', () => this.#updateSeason(this.session.state, true)),
       bus.on('crisis:started', () => this.effects?.markEmitters()),
       bus.on('crisis:ended', ({ crisis }) => {
@@ -236,7 +238,9 @@ export class Renderer {
   #drawTerrainChunk(g, x0, y0, x1, y1) {
     const grid = this.session.state.grid;
     const snow = [0, 0.5, 0.85][this.snowLevel];
-    this.#forEachDiagonal(x0, y0, x1, y1, (x, y) => drawTerrainTile(g, grid, x, y, { gridLines: this.gridLines, snow, season: this.season }));
+    const state = this.session.state;
+    const all = fullyOwned(state);
+    this.#forEachDiagonal(x0, y0, x1, y1, (x, y) => drawTerrainTile(g, grid, x, y, { gridLines: this.gridLines, snow, season: this.season, locked: !all && !isOwned(state, x, y) }));
   }
 
   #drawGroundChunk(g, x0, y0, x1, y1) {

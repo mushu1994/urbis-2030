@@ -38,6 +38,7 @@ export const CATEGORY_LABELS = {
   demolition: 'Démolitions',
   clearing: 'Défrichement',
   terraforming: 'Terrassement et plantations',
+  land: 'Acquisitions foncières (extensions)',
   interest: 'Charges d\'intérêts',
   loan: 'Emprunts',
   principal: 'Remboursement du capital',

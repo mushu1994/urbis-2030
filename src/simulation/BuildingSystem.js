@@ -5,8 +5,8 @@ import { constructionDaysFor, isUnderConstruction } from './Construction.js';
 import { findAccess } from '../world/PlacementSystem.js';
 
 /** Secteur de demande de chaque code de zone (agriculture et extraction relèvent de l'industrie). */
-export const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I', 6: 'I', 7: 'I' };
-const ZONE_CODES = [1, 2, 3, 4, 5, 6, 7];
+export const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I', 6: 'I', 7: 'I', 8: 'I' };
+const ZONE_CODES = [1, 2, 3, 4, 5, 6, 7, 8];
 
 /** Critère d'implantation propre à chaque secteur (v0.6). */
 const SITE_LABELS = {
@@ -15,7 +15,8 @@ const SITE_LABELS = {
   O: 'Attractivité tertiaire',
   I: 'Attractivité industrielle',
   IA: 'Attractivité agricole',
-  IX: 'Attractivité industrielle'
+  IX: 'Attractivité industrielle',
+  IF: 'Attractivité industrielle'
 };
 
 /** Valeur d'implantation d'une case pour un bâtiment : valeur foncière (logement) ou attractivité économique. */

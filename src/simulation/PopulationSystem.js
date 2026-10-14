@@ -255,6 +255,7 @@ export class PopulationSystem {
     st.avgLandValue = prev.avgLandValue;
     st.avgPollution = prev.avgPollution;
     st.avgHeat = prev.avgHeat;
+    st.regionConnected = prev.regionConnected;
     state.stats = st;
   }
 

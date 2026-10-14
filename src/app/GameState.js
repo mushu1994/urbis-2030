@@ -1,6 +1,7 @@
 import { Grid } from '../world/Grid.js';
 import { Rng } from '../util/rng.js';
 import { generateWorld } from '../world/WorldGenerator.js';
+import { defaultLand } from '../world/Land.js';
 import { SIM } from '../simulation/config.js';
 import { toCents } from '../util/money.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
@@ -99,6 +100,8 @@ export class GameState {
     this.scenario = null;
     /** Options de partie qui influencent la simulation (fréquence des catastrophes). */
     this.options = defaultOptions('normal');
+    /** Territoire de la commune : parcelles achetées (v0.6). */
+    this.land = defaultLand(grid.width, grid.height);
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};
@@ -110,11 +113,12 @@ export class GameState {
    * Crée une nouvelle partie avec un terrain généré.
    * @param {{catalog: import('../data/Catalog.js').Catalog, seed?:number, width?:number, height?:number, name?:string}} p
    */
-  static createNew({ catalog, seed = 2030, width = 64, height = 64, name = 'Nouvelle ville' }) {
+  static createNew({ catalog, seed = 2030, width = 64, height = 64, name = 'Nouvelle ville', mapParams = null }) {
     const grid = new Grid(width, height);
-    const { entries } = generateWorld(grid, { seed, highwayRoadCode: catalog.road('road_highway').code });
+    const { entries } = generateWorld(grid, { seed, highwayRoadCode: catalog.road('road_highway').code, params: mapParams ?? {} });
     const s = new GameState({ grid, seed, name });
     s.entries = entries;
+    if (mapParams) s.meta.mapParams = { ...mapParams };
     return s;
   }
 

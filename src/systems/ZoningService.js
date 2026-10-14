@@ -1,7 +1,8 @@
 import { REASONS, canZoneTile } from '../world/PlacementSystem.js';
 import { isUnlocked } from './ConstructionService.js';
-import { ZONE_EXTRACT, TERRAIN, ROCK_CLEARING_COST_EUROS } from '../world/Terrain.js';
+import { ZONE_EXTRACT, ZONE_FOREST, TERRAIN, ROCK_CLEARING_COST_EUROS } from '../world/Terrain.js';
 import { toCents } from '../util/money.js';
+import { isOwnedIndex, fullyOwned } from '../world/Land.js';
 
 /**
  * Zonage (résidentiel, commerce, bureaux, industrie) et zones de desserte autorisées pour les drones.
@@ -57,7 +58,8 @@ export class ZoningService {
       eligible = [...set].sort((a, z) => a - z);
     }
     const reasons = [];
-    if (!eligible.length) reasons.push(zone ? (code === ZONE_EXTRACT && all.some((i) => canZoneTile(state, i) && g.zone[i] !== code) ? 'noDeposit' : 'noZone') : 'nothing');
+    const special = code === ZONE_EXTRACT ? 'noDeposit' : code === ZONE_FOREST ? 'noForest' : null;
+    if (!eligible.length) reasons.push(zone ? (special && all.some((i) => canZoneTile(state, i) && g.zone[i] !== code) ? special : 'noZone') : 'nothing');
     let cost = zone ? eligible.length * zone.costCents : 0;
     // Roche : dérochée (payante) au moment du zonage, sauf pour l'extraction qui l'exploite
     const rocks = zone && code !== ZONE_EXTRACT ? eligible.filter((i) => g.terrain[i] === TERRAIN.ROCK) : [];
@@ -115,7 +117,7 @@ export class ZoningService {
     const unlocked = isUnlocked(state, { tech: tech?.id });
     const all = this.#rectTiles(state, rect);
     const g = state.grid;
-    const eligible = all.filter((i) => g.terrain[i] !== 1 && !!g.deliveryZone[i] !== enabled);
+    const eligible = all.filter((i) => g.terrain[i] !== 1 && !!g.deliveryZone[i] !== enabled && (fullyOwned(state) || isOwnedIndex(state, i)));
     const reasons = [];
     if (!unlocked.ok) reasons.push('locked');
     else if (!eligible.length) reasons.push('nothing');

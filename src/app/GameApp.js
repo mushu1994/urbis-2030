@@ -6,7 +6,9 @@ import { ToolController } from './ToolController.js';
 import { buildStarterTown, placeNear } from './scenarios.js';
 import { SimulationClock } from '../simulation/SimulationClock.js';
 import { Renderer } from '../rendering/Renderer.js';
-import { SaveService } from '../persistence/SaveService.js';
+import { SaveService, serializeState, deserializeState } from '../persistence/SaveService.js';
+import { expandSave } from '../persistence/WorldExpansion.js';
+import { TerritoryPanel } from '../ui/TerritoryPanel.js';
 import { SettingsService } from '../persistence/SettingsService.js';
 import { HUD } from '../ui/HUD.js';
 import { Toolbar } from '../ui/Toolbar.js';
@@ -111,6 +113,7 @@ export class GameApp {
         onDebug: () => this.togglePanel('debug')
       }),
       demand: new DemandPanel(),
+      territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price) }),
       sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
       help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
       debug: new DebugPanel({ getRenderer: () => this.renderer, getLoop: () => this.loop, settings: this.settings, apply: () => this.applySettings(), notify })
@@ -206,6 +209,7 @@ export class GameApp {
       'Ctrl+s': () => this.save({ id: 'quick', name: `${this.session?.state.meta.name} (rapide)` }),
       b: () => this.togglePanel('finance'),
       c: () => this.togglePanel('city'),
+      t: () => this.togglePanel('territory'),
       i: () => this.togglePanel('ai'),
       h: () => this.togglePanel('help'),
       F1: () => this.togglePanel('help'),
@@ -296,7 +300,7 @@ export class GameApp {
     el.hidden = !text;
   }
 
-  async newGame({ name, seed, size, mode, disasters = 'normal', scenarioId }) {
+  async newGame({ name, seed, size, mode, disasters = 'normal', scenarioId, mapParams = null }) {
     this.#busy('Génération du territoire…');
     await new Promise((r) => setTimeout(r, 30));
     const bus = new EventBus();
@@ -306,7 +310,7 @@ export class GameApp {
       size = challenge.size;
       name = challenge.name;
     }
-    const session = GameSession.newGame({ catalog: this.catalog, seed, width: size, height: size, name, bus });
+    const session = GameSession.newGame({ catalog: this.catalog, seed, width: size, height: size, name, bus, mapParams: challenge ? null : mapParams });
     session.state.options.disasters = disasters;
     if (challenge) {
       this.#busy(`Préparation du scénario « ${challenge.name} »…`);
@@ -445,6 +449,40 @@ export class GameApp {
     } catch (err) {
       this.notifications.push({ level: 'danger', message: `Chargement impossible : ${err.message}` });
       if (!this.session) await this.showMenu();
+    } finally {
+      this.#busy(null);
+    }
+  }
+
+  /**
+   * Achète une parcelle (32 × 32) : paiement par commande, puis, si la carte doit grandir, la partie est
+   * sérialisée, agrandie (WorldExpansion) et rechargée telle quelle — caméra recentrée au même endroit.
+   */
+  async buyParcel(gx, gy, price) {
+    if (!this.session) return;
+    if (!(await confirmDialog(`Acheter cette parcelle de 32 × 32 cases pour ${formatMoney(price)} ?`, { confirmLabel: 'Acheter' }))) return;
+    const r = this.execute({ type: 'buyParcel', gx, gy });
+    if (!r.ok) return this.notifications.push({ level: 'warning', message: r.messages?.join(' · ') || 'Achat impossible' });
+    if (!r.grows) {
+      this.notifications.push({ level: 'success', message: 'Parcelle achetée : elle est constructible tout de suite.' });
+      this.panelHost.refresh(true);
+      return;
+    }
+    const speed = this.clock.speedIndex;
+    this.#busy('Agrandissement du territoire…');
+    try {
+      await this.host?.flush();
+      const cam = this.renderer.tileAtScreen(this.renderer.view.width / 2, this.renderer.view.height / 2);
+      const { data, offset } = expandSave(serializeState(this.session.state), { catalog: this.catalog, box: r.box });
+      const state = deserializeState(data);
+      const session = new GameSession({ catalog: this.catalog, state, bus: new EventBus() });
+      await this.startSession(session);
+      if (cam) this.focus(cam.x + offset.dx, cam.y + offset.dy);
+      this.setSpeed(speed);
+      this.openPanel('territory');
+      this.notifications.push({ level: 'success', message: `Territoire agrandi : la carte fait maintenant ${state.grid.width} × ${state.grid.height} cases.` });
+    } catch (err) {
+      this.notifications.push({ level: 'danger', message: `Agrandissement impossible : ${err.message}` });
     } finally {
       this.#busy(null);
     }

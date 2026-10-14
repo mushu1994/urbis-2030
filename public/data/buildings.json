@@ -128,6 +128,15 @@
       "cost": 25,
       "color": "#b5703f",
       "description": "Puits de forage, carrières puis sites d'extraction automatisés : forte production mais pollution et bruit élevés. Uniquement à 2 cases au plus d'un gisement (roche). Répond à la demande industrielle (jauge I)."
+    },
+    {
+      "id": "IF",
+      "code": 8,
+      "name": "Industrie forestière",
+      "short": "Bo",
+      "cost": 12,
+      "color": "#6f8f3a",
+      "description": "Scieries, panneaux puis bois lamellé-croisé (ère 2) : des emplois et des matériaux, une pollution modérée. Uniquement à 2 cases au plus d'une forêt. Les forêts repoussent d'elles-mêmes autour des massifs ; l'outil Terrain permet d'en planter. Répond à la demande industrielle (jauge I)."
     }
   ],
   "buildings": [
@@ -1424,6 +1433,131 @@
         "roof": "derrick",
         "roofColor": "#4fc3d9",
         "detail": "rig",
+        "era": 2
+      }
+    },
+    {
+      "id": "wood_1",
+      "name": "Scierie",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IF",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 10,
+        "water": 4
+      },
+      "capacity": {
+        "jobs": 12,
+        "qualification": 0.2,
+        "goods": 20
+      },
+      "environment": {
+        "pollution": 6,
+        "noise": 8,
+        "heat": 1,
+        "radius": 4
+      },
+      "growth": {
+        "next": "wood_2",
+        "minLandValue": 14,
+        "requires": [
+          "power"
+        ]
+      },
+      "visual": {
+        "height": 12,
+        "color": "#a07a4f",
+        "roof": "sawmill",
+        "roofColor": "#6b4a2b",
+        "detail": "logs"
+      }
+    },
+    {
+      "id": "wood_2",
+      "name": "Usine de panneaux bois",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IF",
+      "level": 2,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 26,
+        "water": 12
+      },
+      "capacity": {
+        "jobs": 22,
+        "qualification": 0.3,
+        "goods": 40
+      },
+      "environment": {
+        "pollution": 9,
+        "noise": 8,
+        "heat": 2,
+        "radius": 4
+      },
+      "growth": {
+        "next": "wood_3",
+        "minLandValue": 24,
+        "requires": [
+          "power",
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 16,
+        "color": "#b48a5a",
+        "roof": "sawmill",
+        "roofColor": "#5e3f24",
+        "detail": "logs2"
+      }
+    },
+    {
+      "id": "wood_3",
+      "name": "Usine de bois lamellé-croisé",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IF",
+      "level": 3,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 48,
+        "water": 16
+      },
+      "capacity": {
+        "jobs": 26,
+        "qualification": 0.5,
+        "goods": 70
+      },
+      "environment": {
+        "pollution": 4,
+        "noise": 5,
+        "heat": 2,
+        "radius": 3
+      },
+      "growth": {
+        "requires": [
+          "power",
+          "water",
+          "era2"
+        ]
+      },
+      "visual": {
+        "height": 24,
+        "color": "#d8b88a",
+        "roof": "flat",
+        "roofColor": "#7aa05a",
+        "detail": "solar",
         "era": 2
       }
     },

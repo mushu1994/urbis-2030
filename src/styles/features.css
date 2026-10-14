@@ -712,3 +712,83 @@ details.factors summary {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- v0.6 : territoire (parcelles de 32 × 32) ---------- */
+.territory {
+  display: grid;
+  gap: 10px;
+}
+
+.territory-grid {
+  display: grid;
+  gap: 3px;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  margin: 4px auto;
+}
+
+.parcel {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 700 16px/1 inherit;
+  color: #fff;
+  background: rgba(127, 127, 127, 0.12);
+  cursor: default;
+}
+
+.parcel.owned {
+  background: var(--ok);
+  border-color: transparent;
+}
+
+.parcel.locked.inbox {
+  background: rgba(127, 127, 127, 0.35);
+}
+
+.parcel.available {
+  background: var(--sign, #f2c230);
+  color: var(--sign-ink, #222);
+  cursor: pointer;
+}
+
+.parcel.available:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.territory-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+
+.territory-legend .parcel {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+}
+
+.map-editor {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.map-editor summary {
+  cursor: pointer;
+  color: var(--ink-dim);
+}
+
+.map-editor .setting.slider {
+  display: grid;
+  grid-template-columns: 120px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}

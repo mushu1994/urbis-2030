@@ -29,7 +29,7 @@ const corners = (x, y, alt) => [gridToWorld(x, y, alt), gridToWorld(x + 1, y, al
  * @param {import('pixi.js').Graphics} g
  * @param {import('../../world/Grid.js').Grid} grid
  */
-export function drawTerrainTile(g, grid, x, y, { gridLines = false, snow = 0, season = 'summer' } = {}) {
+export function drawTerrainTile(g, grid, x, y, { gridLines = false, snow = 0, season = 'summer', locked = false } = {}) {
   const i = grid.idx(x, y);
   const alt = grid.altitude[i];
   const terr = grid.terrain[i];
@@ -60,7 +60,10 @@ export function drawTerrainTile(g, grid, x, y, { gridLines = false, snow = 0, se
     }
     if (snow > 0 && terr !== TERRAIN.SAND) c = mix(c, 0xf3f6fa, snow * (0.75 + n * 0.2));
   }
+  // Parcelle non achetée : assombrie et désaturée
+  if (locked) c = mix(c, 0x39404a, 0.55);
   g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).fill(c);
+  if (locked && (x + y) % 4 === 0) g.moveTo(L.x, L.y).lineTo(R.x, R.y).stroke({ width: 0.6, color: 0x1d2228, alpha: 0.35 });
   if (terr === TERRAIN.WATER && n > 0.82) {
     const cx = (T.x + B.x) / 2;
     const cy = (T.y + B.y) / 2;

@@ -21,6 +21,7 @@ export const SHORTCUTS = [
   ['1, 2, 3', 'Vitesse normale, rapide, très rapide'],
   ['B', 'Finances'],
   ['C', 'Tableau de bord de la ville'],
+  ['T', 'Territoire : acheter des extensions de 32 × 32 cases'],
   ['I', 'IA urbaine et politiques'],
   ['L', 'Couche de données suivante'],
   ['X', 'Rendre translucides les bâtiments devant le curseur'],
@@ -294,12 +295,29 @@ export class StartMenu {
     const tabs = h('nav.menu-tabs', { role: 'tablist' },
       [['new', 'Nouvelle partie'], ['scenarios', 'Scénarios et défis']].map(([id, label]) =>
         h('button.menu-tab', { type: 'button', role: 'tab', 'aria-selected': String(this.tab === id), class: this.tab === id ? 'active' : '', on: { click: () => { this.tab = id; this.show({ canResume }); } } }, label)));
-    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value }); } } },
+    // Éditeur de carte (v0.6) : proportions d'eau, de relief, de roche et de forêt, en pourcentage (50 = équilibré)
+    const MAP_SLIDERS = [['water', 'Eau'], ['relief', 'Relief'], ['rock', 'Roche (gisements)'], ['forest', 'Forêt']];
+    const mapInputs = {};
+    const mapEditor = h('details.map-editor',
+      h('summary', 'Personnaliser la carte (eau, relief, roche, forêt)'),
+      MAP_SLIDERS.map(([k, label]) => {
+        const out = h('output', '50 %');
+        const input = h('input', { type: 'range', min: 0, max: 100, step: 5, value: 50, id: `map-${k}`, 'aria-label': label, on: { input: (e) => { out.textContent = `${e.target.value} %`; } } });
+        mapInputs[k] = input;
+        return h('label.setting.slider', h('span', label), input, out);
+      }),
+      h('p.hint', '50 % partout = carte équilibrée d\'origine. Les extensions de territoire achetées en cours de partie suivent les mêmes réglages.'));
+    const mapParams = () => {
+      const p = Object.fromEntries(Object.entries(mapInputs).map(([k, el]) => [k, Number(el.value)]));
+      return Object.values(p).every((v) => v === 50) ? null : p;
+    };
+    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, mapParams: mapParams() }); } } },
       h('h2', 'Nouvelle partie'),
       h('label', 'Nom de la ville', name),
       h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
       h('label', 'Départ', mode),
       h('label', 'Catastrophes', disasters),
+      mapEditor,
       h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville')
     );
     setChildren(this.root,

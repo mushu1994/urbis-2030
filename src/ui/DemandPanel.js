@@ -7,7 +7,7 @@ export const SECTORS = [
   { k: 'R', label: 'Logement', short: 'R', color: 'var(--zone-r)', zones: [1, 2] },
   { k: 'C', label: 'Commerce', short: 'C', color: 'var(--zone-c)', zones: [3] },
   { k: 'O', label: 'Bureaux', short: 'B', color: 'var(--zone-o)', zones: [4] },
-  { k: 'I', label: 'Industrie', short: 'I', color: 'var(--zone-i)', zones: [5, 6, 7] }
+  { k: 'I', label: 'Industrie', short: 'I', color: 'var(--zone-i)', zones: [5, 6, 7, 8] }
 ];
 
 const LEVELS = [
@@ -144,7 +144,8 @@ function figuresFor(k, state, free) {
         ['Parcelles industrielles libres', formatNumber(free)],
         ['Ateliers et usines', formatNumber(bz.I ?? 0)],
         ['Fermes', formatNumber(bz.IA ?? 0)],
-        ['Sites de forage et d\'extraction', formatNumber(bz.IX ?? 0)]
+        ['Sites de forage et d\'extraction', formatNumber(bz.IX ?? 0)],
+        ['Scieries et industries du bois', formatNumber(bz.IF ?? 0)]
       ];
   }
 }

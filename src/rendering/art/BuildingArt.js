@@ -132,6 +132,8 @@ function drawBuildingBody(g, def, b, alt) {
       return drawDerrick(g, b, alt, v, base, roof);
     case 'quarry':
       return drawQuarry(g, b, alt, base, roof);
+    case 'sawmill':
+      return drawSawmill(g, b, alt, v, base, roof);
     default:
       if (FLAT_SITE_ROOFS.has(v.roof)) return drawFlatSite(g, def, b, alt, T, R, B, L);
       break;
@@ -470,4 +472,25 @@ function drawQuarry(g, b, alt, base, roof) {
   const z = gridToWorld(b.x + 0.7, b.y + 0.62, alt);
   g.moveTo(a.x, a.y - 2).lineTo(z.x, z.y - 13).stroke({ width: 2.2, color: ab ? 0x777777 : 0x4a4a4a });
   if (!ab) g.circle(z.x, z.y - 14, 1.6).fill(roof);
+}
+
+/** Scierie : cour en terre battue, hangar et piles de grumes (plus hautes au niveau 2). */
+function drawSawmill(g, b, alt, v, base, roof) {
+  const ab = !!b.abandoned;
+  const yard = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.04);
+  g.poly(flat(yard.T, yard.R, yard.B, yard.L)).fill(ab ? 0x8c867c : 0xa68b63);
+  box(g, b.x + 0.08, b.y + 0.08, 0.5, 0.42, alt, v.height, ab ? desaturate(base, 0.8) : base, ab ? 0x6b6b6b : roof, true);
+  const stacks = v.detail === 'logs2' ? 3 : 2;
+  for (let k = 0; k < stacks; k++) {
+    const p = gridToWorld(b.x + 0.62 + (k % 2) * 0.18, b.y + 0.5 + Math.floor(k / 2) * 0.3 + (k % 2) * 0.12, alt);
+    for (let r = 0; r < 3; r++) {
+      const yy = p.y - 2 - r * 3;
+      const n = 3 - r;
+      for (let c = 0; c < n; c++) {
+        const xx = p.x - (n - 1) * 2.2 + c * 4.4;
+        g.rect(xx - 1.6, yy - 1.6, 9, 3.2).fill(ab ? 0x7a7166 : 0x8a5a33);
+        g.circle(xx - 1.6, yy, 1.7).fill(ab ? 0x9a9186 : 0xd9b27a);
+      }
+    }
+  }
 }

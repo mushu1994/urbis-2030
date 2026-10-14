@@ -2,6 +2,8 @@ import { toCents } from '../util/money.js';
 import { TERRAIN, CLEARING_COST_EUROS, ROCK_CLEARING_COST_EUROS, MAX_ALTITUDE } from '../world/Terrain.js';
 import { REASONS, checkBuildingPlacement, checkRoadTile, roadPath, planBridges, footprintOf, findAccess, siteWorksCents, prepareSite } from '../world/PlacementSystem.js';
 import { createBuilding, removeBuilding, markNetworksDirty } from './BuildingFactory.js';
+import { isOwnedIndex, fullyOwned, landOf, parcelMap, parcelPrice, parcelKey } from '../world/Land.js';
+import { EconomySystem } from '../simulation/EconomySystem.js';
 import { accountForCategory } from '../simulation/EconomySystem.js';
 
 /** Coût de démolition d'une case de route (centimes). */
@@ -94,7 +96,8 @@ export class ConstructionService {
       let deck;
       if (g.terrain[i] === TERRAIN.WATER) {
         deck = bridges.deck.get(i);
-        if (deck === undefined || !road.bridgeCostCents) r = { status: 'invalid', reason: 'water' };
+        if (!fullyOwned(state) && !isOwnedIndex(state, i)) r = { status: 'invalid', reason: 'notOwned' };
+        else if (deck === undefined || !road.bridgeCostCents) r = { status: 'invalid', reason: 'water' };
         else if (g.road[i] === road.code) r = { status: 'same' };
         else if (g.road[i]) r = { status: 'upgrade' };
         else r = { status: 'new' };
@@ -456,11 +459,16 @@ export class ConstructionService {
     const target = g.inBounds(rect.x0, rect.y0) ? g.altitude[g.idx(rect.x0, rect.y0)] : 1;
     const eligible = [];
     const skipped = new Set();
+    const checkOwned = !fullyOwned(state);
     let cost = 0;
     for (let y = Math.min(rect.y0, rect.y1); y <= Math.max(rect.y0, rect.y1); y++) {
       for (let x = Math.min(rect.x0, rect.x1); x <= Math.max(rect.x0, rect.x1); x++) {
         if (!g.inBounds(x, y)) continue;
         const i = g.idx(x, y);
+        if (checkOwned && !isOwnedIndex(state, i)) {
+          skipped.add('notOwned');
+          continue;
+        }
         const terr = g.terrain[i];
         const factor = terr === TERRAIN.ROCK ? 2 : 1;
         if (terr === TERRAIN.WATER) {
@@ -510,7 +518,8 @@ export class ConstructionService {
       occupied: 'cases bâties ou routes ignorées',
       zoned: 'cases zonées ignorées (retirez le zonage pour planter)',
       max: 'altitude maximale atteinte',
-      min: 'impossible de creuser sous le niveau du sol'
+      min: 'impossible de creuser sous le niveau du sol',
+      notOwned: 'parcelles non achetées ignorées'
     };
     return {
       ok: reasons.length === 0,
@@ -554,6 +563,39 @@ export class ConstructionService {
     state.dirty.roadReach = true;
     this.#record(state, spec.label, snapshot, pv.eligible, [pay.tx]);
     this.bus?.emit('world:changed', { tiles: [...around], reason: 'terraform' });
+    return { ...pv, ok: true };
+  }
+
+  // ───────────────────────────── Territoire ─────────────────────────────
+
+  /** Prévisualise l'achat d'une parcelle (32 × 32) voisine du territoire. */
+  previewParcel(state, { gx, gy }) {
+    const cell = parcelMap(state).find((c) => c.gx === gx && c.gy === gy);
+    const cost = parcelPrice(state, EconomySystem.summarize);
+    const fail = (m) => ({ ok: false, cost, reasons: ['land'], messages: [m] });
+    if (!cell) return fail('Hors du territoire possible (256 × 256 cases au plus)');
+    if (cell.status === 'owned') return fail('Parcelle déjà achetée');
+    if (cell.status !== 'available') return fail('Achetez d\'abord une parcelle voisine');
+    if ((state.crises?.active ?? []).length) return fail('Impossible pendant une crise');
+    if (!this.economy.canAfford(state, cost)) return { ok: false, cost, reasons: ['budget'], messages: [REASONS.budget] };
+    const box = landOf(state).box;
+    const next = { x0: Math.min(box.x0, gx), y0: Math.min(box.y0, gy), x1: Math.max(box.x1, gx), y1: Math.max(box.y1, gy) };
+    const grows = next.x0 !== box.x0 || next.y0 !== box.y0 || next.x1 !== box.x1 || next.y1 !== box.y1;
+    return { ok: true, cost, box: next, grows, reasons: [], messages: [] };
+  }
+
+  /** Achète une parcelle : paiement et inscription au territoire. L'agrandissement de la grille suit (GameApp). */
+  buyParcel(state, params) {
+    const pv = this.previewParcel(state, params);
+    if (!pv.ok) return pv;
+    const pay = this.economy.payCapex(state, { amount: pv.cost, category: 'land', label: `Extension du territoire (parcelle ${params.gx + 1}-${params.gy + 1})`, lifeYears: 0 });
+    if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
+    const land = landOf(state);
+    land.owned = [...land.owned, parcelKey(params.gx, params.gy)];
+    land.purchases += 1;
+    land.spent = (land.spent ?? 0) + pv.cost;
+    // Parcelle comprise dans la grille actuelle (territoire en « L ») : elle se déverrouille tout de suite
+    this.bus?.emit('land:changed', { grows: pv.grows });
     return { ...pv, ok: true };
   }
 

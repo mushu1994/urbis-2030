@@ -2,13 +2,14 @@ import { GameState, defaultTrade } from '../app/GameState.js';
 import { Grid } from '../world/Grid.js';
 import { Rng } from '../util/rng.js';
 import { typedToBase64, base64ToTyped, checksum } from '../util/encoding.js';
+import { defaultLand } from '../world/Land.js';
 import { validateSaveData } from '../data/Validators.js';
 import { CURRENT_FORMAT_VERSION, migrate } from './SaveMigration.js';
 import { formatDate } from '../simulation/config.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
 import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
 
-const TRAFFIC_ARRAYS = { acc: Float32Array, cost: Float64Array, jobW: Float64Array, shopW: Float64Array };
+export const TRAFFIC_ARRAYS = { acc: Float32Array, cost: Float64Array, jobW: Float64Array, shopW: Float64Array };
 
 /**
  * Sérialise l'état de jeu en objet JSON versionné.
@@ -46,6 +47,7 @@ export function serializeState(state) {
     crises: structuredClone(state.crises ?? null),
     scenario: structuredClone(state.scenario ?? null),
     options: structuredClone(state.options ?? null),
+    land: structuredClone(state.land ?? null),
     modifiers: { ...mods, disabledModes: { ...(disabledModes ?? {}) }, compute: compute ? { ...compute } : undefined },
     dirty: { ...state.dirty }
   };
@@ -100,6 +102,7 @@ export function deserializeState(raw) {
   s.crises = data.crises ?? defaultCrises();
   s.scenario = data.scenario ?? null;
   s.options = data.options ?? defaultOptions('off');
+  s.land = data.land ?? defaultLand(grid.width, grid.height);
   s.modifiers = data.modifiers ?? {};
   s.dirty = { ...s.dirty, ...(data.dirty ?? {}), roads: true, roadReach: true };
   if (!data.modifiers) s.dirty.modifiers = true;

@@ -29,8 +29,8 @@ export class GameSession {
     this.remote = null;
   }
 
-  static newGame({ catalog, seed, width, height, name, bus }) {
-    const state = GameState.createNew({ catalog, seed, width, height, name });
+  static newGame({ catalog, seed, width, height, name, bus, mapParams }) {
+    const state = GameState.createNew({ catalog, seed, width, height, name, mapParams });
     return new GameSession({ catalog, state, bus });
   }
 
@@ -70,6 +70,8 @@ export class GameSession {
         return this.construction.previewMove(s, cmd);
       case 'terraform':
         return this.construction.previewTerraform(s, cmd);
+      case 'buyParcel':
+        return this.construction.previewParcel(s, cmd);
       default:
         return { ok: false, reasons: ['unknown'], messages: [`Commande inconnue : ${cmd.type}`] };
     }
@@ -116,6 +118,9 @@ export class GameSession {
         break;
       case 'terraform':
         r = this.construction.terraform(s, cmd);
+        break;
+      case 'buyParcel':
+        r = this.construction.buyParcel(s, cmd);
         break;
       case 'upgrade':
         r = this.construction.applyUpgrade(s, cmd);

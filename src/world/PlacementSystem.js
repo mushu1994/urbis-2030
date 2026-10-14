@@ -1,4 +1,5 @@
-import { TERRAIN, roadAllowedOn, zoneAllowedOn, hasDeposit, ZONE_EXTRACT, CLEARING_COST_EUROS, ROCK_CLEARING_COST_EUROS, LEVELING_COST_EUROS } from './Terrain.js';
+import { isOwnedIndex, fullyOwned } from './Land.js';
+import { TERRAIN, roadAllowedOn, zoneAllowedOn, hasDeposit, hasForest, ZONE_EXTRACT, ZONE_FOREST, CLEARING_COST_EUROS, ROCK_CLEARING_COST_EUROS, LEVELING_COST_EUROS } from './Terrain.js';
 
 /** Messages d'explication des refus de placement (affichés au joueur). */
 export const REASONS = {
@@ -22,7 +23,9 @@ export const REASONS = {
   highway: 'L\'accès autoroutier ne peut pas être modifié',
   nothing: 'Rien à faire ici',
   noZone: 'Zonage impossible sur cette case',
-  noDeposit: 'Aucun gisement (roche) à moins de 2 cases'
+  noDeposit: 'Aucun gisement (roche) à moins de 2 cases',
+  noForest: 'Aucune forêt à moins de 2 cases',
+  notOwned: 'Parcelle non achetée (Ville → Territoire)'
 };
 
 /** Dimensions effectives selon la rotation. */
@@ -48,6 +51,7 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
   let alt = -1;
   let minAlt = Infinity;
   let maxAlt = -Infinity;
+  const checkOwned = !fullyOwned(state);
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
       const tx = x + dx;
@@ -58,6 +62,7 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
       }
       const i = g.idx(tx, ty);
       tiles.push(i);
+      if (checkOwned && !isOwnedIndex(state, i)) reasons.add('notOwned');
       const terr = g.terrain[i];
       if (g.building[i]) reasons.add('occupied');
       if (g.road[i]) reasons.add('road');
@@ -214,6 +219,7 @@ export function roadPath(x0, y0, x1, y1, verticalFirst = false) {
  */
 export function checkRoadTile(state, i, roadCode, prevAlt) {
   const g = state.grid;
+  if (!fullyOwned(state) && !isOwnedIndex(state, i)) return { status: 'invalid', reason: 'notOwned' };
   if (g.building[i]) return { status: 'invalid', reason: 'occupied' };
   if (!roadAllowedOn(g.terrain[i])) return { status: 'invalid', reason: 'water' };
   if (prevAlt >= 0 && Math.abs(g.altitude[i] - prevAlt) > 1) return { status: 'invalid', reason: 'steep' };
@@ -226,5 +232,7 @@ export function checkRoadTile(state, i, roadCode, prevAlt) {
 export function canZoneTile(state, i, zoneCode = 0) {
   const g = state.grid;
   if (g.building[i] || g.road[i] || !zoneAllowedOn(g.terrain[i], zoneCode)) return false;
+  if (!fullyOwned(state) && !isOwnedIndex(state, i)) return false;
+  if (zoneCode === ZONE_FOREST) return hasForest(g, i);
   return zoneCode !== ZONE_EXTRACT || hasDeposit(g, i);
 }

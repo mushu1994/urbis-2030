@@ -100,8 +100,14 @@ export class Simulation {
     if (t % F.growth === 0) this.#time('growth', () => this.buildingSystem.update(state, F.growth));
     if (t % F.environment === 0 || state.dirty.environment) {
       this.#time('environment', () => this.environment.update(state));
+
       state.dirty.environment = false;
       this.bus?.emit('fields:updated', { fields: ['pollution', 'noise', 'landValue', 'heat', 'green', 'density'] });
+    }
+    if (t % 30 === 15) {
+      // Repousse naturelle des forêts, une fois par mois
+      const grown = this.environment.regrowForests(state);
+      if (grown.length) this.bus?.emit('world:changed', { tiles: grown, reason: 'forest' });
     }
     if (t % F.logistics === 0) this.#time('logistics', () => this.ai.updateLogistics(state));
     // Décalés dans le cycle de 10 jours pour répartir la charge de calcul

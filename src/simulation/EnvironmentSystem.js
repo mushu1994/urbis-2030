@@ -1,3 +1,4 @@
+import { hash2 } from '../util/rng.js';
 import { TERRAIN } from '../world/Terrain.js';
 
 const COVER_LAYER = { police: 'coverPolice', fire: 'coverFire', health: 'coverHealth', education: 'coverEducation', admin: 'coverAdmin' };
@@ -156,6 +157,34 @@ export class EnvironmentSystem {
       else v = 14 + access * 1.2 + Math.min(22, logistics[i]) + lv * 0.25 + Math.min(10, customers[i] / 60);
       g.siteValue[i] = Math.max(0, Math.min(100, v));
     }
+  }
+
+  /**
+   * Repousse des forêts (v0.6) : une prairie libre (ni zonée, ni bâtie, ni route) entourée d'au moins deux cases de
+   * forêt a une petite chance de se boiser à chaque mise à jour (tirage déterministe sur la case et le jour).
+   * @returns {number[]} cases devenues forêt
+   */
+  regrowForests(state) {
+    const g = state.grid;
+    const out = [];
+    const t = state.time.tick;
+    const seed = state.meta?.seed ?? 0;
+    const nb = new Int32Array(4);
+    for (let i = 0; i < g.size; i++) {
+      if (g.terrain[i] !== TERRAIN.GRASS || g.zone[i] || g.building[i] || g.road[i]) continue;
+      const n = g.neighbors4(i, nb);
+      let f = 0;
+      for (let k = 0; k < n; k++) if (g.terrain[nb[k]] === TERRAIN.FOREST) f++;
+      if (f < 2) continue;
+      if (hash2(i, t, seed + 4242) < 0.02 * f) {
+        out.push(i);
+      }
+    }
+    for (const i of out) {
+      g.terrain[i] = TERRAIN.FOREST;
+      g.touch(i);
+    }
+    return out;
   }
 
   update(state) {
