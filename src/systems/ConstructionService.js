@@ -5,7 +5,7 @@ import { createBuilding, removeBuilding, markNetworksDirty } from './BuildingFac
 import { accountForCategory } from '../simulation/EconomySystem.js';
 
 /** Coût de démolition d'une case de route (centimes). */
-export const ROAD_DEMOLITION_CENTS = 500;
+export const ROAD_DEMOLITION_CENTS = 1000;
 
 /**
  * Terrassement : opérations et coûts par case (euros). La roche coûte le double à creuser ou remblayer.
@@ -256,8 +256,9 @@ export class ConstructionService {
   /** Coût de démolition d'un bâtiment (frais de chantier, charge de fonctionnement). */
   demolitionCost(b) {
     const def = this.catalog.building(b.defId);
-    if (def.kind === 'plop') return Math.round(def.costCents * 0.1);
-    return toCents(80 * def.level * b.w * b.h);
+    // v0.6 : démolir coûte nettement plus cher (un quart du prix d'un équipement)
+    if (def.kind === 'plop') return Math.round(def.costCents * 0.25);
+    return toCents(150 * def.level * b.w * b.h);
   }
 
   /**

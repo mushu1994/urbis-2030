@@ -228,7 +228,7 @@ export const CHALLENGES = [
         goals: [
           { id: 'era', metric: 'era', op: '>=', target: 3, label: 'Atteindre l\'ère 3 « Ville symbiotique »' },
           { id: 'pop', metric: 'population', op: '>=', target: 8000, label: 'Au moins 8 000 habitants' },
-          { id: 'net', metric: 'netResult', op: '>=', target: 0, label: 'Résultat du dernier mois positif' }
+          { id: 'net', metric: 'netResult12', op: '>=', target: 0, label: 'Résultat mensuel moyen positif sur 12 mois' }
         ],
         failRules: [{ id: 'faillite', metric: 'treasury', op: '<', target: euro(-500000), months: 6, label: 'Faillite : trésorerie sous −500 000 € pendant 6 mois' }]
       };

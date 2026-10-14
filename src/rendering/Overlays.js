@@ -19,6 +19,12 @@ export const OVERLAYS = [
     color: (s, i) => (s.grid.terrain[i] === 1 ? -1 : ramp(s.grid.landValue[i] / 90, RAMPS.good))
   },
   {
+    id: 'siteValue',
+    label: 'Attractivité des zones',
+    legend: { ramp: RAMPS.good, min: 'faible', max: 'élevée', note: 'Valeur foncière pour le logement, attractivité commerciale, tertiaire ou industrielle ailleurs' },
+    color: (s, i) => (s.grid.zone[i] ? ramp((s.grid.siteValue?.[i] ?? 0) / 90, RAMPS.good) : -1)
+  },
+  {
     id: 'accessibility',
     label: 'Accessibilité',
     legend: { ramp: RAMPS.good, min: '30 min+', max: 'immédiate', note: 'Temps d\'accès depuis l\'autoroute' },

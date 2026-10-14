@@ -8,6 +8,23 @@ import { findAccess } from '../world/PlacementSystem.js';
 export const ZONE_KEYS = { 1: 'R', 2: 'R', 3: 'C', 4: 'O', 5: 'I', 6: 'I', 7: 'I' };
 const ZONE_CODES = [1, 2, 3, 4, 5, 6, 7];
 
+/** Critère d'implantation propre à chaque secteur (v0.6). */
+const SITE_LABELS = {
+  R: 'Valeur foncière',
+  C: 'Attractivité commerciale',
+  O: 'Attractivité tertiaire',
+  I: 'Attractivité industrielle',
+  IA: 'Attractivité agricole',
+  IX: 'Attractivité industrielle'
+};
+
+/** Valeur d'implantation d'une case pour un bâtiment : valeur foncière (logement) ou attractivité économique. */
+export function siteValueOf(g, i, def) {
+  if (!def.zoneCode || def.zoneCode <= 2) return g.landValue[i];
+  const v = g.siteValue?.[i];
+  return v === undefined ? g.landValue[i] : v;
+}
+
 /** Libellés des conditions d'évolution (affichés dans l'inspecteur). */
 const REQUIREMENT_LABELS = {
   power: 'Électricité',
@@ -34,9 +51,10 @@ export function growthChecks(state, b, def) {
   const sat = def.capacity.residents ? b.satisfaction : state.stats.satisfaction;
   const minSat = Math.max(def.capacity.residents ? 52 : 0, def.growth.minSatisfaction ?? 0);
   const era = state.progression?.era ?? 1;
+  const site = siteValueOf(g, i, def);
   const checks = [
     { key: 'occupancy', label: def.capacity.residents ? 'Logements occupés à 85 %' : 'Emplois pourvus à 85 %', ok: occupancy >= 0.85, detail: `${Math.round(occupancy * 100)} %` },
-    { key: 'landValue', label: `Valeur foncière ≥ ${def.growth.minLandValue}`, ok: g.landValue[i] >= def.growth.minLandValue, detail: `${Math.round(g.landValue[i])}` },
+    { key: 'landValue', label: `${SITE_LABELS[zoneKey === 'R' ? 'R' : def.zone] ?? 'Valeur foncière'} ≥ ${def.growth.minLandValue}`, ok: site >= def.growth.minLandValue, detail: `${Math.round(site)}` },
     { key: 'demand', label: 'Demande du secteur', ok: state.demand[zoneKey] > 5, detail: `${Math.round(state.demand[zoneKey])}` }
   ];
   if (minSat > 0) {
@@ -152,7 +170,7 @@ export class BuildingSystem {
         const k = state.rng.int(0, list.length - 1);
         const i = list[k];
         if (g.building[i]) continue;
-        const lvFactor = 0.55 + g.landValue[i] / 110;
+        const lvFactor = 0.55 + (code <= 2 ? g.landValue[i] : g.siteValue[i]) / 110;
         if (!state.rng.chance((demand / 100) * 0.9 * lvFactor * growth)) continue;
         const b = createBuilding(state, def, g.xOf(i), g.yOf(i), 0, 'growth');
         b.access = BuildingSystem.accessOf(state, b);

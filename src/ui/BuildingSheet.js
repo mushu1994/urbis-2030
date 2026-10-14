@@ -50,7 +50,7 @@ export function buildingSheetData(def, catalog) {
   if (cap.sewageTreatment) pos(`Traite ${num(cap.sewageTreatment)} u. d'eaux usées`);
   if (cap.compute) pos(`Fournit ${num(cap.compute)} unités de calcul aux technologies IA`);
   if (cap.service) {
-    pos(`${SERVICE_LABELS[cap.service.type] ?? cap.service.type} : rayon de ${num(cap.service.radius)} cases, efficacité ${Math.round(cap.service.strength * 100)} %`);
+    pos(`${SERVICE_LABELS[cap.service.type] ?? cap.service.type} : rayon de ${num(cap.service.radius)} cases, efficacité ${Math.round(cap.service.strength * 100)} %${cap.service.capacity ? `, pour ${num(cap.service.capacity)} habitants` : ''}`);
   }
   if (cap.transit) {
     const t = cap.transit;

@@ -6,9 +6,9 @@
       "id": "road_street",
       "name": "Rue",
       "category": "roads",
-      "cost": 40,
+      "cost": 60.0,
       "upkeep": 0.6,
-      "bridgeCost": 650,
+      "bridgeCost": 975.0,
       "bridgeUpkeep": 4,
       "capacity": 650,
       "speedKmh": 30,
@@ -26,9 +26,9 @@
       "id": "road_avenue",
       "name": "Avenue",
       "category": "roads",
-      "cost": 120,
+      "cost": 180.0,
       "upkeep": 1.6,
-      "bridgeCost": 1600,
+      "bridgeCost": 2400,
       "bridgeUpkeep": 10,
       "capacity": 1800,
       "speedKmh": 50,
@@ -50,7 +50,7 @@
       "id": "road_highway",
       "name": "Accès autoroutier",
       "category": "roads",
-      "cost": 0,
+      "cost": 0.0,
       "upkeep": 0,
       "capacity": 5000,
       "speedKmh": 90,
@@ -155,7 +155,7 @@
       },
       "growth": {
         "next": "res_low_2",
-        "minLandValue": 35,
+        "minLandValue": 30,
         "requires": [
           "power",
           "water"
@@ -193,7 +193,7 @@
       },
       "growth": {
         "next": "res_low_3",
-        "minLandValue": 55,
+        "minLandValue": 46,
         "requires": [
           "power",
           "water",
@@ -240,7 +240,7 @@
           "era2"
         ],
         "next": "res_low_4",
-        "minLandValue": 62,
+        "minLandValue": 55,
         "minSatisfaction": 60
       },
       "visual": {
@@ -275,7 +275,7 @@
       },
       "growth": {
         "next": "res_low_5",
-        "minLandValue": 72,
+        "minLandValue": 65,
         "minSatisfaction": 70,
         "requires": [
           "power",
@@ -359,7 +359,7 @@
       },
       "growth": {
         "next": "res_high_2",
-        "minLandValue": 40,
+        "minLandValue": 34,
         "requires": [
           "power",
           "water"
@@ -398,7 +398,7 @@
       },
       "growth": {
         "next": "res_high_3",
-        "minLandValue": 60,
+        "minLandValue": 46,
         "requires": [
           "power",
           "water",
@@ -447,7 +447,7 @@
           "era2"
         ],
         "next": "res_high_4",
-        "minLandValue": 66,
+        "minLandValue": 58,
         "minSatisfaction": 60
       },
       "visual": {
@@ -484,7 +484,7 @@
       },
       "growth": {
         "next": "res_high_5",
-        "minLandValue": 80,
+        "minLandValue": 70,
         "minSatisfaction": 70,
         "requires": [
           "power",
@@ -571,7 +571,7 @@
       },
       "growth": {
         "next": "com_2",
-        "minLandValue": 40,
+        "minLandValue": 30,
         "requires": [
           "power",
           "water"
@@ -611,7 +611,7 @@
       },
       "growth": {
         "next": "com_3",
-        "minLandValue": 60,
+        "minLandValue": 45,
         "requires": [
           "power",
           "water",
@@ -659,7 +659,7 @@
           "era2"
         ],
         "next": "com_4",
-        "minLandValue": 64,
+        "minLandValue": 55,
         "minSatisfaction": 56
       },
       "visual": {
@@ -696,7 +696,7 @@
       },
       "growth": {
         "next": "com_5",
-        "minLandValue": 76,
+        "minLandValue": 65,
         "minSatisfaction": 66,
         "requires": [
           "power",
@@ -779,7 +779,7 @@
       },
       "growth": {
         "next": "off_2",
-        "minLandValue": 45,
+        "minLandValue": 34,
         "requires": [
           "power",
           "water"
@@ -817,7 +817,7 @@
       },
       "growth": {
         "next": "off_3",
-        "minLandValue": 65,
+        "minLandValue": 48,
         "requires": [
           "power",
           "water",
@@ -864,7 +864,7 @@
           "era2"
         ],
         "next": "off_4",
-        "minLandValue": 68,
+        "minLandValue": 56,
         "minSatisfaction": 56
       },
       "visual": {
@@ -901,7 +901,7 @@
       },
       "growth": {
         "next": "off_5",
-        "minLandValue": 78,
+        "minLandValue": 66,
         "minSatisfaction": 66,
         "requires": [
           "power",
@@ -987,7 +987,7 @@
       },
       "growth": {
         "next": "ind_2",
-        "minLandValue": 15,
+        "minLandValue": 20,
         "requires": [
           "power"
         ]
@@ -1077,7 +1077,7 @@
           "era2"
         ],
         "next": "ind_4",
-        "minLandValue": 28,
+        "minLandValue": 32,
         "minSatisfaction": 50
       },
       "visual": {
@@ -1116,7 +1116,7 @@
       },
       "growth": {
         "next": "ind_5",
-        "minLandValue": 38,
+        "minLandValue": 40,
         "minSatisfaction": 58,
         "requires": [
           "power",
@@ -1205,7 +1205,7 @@
       },
       "growth": {
         "next": "agri_2",
-        "minLandValue": 0,
+        "minLandValue": 12,
         "requires": [
           "water"
         ]
@@ -1246,7 +1246,7 @@
       },
       "growth": {
         "next": "agri_3",
-        "minLandValue": 10,
+        "minLandValue": 20,
         "requires": [
           "power",
           "water"
@@ -1330,7 +1330,7 @@
       },
       "growth": {
         "next": "ext_2",
-        "minLandValue": 0,
+        "minLandValue": 12,
         "requires": [
           "power"
         ]
@@ -1371,7 +1371,7 @@
       },
       "growth": {
         "next": "ext_3",
-        "minLandValue": 5,
+        "minLandValue": 20,
         "requires": [
           "power",
           "water"
@@ -1437,7 +1437,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 55000,
+      "cost": 82500,
       "upkeep": 1800,
       "lifeYears": 40,
       "placement": {
@@ -1484,7 +1484,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 30000,
+      "cost": 45000,
       "upkeep": 300,
       "lifeYears": 25,
       "placement": {
@@ -1526,7 +1526,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 9000,
+      "cost": 13500,
       "upkeep": 150,
       "lifeYears": 25,
       "placement": {
@@ -1572,7 +1572,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 14000,
+      "cost": 21000,
       "upkeep": 200,
       "lifeYears": 15,
       "placement": {
@@ -1613,7 +1613,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 25,
+      "cost": 37.5,
       "upkeep": 0.3,
       "lifeYears": 40,
       "placement": {
@@ -1652,7 +1652,7 @@
         "h": 3
       },
       "rotatable": true,
-      "cost": 120000,
+      "cost": 180000,
       "upkeep": 2500,
       "lifeYears": 20,
       "placement": {
@@ -1704,7 +1704,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 6000,
+      "cost": 9000,
       "upkeep": 250,
       "lifeYears": 40,
       "placement": {
@@ -1745,7 +1745,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 9000,
+      "cost": 13500,
       "upkeep": 320,
       "lifeYears": 40,
       "placement": {
@@ -1784,7 +1784,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 25000,
+      "cost": 37500,
       "upkeep": 900,
       "lifeYears": 40,
       "placement": {
@@ -1828,7 +1828,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 1500,
+      "cost": 2200,
       "upkeep": 40,
       "lifeYears": 30,
       "placement": {
@@ -1864,7 +1864,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 8000,
+      "cost": 12000,
       "upkeep": 200,
       "lifeYears": 30,
       "placement": {
@@ -1900,7 +1900,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 14000,
+      "cost": 21000,
       "upkeep": 150,
       "lifeYears": 50,
       "placement": {
@@ -1940,7 +1940,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 30000,
+      "cost": 45000,
       "upkeep": 500,
       "lifeYears": 60,
       "placement": {
@@ -1989,7 +1989,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 22000,
+      "cost": 33000,
       "upkeep": 1100,
       "lifeYears": 40,
       "placement": {
@@ -2011,7 +2011,8 @@
         "service": {
           "type": "police",
           "radius": 14,
-          "strength": 1
+          "strength": 1,
+          "capacity": 9000
         }
       },
       "unlock": {
@@ -2036,7 +2037,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 22000,
+      "cost": 33000,
       "upkeep": 1000,
       "lifeYears": 40,
       "placement": {
@@ -2058,7 +2059,8 @@
         "service": {
           "type": "fire",
           "radius": 14,
-          "strength": 1
+          "strength": 1,
+          "capacity": 12000
         }
       },
       "unlock": {
@@ -2083,7 +2085,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 8000,
+      "cost": 12000,
       "upkeep": 400,
       "lifeYears": 40,
       "placement": {
@@ -2105,7 +2107,8 @@
         "service": {
           "type": "fire",
           "radius": 8,
-          "strength": 0.75
+          "strength": 0.75,
+          "capacity": 4000
         }
       },
       "unlock": {
@@ -2130,7 +2133,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 12000,
+      "cost": 18000,
       "upkeep": 600,
       "lifeYears": 40,
       "placement": {
@@ -2152,7 +2155,8 @@
         "service": {
           "type": "health",
           "radius": 9,
-          "strength": 0.7
+          "strength": 0.7,
+          "capacity": 4000
         }
       },
       "visual": {
@@ -2174,7 +2178,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 80000,
+      "cost": 120000,
       "upkeep": 3500,
       "lifeYears": 50,
       "placement": {
@@ -2196,7 +2200,8 @@
         "service": {
           "type": "health",
           "radius": 24,
-          "strength": 1
+          "strength": 1,
+          "capacity": 25000
         }
       },
       "unlock": {
@@ -2221,7 +2226,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 20000,
+      "cost": 30000,
       "upkeep": 900,
       "lifeYears": 50,
       "placement": {
@@ -2243,7 +2248,8 @@
         "service": {
           "type": "education",
           "radius": 11,
-          "strength": 0.7
+          "strength": 0.7,
+          "capacity": 5000
         }
       },
       "unlock": {
@@ -2268,7 +2274,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 120000,
+      "cost": 180000,
       "upkeep": 4000,
       "lifeYears": 60,
       "placement": {
@@ -2290,7 +2296,8 @@
         "service": {
           "type": "education",
           "radius": 30,
-          "strength": 1.2
+          "strength": 1.2,
+          "capacity": 22000
         }
       },
       "environment": {
@@ -2319,7 +2326,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 35000,
+      "cost": 52500,
       "upkeep": 600,
       "lifeYears": 30,
       "placement": {
@@ -2375,7 +2382,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 70000,
+      "cost": 105000,
       "upkeep": 900,
       "lifeYears": 25,
       "placement": {
@@ -2431,7 +2438,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 8000,
+      "cost": 12000,
       "upkeep": 250,
       "lifeYears": 20,
       "placement": {
@@ -2482,7 +2489,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 15000,
+      "cost": 22500,
       "upkeep": 400,
       "lifeYears": 12,
       "placement": {
@@ -2533,7 +2540,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 25000,
+      "cost": 37500,
       "upkeep": 700,
       "lifeYears": 10,
       "placement": {
@@ -2585,7 +2592,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 70000,
+      "cost": 105000,
       "upkeep": 700,
       "lifeYears": 60,
       "placement": {
@@ -2632,7 +2639,7 @@
         "h": 4
       },
       "rotatable": false,
-      "cost": 320000,
+      "cost": 480000,
       "upkeep": 6500,
       "lifeYears": 50,
       "placement": {
@@ -2693,7 +2700,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 650000,
+      "cost": 975000,
       "upkeep": 9000,
       "lifeYears": 60,
       "placement": {
@@ -2741,7 +2748,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 80000,
+      "cost": 120000,
       "upkeep": 1800,
       "lifeYears": 40,
       "placement": {
@@ -2778,6 +2785,102 @@
       "description": "Transforme l'eau de mer en eau potable en grande quantité. Très énergivore. Au bord de l'eau."
     },
     {
+      "id": "water_plant",
+      "name": "Usine d'eau potable",
+      "category": "water",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 300000,
+      "upkeep": 3600,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "autoLevel": true,
+        "requiresRoadAccess": true,
+        "adjacentToTerrain": "water"
+      },
+      "networks": {
+        "power": 130
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.5,
+        "waterOutput": 12000
+      },
+      "environment": {
+        "noise": 5,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 6000
+      },
+      "visual": {
+        "height": 10,
+        "color": "#dfe9ee",
+        "roof": "basins",
+        "roofColor": "#4f8fc0",
+        "detail": "basins"
+      },
+      "description": "Grande usine de captage et de potabilisation : 12 000 m³ par jour, autant qu'une quinzaine de stations de pompage, sur une seule emprise au bord de l'eau."
+    },
+    {
+      "id": "sewage_big",
+      "name": "Station d'épuration métropolitaine",
+      "category": "water",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 3
+      },
+      "rotatable": false,
+      "cost": 270000,
+      "upkeep": 3000,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "autoLevel": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 160
+      },
+      "capacity": {
+        "jobs": 28,
+        "qualification": 0.5,
+        "sewageTreatment": 14000
+      },
+      "environment": {
+        "pollution": 8,
+        "noise": 5,
+        "radius": 5
+      },
+      "unlock": {
+        "population": 6000
+      },
+      "visual": {
+        "height": 8,
+        "color": "#c8d3c1",
+        "roof": "basins",
+        "roofColor": "#5f8fa6",
+        "detail": "basins"
+      },
+      "description": "Traite les eaux usées de toute une métropole (14 000 m³ par jour, l'équivalent de huit stations d'épuration)."
+    },
+    {
       "id": "waste_depot",
       "name": "Centre de collecte",
       "category": "waste",
@@ -2787,7 +2890,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 15000,
+      "cost": 22500,
       "upkeep": 600,
       "lifeYears": 30,
       "placement": {
@@ -2833,7 +2936,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 12000,
+      "cost": 18000,
       "upkeep": 400,
       "lifeYears": 25,
       "placement": {
@@ -2882,7 +2985,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 60000,
+      "cost": 90000,
       "upkeep": 1500,
       "lifeYears": 30,
       "placement": {
@@ -2938,7 +3041,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 45000,
+      "cost": 67500,
       "upkeep": 1300,
       "lifeYears": 30,
       "placement": {
@@ -2991,7 +3094,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 55000,
+      "cost": 82500,
       "upkeep": 1100,
       "lifeYears": 30,
       "placement": {
@@ -3043,7 +3146,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 250000,
+      "cost": 375000,
       "upkeep": 4000,
       "lifeYears": 30,
       "placement": {
@@ -3098,7 +3201,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 7000,
+      "cost": 10500,
       "upkeep": 400,
       "lifeYears": 40,
       "placement": {
@@ -3120,7 +3223,8 @@
         "service": {
           "type": "police",
           "radius": 8,
-          "strength": 0.7
+          "strength": 0.7,
+          "capacity": 3500
         }
       },
       "unlock": {
@@ -3145,7 +3249,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 9000,
+      "cost": 13500,
       "upkeep": 350,
       "lifeYears": 50,
       "placement": {
@@ -3167,7 +3271,8 @@
         "service": {
           "type": "education",
           "radius": 8,
-          "strength": 0.45
+          "strength": 0.45,
+          "capacity": 3000
         }
       },
       "environment": {
@@ -3193,7 +3298,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 45000,
+      "cost": 67500,
       "upkeep": 1800,
       "lifeYears": 50,
       "placement": {
@@ -3215,7 +3320,8 @@
         "service": {
           "type": "education",
           "radius": 18,
-          "strength": 0.9
+          "strength": 0.9,
+          "capacity": 9000
         }
       },
       "unlock": {
@@ -3240,7 +3346,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 60000,
+      "cost": 90000,
       "upkeep": 1800,
       "lifeYears": 30,
       "placement": {
@@ -3262,7 +3368,8 @@
         "service": {
           "type": "fire",
           "radius": 26,
-          "strength": 1.1
+          "strength": 1.1,
+          "capacity": 25000
         }
       },
       "environment": {
@@ -3291,7 +3398,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 140000,
+      "cost": 210000,
       "upkeep": 3500,
       "lifeYears": 40,
       "placement": {
@@ -3313,7 +3420,8 @@
         "service": {
           "type": "health",
           "radius": 32,
-          "strength": 1.1
+          "strength": 1.1,
+          "capacity": 40000
         }
       },
       "environment": {
@@ -3342,7 +3450,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 2500,
+      "cost": 3800,
       "upkeep": 50,
       "lifeYears": 40,
       "placement": {
@@ -3378,7 +3486,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 2000,
+      "cost": 3000,
       "upkeep": 40,
       "lifeYears": 20,
       "placement": {
@@ -3414,7 +3522,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 9000,
+      "cost": 13500,
       "upkeep": 250,
       "lifeYears": 30,
       "placement": {
@@ -3451,7 +3559,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 4000,
+      "cost": 6000,
       "upkeep": 20,
       "lifeYears": 80,
       "placement": {
@@ -3486,7 +3594,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 20000,
+      "cost": 30000,
       "upkeep": 400,
       "lifeYears": 40,
       "placement": {
@@ -3534,7 +3642,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 25000,
+      "cost": 37500,
       "upkeep": 200,
       "lifeYears": 80,
       "placement": {
@@ -3584,7 +3692,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 50000,
+      "cost": 75000,
       "upkeep": 1200,
       "lifeYears": 60,
       "placement": {
@@ -3642,7 +3750,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 70000,
+      "cost": 105000,
       "upkeep": 1800,
       "lifeYears": 50,
       "placement": {
@@ -3701,7 +3809,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 150000,
+      "cost": 225000,
       "upkeep": 3000,
       "lifeYears": 50,
       "placement": {
@@ -3765,7 +3873,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 18000,
+      "cost": 27000,
       "upkeep": 300,
       "lifeYears": 30,
       "placement": {
@@ -3808,7 +3916,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 60000,
+      "cost": 90000,
       "upkeep": 900,
       "lifeYears": 30,
       "placement": {
@@ -3857,7 +3965,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 600,
+      "cost": 900.0,
       "upkeep": 20,
       "lifeYears": 20,
       "placement": {
@@ -3898,7 +4006,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 18000,
+      "cost": 27000,
       "upkeep": 900,
       "lifeYears": 30,
       "placement": {
@@ -3949,7 +4057,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 45000,
+      "cost": 67500,
       "upkeep": 1100,
       "lifeYears": 60,
       "placement": {
@@ -4000,7 +4108,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 70000,
+      "cost": 105000,
       "upkeep": 1600,
       "lifeYears": 60,
       "placement": {
@@ -4053,7 +4161,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 400000,
+      "cost": 600000,
       "upkeep": 6000,
       "lifeYears": 40,
       "placement": {
@@ -4104,7 +4212,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 160000,
+      "cost": 240000,
       "upkeep": 3000,
       "lifeYears": 50,
       "placement": {
@@ -4164,7 +4272,7 @@
         "h": 4
       },
       "rotatable": false,
-      "cost": 400000,
+      "cost": 600000,
       "upkeep": 7000,
       "lifeYears": 50,
       "placement": {

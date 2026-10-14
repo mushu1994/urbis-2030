@@ -162,6 +162,11 @@ export class InspectorPanel {
     if (cap.sewageTreatment) prod.push(row('Capacité d\'épuration', `${cap.sewageTreatment} u.`));
     if (cap.compute) prod.push(row('Puissance de calcul', `${cap.compute} u.`));
     if (cap.service) prod.push(row('Rayon d\'action', `${cap.service.radius} cases`));
+    if (cap.service?.capacity) {
+      const load = b.serviceLoad ?? 0;
+      prod.push(row('Habitants servis / capacité', `${Math.round(load * 100)} % de ${formatNumber(cap.service.capacity)}`, load > 1 ? 'neg' : ''));
+      if (load > 1) prod.push(h('p.hint', `Saturé : efficacité réduite à ${Math.round(Math.max(0.35, 1 / load) * 100)} %. Construisez un équipement supplémentaire à proximité.`));
+    }
     if (cap.logistics) {
       prod.push(row('Colis traités / jour', formatNumber(b.logisticsHandled ?? 0, 0)));
       if (cap.logistics.capacity) prod.push(row('Taux d\'utilisation', `${Math.round((b.utilization ?? 0) * 100)} %`), row('Rayon de desserte', `${cap.logistics.radius} cases`));

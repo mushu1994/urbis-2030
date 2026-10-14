@@ -44,7 +44,12 @@ export const LAYER_SPECS = {
   wasteCover: { type: Float32Array },
   transitBus: { type: Float32Array },
   transitMetro: { type: Float32Array },
-  transitRail: { type: Float32Array }
+  transitRail: { type: Float32Array },
+  /**
+   * Attractivité d'implantation (v0.6) : valeur foncière pour le logement, attractivité commerciale,
+   * tertiaire ou industrielle pour les autres zones (0..100). Sert aux paliers d'évolution.
+   */
+  siteValue: { type: Float32Array }
 };
 
 /** Distance maximale (en cases) entre une parcelle zonée et une route pour pouvoir se développer. */

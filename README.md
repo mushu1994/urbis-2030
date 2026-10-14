@@ -6,6 +6,28 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.6 (analyse d'une partie de 27 ans, 88 000 habitants)
+
+### Lot A — équilibrage
+
+- **Attractivité par secteur** : le logement garde la valeur foncière ; le commerce, les bureaux et l'industrie ont
+  désormais leur propre critère pour monter de niveau. *Commerce* : clientèle à pied, passage, transports, une part de
+  valeur foncière. *Bureaux* : éducation, transports en commun, accès, une part de valeur foncière. *Industrie,
+  agriculture, extraction* : accès à l'autoroute, plateformes logistiques, gares et port, main-d'œuvre — la pollution
+  d'une usine ne bloque plus son propre essor. Nouvelle couche de données « Attractivité des zones ». Sur la partie
+  analysée, les bâtiments bloqués par ce critère passent de 96 % à 15 %.
+- **Valeur foncière résidentielle rééquilibrée** (services et métro comptent plus, bruit et pollution un peu moins) et
+  paliers abaissés d'environ 10 points.
+- **Construction 50 % plus chère** (équipements, routes, ponts) ; démolition d'un équipement à 25 % de son prix
+  (10 % auparavant), d'un bâtiment de zone à 150 € par case et par niveau, d'une route à 10 € la case.
+- **Eau en grosses installations** : usine d'eau potable (3 × 3, 12 000 m³/j, au bord de l'eau, dès 6 000 habitants)
+  et station d'épuration métropolitaine (3 × 3, 14 000 m³/j). Améliorations de fin de partie (ère 2), chères :
+  captage profond et ultrafiltration (production × 2), bioréacteurs à membranes (épuration × 2).
+- **Services à capacité** : chaque école, commissariat, caserne ou hôpital sert un nombre d'habitants donné (école
+  5 000, lycée 9 000, université 22 000, commissariat 9 000, caserne 12 000, hôpital 25 000…). Au-delà, son efficacité
+  baisse (jusqu'à 35 %) ; l'inspecteur affiche la fréquentation.
+- **Défi « ville symbiotique »** : l'objectif financier porte sur le résultat moyen des 12 derniers mois.
+
 ## Nouveautés de la version 0.5 (retours de jeu)
 
 - **Déchets simplifiés** : le *Grand centre de tri et de recyclage* (3 × 3, 45 000 €, dès 400 habitants) a désormais
@@ -509,10 +531,10 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 248 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 253 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
-catalogue des 89 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
+catalogue des 91 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
 accumulation d'objets), invariants sur une ville simulée plusieurs années ; météo (saisons, déterminisme, effets),
 crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, désactivation), scénarios (départ,
 victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements) ;

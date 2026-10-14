@@ -27,7 +27,7 @@ describe('Construction et zonage', () => {
     const before = s.state.economy.treasury;
     const pv = s.preview({ type: 'road', roadId: 'road_street', from: { x, y }, to: { x: x + 4, y } });
     expect(pv.ok).toBe(true);
-    expect(pv.cost).toBe(5 * 4000);
+    expect(pv.cost).toBe(5 * 6000);
     expect(s.state.grid.road[s.state.grid.idx(x, y)]).toBe(0);
     expect(s.state.economy.treasury).toBe(before);
   });
@@ -38,7 +38,7 @@ describe('Construction et zonage', () => {
     const before = s.state.economy.treasury;
     const r = s.execute({ type: 'road', roadId: 'road_street', from: { x, y }, to: { x: x + 4, y } });
     expect(r.ok).toBe(true);
-    expect(s.state.economy.treasury).toBe(before - 20000);
+    expect(s.state.economy.treasury).toBe(before - 30000);
     expect(s.state.economy.ledger.at(-1).kind).toBe('capex');
     // re-tracer la même route n'a aucun effet
     expect(s.preview({ type: 'road', roadId: 'road_street', from: { x, y }, to: { x: x + 4, y } }).reasons).toContain('nothing');
@@ -113,7 +113,7 @@ describe('Construction et zonage', () => {
     expect(d.ok).toBe(true);
     expect(s.state.buildings.has(id)).toBe(false);
     for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) expect(s.state.grid.building[s.state.grid.idx(x + 2 + dx, y + 1 + dy)]).toBe(0);
-    expect(s.state.economy.current.writeOffs).toBe(3_000_000);
+    expect(s.state.economy.current.writeOffs).toBe(4_500_000);
   });
 
   it('zone uniquement les cases éligibles et facture à la case', () => {

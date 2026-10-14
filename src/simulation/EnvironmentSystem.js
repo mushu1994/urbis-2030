@@ -71,13 +71,33 @@ export class EnvironmentSystem {
   updateCoverage(state) {
     const g = state.grid;
     for (const layer of Object.values(COVER_LAYER)) g[layer].fill(0);
+    // v0.6 : chaque équipement a une capacité (habitants servis). Au-delà, son efficacité baisse :
+    // une seule école ne peut plus couvrir toute une métropole.
+    const homes = [];
+    for (const b of state.buildings.values()) if (b.residents > 0) homes.push(b);
     for (const b of state.buildings.values()) {
       const def = this.catalog.buildingFor(b);
       const svc = def.capacity.service;
       if (!svc || b.abandoned) continue;
       const staffing = def.capacity.jobs ? Math.min(1, 0.25 + (b.jobsFilled / def.capacity.jobs) * 0.75) : 1;
       const power = b.powered ? 1 : 0.35;
-      EnvironmentSystem.splat(g, g[COVER_LAYER[svc.type]], b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, svc.strength * staffing * power * 1.4, svc.radius);
+      const cx = b.x + (b.w - 1) / 2;
+      const cy = b.y + (b.h - 1) / 2;
+      let load = 1;
+      if (svc.capacity) {
+        const base = this.catalog.building(b.defId).capacity.service;
+        const cap = svc.capacity * (svc.strength / (base.strength || 1));
+        const r2 = svc.radius * svc.radius;
+        let served = 0;
+        for (const h of homes) {
+          const dx = h.x - cx;
+          const dy = h.y - cy;
+          if (dx * dx + dy * dy <= r2) served += h.residents;
+        }
+        b.serviceLoad = Math.round((served / cap) * 100) / 100;
+        load = served > cap ? Math.max(0.35, cap / served) : 1;
+      }
+      EnvironmentSystem.splat(g, g[COVER_LAYER[svc.type]], cx, cy, svc.strength * staffing * power * 1.4 * load, svc.radius);
     }
     for (const layer of Object.values(COVER_LAYER)) {
       const f = g[layer];
@@ -95,6 +115,47 @@ export class EnvironmentSystem {
     for (let i = 0; i < g.size; i++) f[i] = Math.min(1, f[i]);
     this.waterProximity = f;
     return f;
+  }
+
+  /**
+   * Attractivité d'implantation par secteur (v0.6). Le logement garde la valeur foncière ; le commerce, les bureaux
+   * et l'industrie ont leurs propres critères, pour que la pollution d'une usine ne bloque plus son propre essor :
+   * - commerce : clientèle à pied (habitants alentour), passage (accès, transports), une part de valeur foncière ;
+   * - bureaux : actifs qualifiés (éducation), transports en commun, accès, une part de valeur foncière ;
+   * - industrie, agriculture, extraction : accès routier à l'autoroute, plateformes logistiques, port et gares,
+   *   main-d'œuvre ; la pollution compte peu.
+   */
+  #siteValue(state) {
+    const g = state.grid;
+    const cat = this.catalog;
+    const customers = new Float32Array(g.size);
+    const logistics = new Float32Array(g.size);
+    for (const b of state.buildings.values()) {
+      const def = cat.buildingFor(b);
+      const cx = b.x + (b.w - 1) / 2;
+      const cy = b.y + (b.h - 1) / 2;
+      if (b.residents > 0) EnvironmentSystem.splat(g, customers, Math.round(cx), Math.round(cy), b.residents, 5);
+      const lg = def.capacity.logistics || def.capacity.transit?.mode === 'rail' || def.id === 'seaport' || def.id === 'airport';
+      if (lg && !b.abandoned) EnvironmentSystem.splat(g, logistics, Math.round(cx), Math.round(cy), def.id === 'seaport' ? 30 : 18, 14);
+    }
+    for (let i = 0; i < g.size; i++) {
+      const z = g.zone[i];
+      if (!z || g.terrain[i] === TERRAIN.WATER) {
+        g.siteValue[i] = g.landValue[i];
+        continue;
+      }
+      const lv = g.landValue[i];
+      const r = g.nearestRoad[i];
+      const acc = r >= 0 ? g.accessibility[r] : 999;
+      const access = acc > 0 && acc < 900 ? Math.max(0, 16 - acc * 0.35) : 0;
+      const transit = Math.max(g.transitBus[i] * 0.6, g.transitMetro[i], g.transitRail[i]);
+      let v;
+      if (z <= 2) v = lv;
+      else if (z === 3) v = 12 + lv * 0.45 + Math.min(32, customers[i] / 25) + access * 0.8 + transit * 8;
+      else if (z === 4) v = 10 + lv * 0.5 + g.coverEducation[i] * 16 + transit * 12 + access;
+      else v = 14 + access * 1.2 + Math.min(22, logistics[i]) + lv * 0.25 + Math.min(10, customers[i] / 60);
+      g.siteValue[i] = Math.max(0, Math.min(100, v));
+    }
   }
 
   update(state) {
@@ -168,18 +229,18 @@ export class EnvironmentSystem {
       let lv = 22;
       lv += wp[i] * 14;
       lv += Math.min(18, g.green[i] * 0.45);
-      lv += g.coverPolice[i] * 5 + g.coverFire[i] * 3 + g.coverHealth[i] * 5 + g.coverEducation[i] * 6 + g.coverAdmin[i] * 4;
+      lv += g.coverPolice[i] * 6 + g.coverFire[i] * 4 + g.coverHealth[i] * 6 + g.coverEducation[i] * 8 + g.coverAdmin[i] * 4;
       const r = g.nearestRoad[i];
       if (r >= 0) {
         const acc = g.accessibility[r];
         lv += acc > 0 && acc < 900 ? Math.max(0, 12 - acc * 0.4) : 0;
       }
-      lv -= Math.min(30, g.pollution[i] * 0.7);
-      lv -= Math.min(15, g.noise[i] * 0.35);
+      lv -= Math.min(28, g.pollution[i] * 0.6);
+      lv -= Math.min(12, g.noise[i] * 0.25);
       lv -= Math.min(10, Math.max(0, g.heat[i] - 25) * 0.3);
       lv += g.altitude[i] >= 2 ? 3 : 0;
       lv -= g.garbage[i] * 10;
-      lv += Math.max(g.transitMetro[i], g.transitRail[i]) * 4;
+      lv += Math.max(g.transitMetro[i], g.transitRail[i]) * 8;
       lv += mods['landValue.add'] ?? 0;
       g.landValue[i] = lv;
     }
@@ -199,6 +260,7 @@ export class EnvironmentSystem {
         nBuilt++;
       }
     }
+    this.#siteValue(state);
     state.stats.avgLandValue = nLV ? sumLV / nLV : 0;
     state.stats.avgPollution = nBuilt ? sumPol / nBuilt : 0;
     state.stats.avgHeat = nBuilt ? sumHeat / nBuilt : 0;

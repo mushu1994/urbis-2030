@@ -28,6 +28,15 @@ export const METRICS = {
     read: (s) => EconomySystem.summarize(s.economy.periods.at(-1))?.netResult ?? 0,
     fmt: euros
   },
+  /** v0.6 : résultat lissé sur 12 mois (un mois exceptionnel ne fait plus perdre un défi de 15 ans). */
+  netResult12: {
+    label: 'Résultat mensuel moyen sur 12 mois',
+    read: (s) => {
+      const ps = s.economy.periods.slice(-12);
+      return ps.length ? ps.reduce((a, p) => a + EconomySystem.summarize(p).netResult, 0) / ps.length : 0;
+    },
+    fmt: euros
+  },
   pollution: { label: 'Pollution moyenne', read: (s) => s.stats.avgPollution ?? 0, fmt: (v) => v.toFixed(1).replace('.', ',') },
   unemployment: { label: 'Chômage', read: (s) => s.stats.unemploymentRate ?? 0, fmt: pct },
   congestion: { label: 'Congestion moyenne', read: (s) => s.traffic.stats?.avgCongestion ?? 0, fmt: pct },
