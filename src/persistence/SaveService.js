@@ -9,6 +9,7 @@ import { formatDate } from '../simulation/config.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
 import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
 import { defaultPolitics, LEGACY_FIRST_ELECTION_MONTHS } from '../simulation/PoliticsSystem.js';
+import { defaultResources } from '../simulation/ResourceSystem.js';
 
 export const TRAFFIC_ARRAYS = { acc: Float32Array, cost: Float64Array, jobW: Float64Array, shopW: Float64Array };
 
@@ -50,6 +51,7 @@ export function serializeState(state) {
     options: structuredClone(state.options ?? null),
     land: structuredClone(state.land ?? null),
     politics: structuredClone(state.politics ?? null),
+    resources: structuredClone(state.resources ?? null),
     modifiers: { ...mods, disabledModes: { ...(disabledModes ?? {}) }, compute: compute ? { ...compute } : undefined },
     dirty: { ...state.dirty }
   };
@@ -105,6 +107,7 @@ export function deserializeState(raw) {
   s.scenario = data.scenario ?? null;
   s.options = data.options ?? defaultOptions('off');
   s.land = data.land ?? defaultLand(grid.width, grid.height);
+  s.resources = data.resources ?? defaultResources();
   if (data.politics) s.politics = data.politics;
   else {
     // Partie d'avant la v0.7 : la vie politique démarre, premier scrutin dans 3 ans

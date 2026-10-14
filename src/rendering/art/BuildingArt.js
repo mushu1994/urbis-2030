@@ -377,6 +377,7 @@ function box(g, x, y, w, h, alt, H, base, roof, gable = false) {
 /** Ferme : sillons cultivés, grange rouge et (niveau 2) silo. */
 function drawFarm(g, b, alt, v, base, roof) {
   const ab = !!b.abandoned;
+  if (v.detail === 'pasture') return drawPasture(g, b, alt, v, base, roof, ab);
   const soil = ab ? 0x8a7d6a : 0x8b6b42;
   const crop = ab ? 0x9a9a7a : [0x7fb24a, 0xc9b94a, 0x5f9d3f][b.id % 3];
   const field = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.04);
@@ -397,6 +398,36 @@ function drawFarm(g, b, alt, v, base, roof) {
     g.rect(p.x, p.y - 20, 3.5, 20).fill(ab ? 0x777777 : 0xa9adb3);
     g.ellipse(p.x, p.y - 20, 3.5, 1.8).fill(ab ? 0x6b6b6b : 0x8d949c);
   }
+}
+
+/** Ferme d'élevage (v0.7) : prairie clôturée, troupeau, étable et abreuvoir. */
+function drawPasture(g, b, alt, v, base, roof, ab) {
+  const field = footprintCorners(b.x, b.y, b.w, b.h, alt, 0.04);
+  g.poly(flat(field.T, field.R, field.B, field.L)).fill(ab ? 0x8f9a7a : 0x7fae4e);
+  // Clôture
+  const fence = ab ? 0x8a8378 : 0xe9e1cf;
+  for (const [a, c] of [[field.L, field.B], [field.B, field.R]]) {
+    g.moveTo(a.x, a.y - 2).lineTo(c.x, c.y - 2).stroke({ width: 0.8, color: fence });
+    for (let k = 0; k <= 6; k++) {
+      const q = lerp(a, c, k / 6);
+      g.moveTo(q.x, q.y).lineTo(q.x, q.y - 3).stroke({ width: 0.8, color: fence });
+    }
+  }
+  // Étable au fond de la parcelle
+  box(g, b.x + 0.08, b.y + 0.08, 0.4, 0.34, alt, v.height, base, roof, true);
+  // Troupeau (vaches pie) — positions stables par bâtiment
+  if (!ab) {
+    for (let k = 0; k < 5; k++) {
+      const u = 0.45 + 0.5 * ((b.id * 37 + k * 53) % 100) / 100;
+      const w = 0.15 + 0.75 * ((b.id * 61 + k * 29) % 100) / 100;
+      const p = gridToWorld(b.x + u, b.y + w, alt);
+      g.ellipse(p.x, p.y - 1.6, 2.4, 1.3).fill(k % 2 ? 0xf4f1ea : 0x3b3530);
+      g.circle(p.x + 2.2, p.y - 2.2, 0.9).fill(k % 2 ? 0x3b3530 : 0xf4f1ea);
+    }
+  }
+  // Abreuvoir
+  const t = gridToWorld(b.x + 0.8, b.y + 0.3, alt);
+  g.rect(t.x - 3, t.y - 1.5, 6, 1.5).fill(ab ? 0x777777 : 0x6aa7c9);
 }
 
 /** Ferme verticale : serres vitrées étagées. */
@@ -436,6 +467,23 @@ function drawDerrick(g, b, alt, v, base, roof) {
   const c = gridToWorld(b.x + 0.45, b.y + 0.6, alt);
   const steel = ab ? 0x6b6b6b : base;
   const accent = ab ? 0x8f8f8f : hex(v.roofColor);
+  if (v.detail === 'gaswell') {
+    // Puits de gaz (v0.7) : tête de puits, sphère de stockage et torchère
+    const sph = gridToWorld(b.x + 0.3, b.y + 0.35, alt);
+    g.circle(sph.x, sph.y - 7, 6).fill(ab ? 0x8a8a8a : 0xe6e8ea);
+    g.circle(sph.x + 1.8, sph.y - 6, 4).fill({ color: 0x000000, alpha: 0.08 });
+    g.rect(sph.x - 4, sph.y - 2, 1.2, 2).fill(steel);
+    g.rect(sph.x + 3, sph.y - 2, 1.2, 2).fill(steel);
+    g.rect(c.x - 2, c.y - 6, 4, 6).fill(steel);
+    g.rect(c.x - 4, c.y - 7, 8, 1.6).fill(accent);
+    const f = gridToWorld(b.x + 0.8, b.y + 0.75, alt);
+    g.rect(f.x - 0.8, f.y - v.height, 1.6, v.height).fill(steel);
+    if (!ab) {
+      g.ellipse(f.x, f.y - v.height - 3, 2.2, 3.4).fill(0xf08a24);
+      g.ellipse(f.x, f.y - v.height - 2.4, 1.1, 1.8).fill(0xffe08a);
+    }
+    return;
+  }
   if (v.detail === 'rig') {
     // Tour de forage automatisée : treillis et balise
     const H = v.height;

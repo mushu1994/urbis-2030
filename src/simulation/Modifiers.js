@@ -159,6 +159,10 @@ export function computeModifiers(state, catalog) {
     applyEffects(mods, def.cityEffects, staffing * powered);
   }
 
+  // Circuits courts (v0.7) : une ville qui se nourrit de ses propres fermes est plus satisfaite
+  const foodSelf = state.resources?.stats?.foodSelf ?? 0;
+  if (foodSelf >= 0.5) applyEffects(mods, [{ key: 'satisfaction.all', op: 'add', value: Math.min(1.5, (foodSelf - 0.5) * 3) }]);
+
   // Opinion (v0.7) : une ville où le maire est populaire attire ; une ville en défiance fait fuir.
   const pol = state.politics;
   if (pol?.enabled && (state.stats?.population ?? 0) > 0) {

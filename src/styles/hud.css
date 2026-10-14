@@ -491,6 +491,11 @@ button.hud-group:hover {
   max-width: 340px;
 }
 
+/* Liste des couches dépliée : au-dessus de la carte des objectifs (v0.7, liste plus longue), sous les menus d'outils */
+#overlays:has(.ov-list) {
+  z-index: 5;
+}
+
 .ov-bar {
   display: flex;
   gap: 2px;
@@ -519,7 +524,7 @@ button.hud-group:hover {
 }
 
 .ov-list {
-  max-height: min(70vh, 640px);
+  max-height: min(calc(100vh - 200px), 640px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }

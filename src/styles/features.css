@@ -995,6 +995,27 @@ details.factors summary {
   text-align: left;
 }
 
+.jobs-alert {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--bad);
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.jobs-alert header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+}
+
+.jobs-alert p {
+  margin: 0;
+}
+
 .jobs-alert .btn.small,
 .demand-advice .btn.small {
   margin-left: 8px;

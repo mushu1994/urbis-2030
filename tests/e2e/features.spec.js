@@ -152,7 +152,7 @@ test('aucun bouton principal n\'est décoratif', async ({ page }) => {
   await newTown(page);
   const panelTitles = {
     finance: 'Finances municipales', city: 'Tableau de bord de la ville', ai: 'IA urbaine et politiques publiques',
-    saves: 'Sauvegardes', settings: 'Paramètres', help: 'Aide'
+    saves: 'Sauvegardes', settings: 'Paramètres', help: 'Aide', politics: 'Mairie et élections'
   };
   // Boutons de catégories : ouvrent un menu d'outils ou activent un outil
   const cats = await page.locator('#toolbar .toolbar-group').first().locator('.tool-btn').all();

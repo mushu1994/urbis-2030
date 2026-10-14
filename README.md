@@ -6,6 +6,90 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.7 — la politique au cœur de la ville
+
+> **Anciennes parties.** La vie politique démarre au chargement : premières élections municipales dans 3 ans
+> (6 ans pour une nouvelle partie), y compris dans les scénarios. Les élections se désactivent dans les paramètres
+> de la partie ou dans « Mairie et élections ». Les extensions de territoire d'une ancienne partie gardent
+> l'ancien raccord du relief ; le monde complet sans couture concerne les parties fondées en v0.7.
+
+### Mairie et élections (touche E, ou la popularité dans la barre du haut)
+
+- **Popularité** (0–100) recalculée chaque mois à partir de facteurs lisibles : satisfaction des habitants, emploi
+  (chômage, et postes vacants au-delà de 15 %), fiscalité (niveau et hausses des 12 derniers mois), note financière
+  et trésorerie, couverture des services publics, cadre de vie (congestion, pollution), pénurie de logements,
+  gestion des crises (en cours, bien gérées, ignorées), promesses tenues ou rompues, dynamique de la population,
+  inaugurations d'équipements, revirements (politique abrogée moins d'un an après son adoption), effets des
+  politiques, état de grâce de début de mandat et usure du pouvoir. Elle a de l'inertie : 30 % de l'écart par mois.
+  Sondage mensuel (marge d'erreur de ±3 points) et courbe d'évolution.
+- **Mandat de 6 ans.** Six mois avant le scrutin, la **campagne** s'ouvre : la liste adverse (fictive) attaque les
+  deux plus grandes faiblesses du bilan. Le maire choisit jusqu'à **3 engagements chiffrés**, un par thème, construits
+  sur la situation réelle de la ville (chômage, population, taxe d'habitation, couverture écoles, santé et police,
+  pollution, transports en commun, congestion, note financière, satisfaction, emplois non pourvus), chacun en
+  version modeste (+1 point de voix) ou ambitieuse (+2,2 points), multipliés par la **crédibilité** (promesses
+  tenues lors des mandats précédents). Un **thème de campagne** rapporte jusqu'à 3 points s'il met en avant un point
+  fort du bilan… et en coûte autant s'il s'agit d'un point faible.
+- **Score au scrutin** : 50 + 0,85 × (popularité − 50) + programme + thème − avantage de l'adversaire (jusqu'à 3
+  points) ± aléa de campagne (2,5 points). Résultats par **quartier** (parcelles habitées de 32 × 32 cases, selon la
+  satisfaction et les services locaux) et participation. La soirée électorale met la partie en pause.
+- **Après l'élection** : les engagements deviennent des **promesses suivies** (progression, échéance). Une promesse
+  « à atteindre » est tenue dès que l'objectif est atteint (+2,5 points de popularité) ; une promesse « à maintenir »
+  (ne pas augmenter la taxe d'habitation, garder le chômage bas) est rompue au premier écart (−4 points).
+- **Défaite** : continuer la partie sans élections, ou revenir au menu. **Crise de majorité** : sous 18 % de
+  popularité pendant 9 mois, élections anticipées dans 6 mois.
+- **Effets en jeu** : une popularité élevée attire des habitants (demande résidentielle +3), une défiance les fait
+  fuir (jusqu'à −4) et déclenche manifestations et émeutes.
+
+Équilibrage vérifié sur la partie de 88 000 habitants : sans intervention, avec un programme modeste, la ville
+congestionnée (91 %) perd de peu (48 % des voix) ; trois engagements ambitieux font basculer le scrutin (≈ 51 %),
+à condition de les tenir ensuite, et désengorger les axes peut rapporter jusqu'à 14 points de popularité.
+
+### Crises sociales, ruines et reconstruction (lot E)
+
+- **Manifestation** (popularité sous 45 %, hausses d'impôts, chômage) : cortège devant la mairie, circulation et
+  commerce perturbés. *Recevoir une délégation* y met fin en deux jours ; *laisser passer* peut dégénérer en émeute,
+  surtout si la police est peu présente.
+- **Émeute** (manifestation ignorée, popularité sous 25 % et chômage élevé) : des commerces et bureaux sont saccagés
+  chaque jour autour du foyer. La **couverture police** réduit sa durée et ses dégâts ; *déployer les forces de
+  l'ordre* la contient en un à deux jours.
+- **Épidémie** (ville dense, couverture santé faible ou hôpitaux saturés, déchets, eaux usées non traitées, hiver) :
+  absentéisme (moins d'actifs), commerces désertés, satisfaction en baisse. La vaccination divise durée et effets.
+- **Ruines** : incendies, crues majeures et émeutes laissent des ruines (gravats, ruban de sécurité). Les
+  propriétaires rebâtissent leurs immeubles au bout de 30 jours (chantier visible). Un **équipement public** détruit
+  ne rend plus aucun service tant que la ville ne finance pas sa reconstruction (35 % de son coût, inspecteur).
+
+### Ressources (lot F, Finances → Ressources)
+
+- Quatre ressources, en tonnes par mois : **cultures**, **élevage** (viande, lait), **pétrole**, **gaz**.
+- Production : fermes maraîchères, nouvelles **fermes d'élevage**, exploitations et fermes verticales (zone
+  agricole) ; puits de pétrole, nouveaux **puits de gaz naturel** et forages automatisés (zone d'extraction) ;
+  méthaniseur (biogaz). Proportionnelle au personnel en poste.
+- Besoins : alimentation des habitants, pétrole de l'industrie, chauffage au gaz (×1,8 en hiver), centrales à gaz.
+- Le déficit est importé (surcoût logistique payé par la ville) ; l'excédent rapporte des redevances, à rendement
+  décroissant au-delà de ce que le marché régional absorbe. Cours mensuels (75 à 135 %) et chocs pétroliers ou
+  gaziers (+60 % pendant six mois). Une ville qui se nourrit elle-même gagne jusqu'à +1,5 de satisfaction.
+
+### Emplois non pourvus
+
+- **Besoins de la ville → Emploi** : emplois, actifs, postes vacants et chômeurs par niveau de qualification,
+  navetteurs, quartiers isolés, et le **diagnostic** (inadéquation des qualifications, pénurie de main-d'œuvre,
+  quartiers non reliés). Une alerte apparaît dans la vue d'ensemble dès que les postes vacants dépassent 3 %.
+- Trois **politiques d'emploi** (adoptables d'un clic depuis le diagnostic) : **Formation professionnelle**
+  (35 % des chômeurs requalifiés vers les postes vacants plus qualifiés, +8 points de qualification),
+  **Accueil des navetteurs régionaux** (part des postes vacants pourvus par la région : 25 % → 60 %, trafic +6 %),
+  **Logement des actifs** (demande résidentielle +10, construction +20 %).
+- Les politiques ont désormais une part de coût par habitant, et certaines pèsent sur la popularité.
+
+### Couches par service public et territoire
+
+- Couches **Éducation**, **Sécurité (police)**, **Secours (pompiers)**, **Santé**, **Administration** et
+  **Saturation des équipements**, chacune dans sa teinte : couverture en dégradé, équipements du service en couleur
+  pleine (rouge s'ils sont saturés), logements hors couverture en gris foncé. Choisir une école, un commissariat ou
+  un hôpital affiche automatiquement la couche du service. La liste des couches est regroupée par thème.
+- **Territoire sans couture** : le monde complet (256 × 256 cases) est généré dès la fondation ; la carte de départ en
+  est découpée et chaque parcelle achetée en recopie les cases — relief, rivières, lacs et forêts se raccordent
+  exactement. L'autoroute prolongée franchit l'eau par un pont au lieu de combler le plan d'eau.
+
 ## Nouveautés de la version 0.6 (analyse d'une partie de 27 ans, 88 000 habitants)
 
 > **Anciennes parties.** Une partie bloquée par la valeur foncière repart d'un coup : sur la partie analysée
@@ -222,7 +306,7 @@ coûts que le joueur) puis le simule pendant un an.
 | Suppr | Outil de démolition (menu Démolir et déplacer) |
 | Ctrl+Z | Annuler la dernière action (30 jours de jeu, si rien n'a changé depuis) |
 | Espace, 1, 2, 3 | Pause, vitesse normale (un mois par minute), rapide (×3), très rapide (×9) |
-| B, C, I | Finances, tableau de bord de la ville, IA et politiques |
+| B, C, I, T, E | Finances, tableau de bord de la ville, IA et politiques, territoire, mairie et élections |
 | L | Couche de données suivante |
 | X | Rendre translucides les bâtiments devant le curseur |
 | Ctrl+S | Sauvegarde rapide |

@@ -7,6 +7,7 @@ import { toCents } from '../util/money.js';
 import { defaultWeather } from '../simulation/WeatherSystem.js';
 import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
 import { defaultPolitics } from '../simulation/PoliticsSystem.js';
+import { defaultResources } from '../simulation/ResourceSystem.js';
 
 /**
  * @typedef {Object} Building
@@ -105,6 +106,8 @@ export class GameState {
     this.land = defaultLand(grid.width, grid.height);
     /** Vie politique : popularité, mandat, campagne, élections (v0.7). */
     this.politics = defaultPolitics(this);
+    /** Ressources : cours, chocs et bilan du dernier mois (v0.7). */
+    this.resources = defaultResources();
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};

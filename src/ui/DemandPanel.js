@@ -106,7 +106,7 @@ export class DemandPanel {
       ? h('ul.demand-advice', d.advice.map((a) => h('li', a.text, a.policy ? h('button.btn.small.primary', { type: 'button', on: { click: () => adopt(a.policy) } }, 'Adopter') : null)))
       : null;
     if (compact) {
-      return h('section.demand-card.jobs-alert', { class: 'down' },
+      return h('section.jobs-alert', { class: 'down' },
         h('header', h('strong', '⚠ Emplois non pourvus'), h('span.demand-value', `${formatNumber(d.vacant)} postes · ${pct(d.share)}`)),
         h('p.demand-main', d.causes[0]),
         advice);

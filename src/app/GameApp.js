@@ -19,6 +19,7 @@ import { TechPanel } from '../ui/TechPanel.js';
 import { CityPanel } from '../ui/CityPanel.js';
 import { OverlayManager } from '../ui/OverlayManager.js';
 import { PoliticsPanel, electionDialog } from '../ui/PoliticsPanel.js';
+import { defaultPolitics } from '../simulation/PoliticsSystem.js';
 import { DemandPanel } from '../ui/DemandPanel.js';
 import { Notifications } from '../ui/Notifications.js';
 import { HelpPanel, SavesPanel, SettingsPanel, SoundPanel, StartMenu } from '../ui/MenuPanels.js';
@@ -343,7 +344,6 @@ export class GameApp {
     }
     const session = GameSession.newGame({ catalog: this.catalog, seed, width: size, height: size, name, bus, mapParams: challenge ? null : mapParams });
     session.state.options.disasters = disasters;
-    session.sim.politics.setEnabled(session.state, elections !== 'off');
     if (challenge) {
       this.#busy(`Préparation du scénario « ${challenge.name} »…`);
       await new Promise((r) => setTimeout(r, 30));
@@ -357,6 +357,9 @@ export class GameApp {
       session.run(240);
       session.history.clear();
     }
+    // Le mandat du joueur commence maintenant (après la préparation d'un bourg ou d'un scénario)
+    session.state.options.elections = elections === 'off' ? 'off' : 'on';
+    session.state.politics = defaultPolitics(session.state, { enabled: elections !== 'off' });
     // Pas de catastrophe aléatoire dans les premiers mois d'une partie (bourg existant ou scénario)
     session.state.crises.graceUntil = session.state.time.tick + (challenge?.risks ? 75 : mode === 'empty' ? 360 : 240);
     await this.startSession(session);

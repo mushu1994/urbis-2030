@@ -217,7 +217,9 @@ function normalizeBuilding(raw, zoneById) {
       service: cap.service ?? null,
       logistics: cap.logistics ?? null,
       waste: cap.waste ?? null,
-      transit: cap.transit ?? null
+      transit: cap.transit ?? null,
+      /** Ressources produites à plein effectif (tonnes par mois, v0.7). */
+      resources: cap.resources ?? null
     },
     cityEffects: raw.cityEffects ?? [],
     risk: raw.risk ?? null,

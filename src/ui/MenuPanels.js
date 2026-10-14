@@ -79,7 +79,11 @@ export class HelpPanel {
       h('li', h('strong', 'Franchissez l\'eau. '), 'Une rue tracée en ligne droite d\'une rive à l\'autre devient un pont.'),
       h('li', h('strong', 'Faites entrer la ville dans le futur. '), 'Technologies (I), puis ères « Ville autonome » et « Ville symbiotique » (C → Progression) : elles débloquent des bâtiments et des niveaux d\'habitation futuristes.'),
       h('li', h('strong', 'Suivez la météo. '), 'Pluie, neige, brouillard, orages et fortes chaleurs changent la consommation d\'énergie, la circulation, la production solaire et le coût du déneigement (icône météo en haut).'),
-      h('li', h('strong', 'Préparez-vous aux crises. '), 'Inondations, canicules, incendies, pannes géantes, grèves et cyberattaques : chacune se prévient (casernes, parcs en bord de rivière, réserve électrique, politiques) et se gère par une décision chiffrée. Tableau de bord (C) → Risques et météo.')
+      h('li', h('strong', 'Préparez-vous aux crises. '), 'Inondations, canicules, incendies, pannes géantes, grèves et cyberattaques : chacune se prévient (casernes, parcs en bord de rivière, réserve électrique, politiques) et se gère par une décision chiffrée. Tableau de bord (C) → Risques et météo.'),
+      h('li', h('strong', 'Soignez votre popularité. '), 'Mairie et élections (E) : la popularité découle de la satisfaction, de l\'emploi, des impôts, des finances, des services et de votre gestion des crises. Tous les six ans, les municipales : six mois avant, composez un programme de trois engagements chiffrés et choisissez un thème de campagne — puis tenez vos promesses. Une popularité basse déclenche manifestations et émeutes (la police les contient).'),
+      h('li', h('strong', 'Pourvoyez les emplois. '), 'Besoins de la ville → Emploi : qualification, pénurie d\'actifs ou quartiers isolés. Politiques « Formation professionnelle », « Accueil des navetteurs régionaux » et « Logement des actifs ».'),
+      h('li', h('strong', 'Exploitez vos ressources. '), 'Fermes et élevages (zone agricole), puits de pétrole et de gaz (zone d\'extraction) couvrent les besoins de la ville ; l\'excédent est vendu, le déficit importé (Finances → Ressources).'),
+      h('li', h('strong', 'Reconstruisez. '), 'Incendies, crues et émeutes laissent des ruines : les propriétaires rebâtissent leurs immeubles, mais un équipement public détruit attend que vous financiez sa reconstruction (inspecteur du bâtiment).')
     ));
   }
 }

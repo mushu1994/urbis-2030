@@ -1,3 +1,4 @@
+import { RESOURCES, RESOURCE_KEYS, NEEDS_PER_1000 } from '../simulation/ResourceSystem.js';
 import { h } from './dom.js';
 import { lineChart } from './charts.js';
 import { formatMoney, formatNumber } from '../util/money.js';
@@ -30,6 +31,7 @@ export class FinancePanel {
       { id: 'cash', label: 'Trésorerie' },
       { id: 'taxes', label: 'Fiscalité et tarifs' },
       { id: 'trade', label: 'Échanges régionaux' },
+      { id: 'resources', label: 'Ressources' },
       { id: 'loans', label: 'Emprunts' },
       { id: 'ledger', label: 'Journal' }
     ];
@@ -48,6 +50,8 @@ export class FinancePanel {
         return this.#loans(session, rerender);
       case 'trade':
         return this.#trade(session, rerender);
+      case 'resources':
+        return this.#resources(session);
       case 'ledger':
         return this.#ledger(s);
       default:
@@ -325,6 +329,42 @@ export class FinancePanel {
       h('tbody', tx.map((t) => h('tr', h('td', String(t.id)), h('td', `${monthLabel(Math.floor(t.tick / 30))} j${(t.tick % 30) + 1}`), h('td', KIND[t.kind] ?? t.kind), h('td', t.label), money(t.amount, t.amount < 0 ? 'neg' : 'pos'))))
     ), h('p.hint', `${formatNumber(s.economy.ledger.length)} opérations conservées.`));
   }
+
+  /** Ressources (v0.7) : production locale, besoins, solde, cours et effet sur le budget. */
+  #resources(session) {
+    const s = session.state;
+    const live = session.sim.resources.balance(s);
+    const st = s.resources?.stats;
+    const rows = st?.rows ?? live.rows;
+    const shock = s.resources?.shock;
+    const t = (v) => `${formatNumber(Math.round(v))} t`;
+    return [
+      h('div.kpis',
+        h('div.kpi', h('span', 'Redevances du dernier mois'), h('strong', { class: 'pos' }, st ? formatMoney(st.exportCents) : '—'), h('small', 'ventes des excédents à la région')),
+        h('div.kpi', h('span', 'Surcoût des importations'), h('strong', { class: st?.importCents ? 'neg' : '' }, st ? formatMoney(st.importCents) : '—'), h('small', 'déficits couverts par la région')),
+        h('div.kpi', h('span', 'Autonomie alimentaire'), h('strong', st ? `${Math.round((st.foodSelf ?? 0) * 100)} %` : '—'), h('small', 'circuits courts : satisfaction + au-delà de 50 %'))),
+      shock ? h('p.demand-warn', `⛽ Choc ${shock.resource === 'oil' ? 'pétrolier' : 'gazier'} en cours : cours ×${String(shock.mult).replace('.', ',')}.`) : null,
+      h('table.fin',
+        h('thead', h('tr', h('th', 'Ressource'), h('th.num', 'Production'), h('th.num', 'Besoins'), h('th.num', 'Solde'), h('th.num', 'Cours'), h('th.num', 'Effet sur le budget'))),
+        h('tbody', RESOURCE_KEYS.map((k) => {
+          const r = rows[k];
+          const lr = live.rows[k];
+          return h('tr',
+            h('td', RESOURCES[k].label, h('small', ` · ${lr.producers} site${lr.producers > 1 ? 's' : ''}`)),
+            h('td.num', t(lr.production)),
+            h('td.num', t(lr.need)),
+            h('td.num', { class: lr.balance < 0 ? 'neg' : 'pos' }, `${lr.balance >= 0 ? '+' : '−'}${t(Math.abs(lr.balance))}`),
+            h('td.num', `${Math.round(r.price * 100)} %`),
+            h('td.num', { class: r.importCents ? 'neg' : r.exportCents ? 'pos' : '' }, r.importCents ? `−${formatMoney(r.importCents)}` : r.exportCents ? `+${formatMoney(r.exportCents)}` : '—'));
+        }))),
+      h('ul.demand-advice',
+        h('li', 'Cultures et élevage : zones agricoles (fermes maraîchères, d\'élevage, exploitations, fermes verticales). Elles nourrissent la ville ; l\'excédent est vendu.'),
+        h('li', 'Pétrole et gaz : zones d\'extraction sur la roche (puits de pétrole, de gaz, forages automatisés). Le méthaniseur produit aussi du biogaz à partir des déchets.'),
+        h('li', `Besoins : ${NEEDS_PER_1000.grain} t de cultures, ${NEEDS_PER_1000.livestock} t d'élevage, ${NEEDS_PER_1000.oil} t de pétrole et ${NEEDS_PER_1000.gas} t de gaz (chauffage, ×1,8 en hiver) par millier d'habitants et par mois, plus le pétrole de l'industrie (${live.detail.industryJobs} emplois) et le gaz des centrales (${formatNumber(live.detail.gasPower)} u. produites).`),
+        h('li', 'Les déficits sont importés : la ville paie un surcoût logistique. Les excédents rapportent des redevances, avec des rendements décroissants au-delà de ce que le marché régional absorbe.')),
+      h('p.hint', 'Les cours varient chaque mois (de 75 % à 135 % du cours de référence) ; un choc pétrolier ou gazier peut survenir. Valeurs en tonnes par mois.')
+    ];
+  }
 }
 
 /** Classe de couleur d'une note : bonne (A…), moyenne (BBB/BB), risquée (B et moins). */
@@ -345,4 +385,5 @@ function creditDetails(rating) {
     ),
     h('p.hint', `Échelle : ${SCALE}. Une bonne note abaisse le taux des nouveaux emprunts ; au-delà de 12 ans de capacité de désendettement, la note se dégrade fortement.`)
   );
+
 }

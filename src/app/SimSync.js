@@ -18,7 +18,7 @@ export const TRAFFIC_ARRAYS = ['acc', 'cost', 'jobW', 'shopW'];
 export const SCALAR_KEYS = [
   'time', 'revisions', 'nextBuildingId', 'entries', 'tech', 'policies', 'events', 'demand', 'stats',
   'logistics', 'transit', 'waste', 'progression', 'trade', 'utilities', 'modifiers', 'weather', 'crises',
-  'scenario', 'options', 'land', 'politics', 'dirty'
+  'scenario', 'options', 'land', 'politics', 'resources', 'dirty'
 ];
 
 /** Événements jamais relayés (trop fréquents ou sans intérêt pour l'interface). */

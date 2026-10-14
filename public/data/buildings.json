@@ -1512,7 +1512,10 @@
       "capacity": {
         "jobs": 7,
         "qualification": 0.15,
-        "goods": 12
+        "goods": 12,
+        "resources": {
+          "grain": 30
+        }
       },
       "environment": {
         "pollution": 1,
@@ -1536,6 +1539,51 @@
       }
     },
     {
+      "id": "agri_pasture",
+      "name": "Ferme d'élevage",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IA",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 4,
+        "water": 16
+      },
+      "capacity": {
+        "jobs": 7,
+        "qualification": 0.15,
+        "goods": 12,
+        "resources": {
+          "livestock": 40
+        }
+      },
+      "environment": {
+        "pollution": 3,
+        "noise": 1,
+        "heat": 0,
+        "radius": 3
+      },
+      "growth": {
+        "next": "agri_2",
+        "minLandValue": 12,
+        "requires": [
+          "water"
+        ]
+      },
+      "visual": {
+        "height": 8,
+        "color": "#c9a46a",
+        "roof": "farm",
+        "roofColor": "#7a4b2a",
+        "detail": "pasture"
+      },
+      "weight": 7
+    },
+    {
       "id": "agri_2",
       "name": "Exploitation agricole",
       "category": "industry",
@@ -1553,7 +1601,11 @@
       "capacity": {
         "jobs": 14,
         "qualification": 0.2,
-        "goods": 26
+        "goods": 26,
+        "resources": {
+          "grain": 45,
+          "livestock": 20
+        }
       },
       "environment": {
         "pollution": 3,
@@ -1595,7 +1647,10 @@
       "capacity": {
         "jobs": 24,
         "qualification": 0.45,
-        "goods": 46
+        "goods": 46,
+        "resources": {
+          "grain": 110
+        }
       },
       "environment": {
         "pollution": 1,
@@ -1637,7 +1692,10 @@
       "capacity": {
         "jobs": 10,
         "qualification": 0.2,
-        "goods": 26
+        "goods": 26,
+        "resources": {
+          "oil": 55
+        }
       },
       "environment": {
         "pollution": 18,
@@ -1659,6 +1717,51 @@
         "roofColor": "#e0a030",
         "detail": "pumpjack"
       }
+    },
+    {
+      "id": "ext_gas",
+      "name": "Puits de gaz naturel",
+      "category": "industry",
+      "kind": "growable",
+      "zone": "IX",
+      "level": 1,
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "networks": {
+        "power": 14,
+        "water": 4
+      },
+      "capacity": {
+        "jobs": 10,
+        "qualification": 0.2,
+        "goods": 26,
+        "resources": {
+          "gas": 70
+        }
+      },
+      "environment": {
+        "pollution": 18,
+        "noise": 10,
+        "heat": 2,
+        "radius": 5
+      },
+      "growth": {
+        "next": null,
+        "minLandValue": 12,
+        "requires": [
+          "power"
+        ]
+      },
+      "visual": {
+        "height": 18,
+        "color": "#3f3f46",
+        "roof": "derrick",
+        "roofColor": "#d24a32",
+        "detail": "gaswell"
+      },
+      "weight": 6
     },
     {
       "id": "ext_2",
@@ -1720,7 +1823,11 @@
       "capacity": {
         "jobs": 16,
         "qualification": 0.55,
-        "goods": 78
+        "goods": 78,
+        "resources": {
+          "oil": 80,
+          "gas": 60
+        }
       },
       "environment": {
         "pollution": 12,
@@ -3560,6 +3667,9 @@
           "process": 250,
           "kind": "biogas",
           "powerPerUnit": 0.25
+        },
+        "resources": {
+          "gas": 35
         }
       },
       "environment": {

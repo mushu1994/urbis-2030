@@ -6,6 +6,7 @@ import { ConstructionService } from '../systems/ConstructionService.js';
 import { ZoningService } from '../systems/ZoningService.js';
 import { getTile } from '../world/Tile.js';
 import { toCents } from '../util/money.js';
+import { ruinBuilding } from '../simulation/CrisisSystem.js';
 
 /**
  * Une partie en cours : état + simulation + services, sans aucune dépendance graphique.
@@ -200,6 +201,14 @@ export class GameSession {
           const cents = toCents(Number(cmd.euros) || 0);
           s.economy.treasury += cents;
           s.economy.opening += cents;
+        } else if (cmd.op === 'election') {
+          // Avance le prochain scrutin (tests et démonstrations)
+          s.politics.nextElection = Math.floor(s.time.tick / 30) + Math.max(1, Number(cmd.months) || 1);
+        } else if (cmd.op === 'ruin') {
+          const b = s.buildings.get(cmd.buildingId);
+          if (!b) return { ok: false, reasons: ['invalid'] };
+          ruinBuilding(s, b, this.catalog.buildingFor(b), cmd.cause ?? 'fire');
+          this.bus.emit('building:changed', { building: b });
         } else return { ok: false, reasons: ['invalid'] };
         r = { ok: true };
         break;

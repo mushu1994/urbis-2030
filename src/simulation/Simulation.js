@@ -17,6 +17,7 @@ import { WeatherSystem } from './WeatherSystem.js';
 import { CrisisSystem } from './CrisisSystem.js';
 import { ScenarioSystem } from './ScenarioSystem.js';
 import { PoliticsSystem } from './PoliticsSystem.js';
+import { ResourceSystem } from './ResourceSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -49,6 +50,7 @@ export class Simulation {
     this.crises = new CrisisSystem({ catalog, economy: this.economy, bus });
     this.scenario = new ScenarioSystem({ bus });
     this.politics = new PoliticsSystem({ catalog, economy: this.economy, bus });
+    this.resources = new ResourceSystem({ catalog, economy: this.economy, bus });
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -130,6 +132,8 @@ export class Simulation {
   #monthEnd(state) {
     // Les modificateurs sont recalculés avant la clôture (saisonnalité, incidents en cours).
     this.ai.refreshModifiers(state);
+    // Ressources (v0.7) : importations et exportations du mois, avant la clôture des comptes
+    this.#time('resources', () => this.resources.monthly(state));
     const period = this.economy.closeMonth(state);
     const sum = EconomySystem.summarize(period);
     const s = state.stats;

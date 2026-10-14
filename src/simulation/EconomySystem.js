@@ -42,7 +42,9 @@ export const CATEGORY_LABELS = {
   interest: 'Charges d\'intérêts',
   loan: 'Emprunts',
   principal: 'Remboursement du capital',
-  crisis: 'Crises et catastrophes'
+  crisis: 'Crises et catastrophes',
+  resourcesExport: 'Redevances sur les ressources exportées',
+  resourcesImport: 'Importations de ressources'
 };
 
 /** Rattachement des catégories de bâtiments aux catégories comptables et aux modificateurs d'entretien. */
