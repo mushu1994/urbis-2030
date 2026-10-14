@@ -76,7 +76,7 @@ test('fonder une ville, la relier, l\'alimenter, la zoner et la voir grandir', a
   expect(spot).not.toBeNull();
   const p = await tileToPage(page, spot.x, spot.y);
   await page.mouse.move(p.x, p.y);
-  await expect(page.locator('#cursor-tip')).toContainText('55');
+  await expect(page.locator('#cursor-tip')).toContainText('82');
   await page.mouse.down();
   await page.mouse.up();
   await expect.poll(() => page.evaluate(() => [...window.__urbis.session.state.buildings.values()].some((b) => b.defId === 'power_gas'))).toBe(true);

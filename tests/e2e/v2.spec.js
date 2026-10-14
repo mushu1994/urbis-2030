@@ -39,7 +39,11 @@ test('scénario depuis l\'accueil, crise déclenchée et gérée, météo, son, 
   await expect(crisis.getByRole('button', { name: /Appeler les renforts/ })).toBeDisabled();
   await crisis.getByRole('button', { name: /Laisser agir les pompiers/ }).click();
   await expect(page.locator('.crisis-pill')).toContainText('Laisser agir les pompiers');
-  await page.evaluate(() => window.__urbis.session.run(40));
+  // Le feu s'éteint d'autant plus vite que la couverture des pompiers est bonne : on avance jusqu'à extinction
+  await expect.poll(async () => {
+    await page.evaluate(() => window.__urbis.session.run(20));
+    return page.evaluate(() => window.__urbis.session.state.crises.active.length);
+  }, { timeout: 180_000 }).toBe(0);
   await expect(page.locator('#crisis')).toBeHidden();
   const history = await page.evaluate(() => window.__urbis.session.state.crises.history.map((c) => c.kind));
   expect(history).toContain('fire');

@@ -16,6 +16,8 @@ async function place(page, defId) {
     const s = app.session;
     // Déblocage par la commande de débogage (la simulation peut tourner dans un Web Worker)
     s.execute({ type: 'debug', op: 'unlock', population: 5000 });
+    // v0.6 : constructions 50 % plus chères, le bourg de départ n'a plus de quoi tout payer
+    if (s.state.economy.treasury < 50_000_000) s.execute({ type: 'debug', op: 'treasury', euros: 1_000_000 });
     for (let y = 6; y < s.state.grid.height - 6; y++) {
       for (let x = 6; x < s.state.grid.width - 6; x++) {
         const r = s.execute({ type: 'building', defId, x, y });
@@ -39,8 +41,8 @@ test('fiches du menu, améliorations, échanges régionaux, train et notificatio
   await expect(page.locator('.flyout-sheet')).toContainText('Construction');
   await expect(page.locator('.flyout-sheet .sheet-up')).toContainText('amélioration');
   // un bâtiment encore verrouillé peut être consulté via le bouton « i »
-  await page.getByRole('button', { name: 'Fiche : Hôpital' }).click();
-  await expect(page.locator('.flyout-sheet h4')).toHaveText('Hôpital');
+  await page.getByRole('button', { name: 'Fiche : Caserne à drones' }).click();
+  await expect(page.locator('.flyout-sheet h4')).toHaveText('Caserne à drones');
   await page.keyboard.press('Escape');
 
   // 2. Amélioration d'un équipement depuis l'inspecteur

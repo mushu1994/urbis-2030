@@ -8,6 +8,10 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
 
 ## Nouveautés de la version 0.6 (analyse d'une partie de 27 ans, 88 000 habitants)
 
+> **Anciennes parties.** Une partie bloquée par la valeur foncière repart d'un coup : sur la partie analysée
+> (88 700 habitants), la population atteint environ 139 000 habitants en six mois de jeu, et une quarantaine
+> d'écoles, commissariats et casernes deviennent saturés. Il faut alors compléter les services.
+
 ### Lot D — transports
 
 - **Grand boulevard** (dès 3 000 habitants) : 2 × 3 voies et large terre-plein planté, 3 200 véhicules par jour.
@@ -585,7 +589,7 @@ victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique
 v0.4 : démolition des routes seules, dézonage d'une parcelle bâtie et annulation, déplacement d'un équipement (coût,
 annulation), terrassement (élever, abaisser, aplanir, planter, défricher), gisements et filières agricole et
 d'extraction, note de la dette et emprunt maximal.
-`npm run test:e2e` : 10 parcours Playwright — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+`npm run test:e2e` : 10 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
