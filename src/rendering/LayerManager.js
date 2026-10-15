@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { gridToWorld, HEIGHT_STEP } from './IsometricProjection.js';
+import { screenCorners, heightStep, depthOf } from './IsometricProjection.js';
 
 export const CHUNK = 16;
 
@@ -59,7 +59,9 @@ export class ChunkedLayer {
     // Ordre de dessin : diagonales croissantes (ordre du peintre)
     const order = [];
     for (let cy = 0; cy < this.ch; cy++) for (let cx = 0; cx < this.cw; cx++) order.push([cx, cy]);
-    order.sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[0] - b[0]);
+    // Profondeur d'un tronçon dans l'orientation courante (centre du tronçon)
+    const cd = ([cx, cy]) => depthOf(Math.min(width - 1, cx * CHUNK + CHUNK / 2), Math.min(height - 1, cy * CHUNK + CHUNK / 2));
+    order.sort((a, b) => cd(a) - cd(b) || a[0] - b[0] || a[1] - b[1]);
     for (const [cx, cy] of order) {
       const g = new Graphics();
       g.label = `chunk-${cx}-${cy}`;
@@ -67,11 +69,9 @@ export class ChunkedLayer {
       const y0 = cy * CHUNK;
       const x1 = Math.min(width, x0 + CHUNK);
       const y1 = Math.min(height, y0 + CHUNK);
-      const top = gridToWorld(x0, y0, 4);
-      const right = gridToWorld(x1, y0, 0);
-      const bottom = gridToWorld(x1, y1, 0);
-      const left = gridToWorld(x0, y1, 0);
-      g.__bounds = { x0: left.x, x1: right.x, y0: top.y - 20, y1: bottom.y + 4 * HEIGHT_STEP + 8 };
+      const c = screenCorners(x0, y0, x1 - x0, y1 - y0, 0);
+      const hs = heightStep();
+      g.__bounds = { x0: c.L.x, x1: c.R.x, y0: c.T.y - 4 * hs - 20, y1: c.B.y + 4 * hs + 8 };
       g.__range = { x0, y0, x1, y1 };
       this.chunks[cy * this.cw + cx] = g;
       parent.addChild(g);
@@ -83,9 +83,11 @@ export class ChunkedLayer {
     const cx = Math.floor(x / CHUNK);
     const cy = Math.floor(y / CHUNK);
     if (cx >= 0 && cy >= 0 && cx < this.cw && cy < this.ch) this.dirty.add(cy * this.cw + cx);
-    // Les falaises débordent sur le tronçon voisin : on le redessine aussi en bordure.
+    // Les falaises débordent sur le tronçon voisin (de n'importe quel côté selon l'orientation) : on le redessine
     if (x % CHUNK === 0 && cx > 0) this.dirty.add(cy * this.cw + cx - 1);
     if (y % CHUNK === 0 && cy > 0) this.dirty.add((cy - 1) * this.cw + cx);
+    if (x % CHUNK === CHUNK - 1 && cx + 1 < this.cw) this.dirty.add(cy * this.cw + cx + 1);
+    if (y % CHUNK === CHUNK - 1 && cy + 1 < this.ch) this.dirty.add((cy + 1) * this.cw + cx);
   }
 
   markAll() {

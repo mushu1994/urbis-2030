@@ -6,7 +6,7 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
-## Nouveautés de la version 0.9 — conseiller circulation, guide du maire, vue gyroscopique
+## Nouveautés de la version 0.9 — conseiller circulation, guide du maire, navigation
 
 ### Conseiller « Circulation et pollution » (touche P, ou tableau de bord → Mobilité)
 
@@ -35,15 +35,19 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
 - Chapitres lus cochés (mémorisés dans le navigateur), navigation précédent / suivant ; lisible hors partie depuis
   l'écran d'accueil. Une notification le signale au premier lancement.
 
-### Vue gyroscopique (téléphone et tablette)
+### Navigation : rotation de la carte et vue de dessus
 
-- Bouton boussole dans la barre du haut : incliner l'appareil fait glisser la ville, comme une maquette qu'on penche.
-- La position au moment de l'activation sert de repos (zone morte de 3°, vitesse progressive jusqu'à 25°) ;
-  « Recentrer » reprend la position actuelle, « Arrêter » coupe la vue.
-- Portrait et paysage pris en compte ; la vue s'interrompt pendant un geste au doigt et quand un panneau est ouvert,
-  puis se recale sans à-coup.
-- iPhone et iPad : l'autorisation « Mouvement et orientation » est demandée au premier appui.
-- Paramètres : sensibilité (douce, normale, rapide) et sens inversé.
+- **Boussole** en bas à droite de la carte (sur téléphone : colonne sur le bord droit) : ⟲ et ⟳ font tourner la carte
+  d'un quart de tour, pour voir derrière les immeubles et sous un autre angle ; l'aiguille indique le nord de la carte,
+  un clic dessus revient à l'orientation d'origine.
+- **Vue de dessus** (bouton ou touche V) : la ville en plan, vue du ciel — toits à la couleur des bâtiments avec une
+  ombre portée selon la hauteur, houppiers des arbres, relief en dégradé et courbes de niveau, chantiers et ruines
+  signalés. Pratique pour tracer un réseau régulier ou lire une couche de données. Elle se combine avec la rotation.
+- Raccourcis : virgule (tourner à gauche), point-virgule ou point (tourner à droite), V (vue de dessus). Au doigt :
+  **torsion à deux doigts** pour tourner la carte.
+- La case au centre de l'écran reste au centre ; construction, sélection, tracés et couches fonctionnent dans toutes
+  les orientations (pointage, ordre d'affichage, falaises et faces visibles recalculés). Orientation et vue sont
+  mémorisées dans le navigateur.
 
 ## Nouveautés de la version 0.8 — lignes de transport, quartiers, dette et marché régional
 
@@ -407,6 +411,7 @@ coûts que le joueur) puis le simule pendant un an.
 | Espace, 1, 2, 3 | Pause, vitesse normale (un mois par minute), rapide (×3), très rapide (×9) |
 | B, C, I, T, E | Finances, tableau de bord de la ville, IA et politiques, territoire, mairie et élections |
 | K, P, G | Lignes de bus et de tramway, conseiller circulation et pollution, guide du maire |
+| Virgule, point-virgule, V | Tourner la carte à gauche, à droite ; vue de dessus |
 | L | Couche de données suivante |
 | X | Rendre translucides les bâtiments devant le curseur |
 | Ctrl+S | Sauvegarde rapide |
@@ -422,6 +427,7 @@ Toutes ces fonctions sont aussi accessibles à la souris.
 | Geste | Action |
 | --- | --- |
 | Pincer | Zoomer / dézoomer |
+| Tourner deux doigts | Faire pivoter la carte d'un quart de tour |
 | Glisser à deux doigts | Déplacer la carte, quel que soit l'outil (annule un tracé en cours) |
 | Glisser à un doigt | Outil Sélection : déplacer la carte ; route ou zone : tracer |
 | Toucher un emplacement, puis « Valider » | Poser ou déplacer un bâtiment (l'aperçu montre le coût ; toucher ailleurs le déplace) |
@@ -777,8 +783,9 @@ coût mensuel), tramway (rails payants, dépôt, autoroute interdite, rue démol
 fiscalité par quartier (recettes, satisfaction, implantation), profils d'emprunt et remboursement anticipé, marché
 régional (saisons, événements, déterminisme, contrats), sauvegarde des lignes et anciennes parties ; v0.9 :
 points noirs, part de pollution due au trafic, conseils classés et actions valides, chapitres du guide et cibles de
-« Montre-moi », vitesse et orientation de la vue gyroscopique.
-`npm run test:e2e` : 14 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+« Montre-moi », projection dans les quatre orientations et en vue de dessus (pointage inversible, ordre
+d'affichage, faces visibles).
+`npm run test:e2e` : 15 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -787,7 +794,8 @@ et débogage depuis l'interface ; aucun bouton principal décoratif ; pas de dup
 mémoire ; iPhone (gestes, pose validée par bouton, mode immersif) ; v0.8 : ligne de bus tracée à l'outil et validée,
 ligne de tramway, panneau des lignes (flotte), écart de taux d'un quartier, emprunt in fine et échéancier, contrat à
 prix fixe, couche des quartiers, sauvegarde ; v0.9 : guide depuis l'accueil et en partie (« Montre-moi »),
-conseiller (politique adoptée, point noir localisé), vue gyroscopique au téléphone (inclinaison, recentrage, arrêt).
+conseiller (politique adoptée, point noir localisé), navigation (quatre orientations, centre conservé, route posée à
+la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, boussole au téléphone).
 
 ## Performances mesurées
 

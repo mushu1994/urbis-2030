@@ -1,4 +1,4 @@
-import { gridToWorld } from '../IsometricProjection.js';
+import { gridToWorld, screenCorners, VIEW } from '../IsometricProjection.js';
 import { hex, shade, desaturate } from './color.js';
 import { hash2 } from '../../util/rng.js';
 import { FLAT_SITE_ROOFS, drawFlatSite, drawArcology, drawVerticalGarden, drawReactor, drawFusion, drawFutureDetail, drawHoloSculptures } from './FutureArt.js';
@@ -15,14 +15,12 @@ const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t 
 const up = (p, h) => ({ x: p.x, y: p.y - h });
 const flat = (...pts) => pts.flatMap((p) => [p.x, p.y]);
 
-/** Quatre coins au sol de l'emprise (avec retrait) : nord, est, sud, ouest. */
+/**
+ * Quatre coins au sol de l'emprise (avec retrait), rangés par position à l'écran : haut, droite, bas, gauche.
+ * Quelle que soit l'orientation de la carte (v0.9), les deux faces visibles sont L→B et B→R.
+ */
 export function footprintCorners(x, y, w, h, alt, inset) {
-  return {
-    T: gridToWorld(x + inset, y + inset, alt),
-    R: gridToWorld(x + w - inset, y + inset, alt),
-    B: gridToWorld(x + w - inset, y + h - inset, alt),
-    L: gridToWorld(x + inset, y + h - inset, alt)
-  };
+  return screenCorners(x + inset, y + inset, w - 2 * inset, h - 2 * inset, alt);
 }
 
 export function drawTree(g, cx, cy, s = 1, tint = 0x3f8f3a) {
@@ -66,6 +64,7 @@ function windows(g, a, b, H, color, { glass = false, lit = 0, seed = 0 } = {}) {
  * @param {number} alt altitude du sol
  */
 export function drawBuilding(g, def, b, alt) {
+  if (VIEW.top) return drawPlanBuilding(g, def, b, {});
   drawBuildingBody(g, def, b, alt);
   if (b.upgrades?.length && !b.abandoned) drawUpgradeBadge(g, b, alt);
 }
@@ -541,4 +540,77 @@ function drawSawmill(g, b, alt, v, base, roof) {
       }
     }
   }
+}
+
+/** Teintes de toit en vue de dessus pour les toits « techniques ». */
+const PLAN_GROUND = { park: null, panels: 0x2f4f8a, basins: 0x5aa0c8, field: 0xc9b46a, farm: 0xb7a35a, landfill: 0x8a7f6a, runway: 0x6d737a, quarry: 0xa59c88 };
+
+/**
+ * Vue de dessus (v0.9) : plan du bâtiment — ombre portée proportionnelle à la hauteur, toit à la couleur du
+ * catalogue, arête de toit, contour. Chantiers en pointillés, ruines grisées.
+ * @param {{construction?:number, ruins?:boolean}} state
+ */
+export function drawPlanBuilding(g, def, b, { construction = -1, ruins = false } = {}) {
+  const v = def.visual;
+  const isPlop = def.kind === 'plop';
+  const inset = isPlop ? 0.05 : 0.12;
+  const c = screenCorners(b.x + inset, b.y + inset, b.w - 2 * inset, b.h - 2 * inset, 0);
+  const x0 = c.T.x;
+  const y0 = c.T.y;
+  const w = c.R.x - c.T.x;
+  const h = c.B.y - c.T.y;
+  let roof = hex(v.roofColor ?? v.color);
+  let base = hex(v.color);
+  if (b.abandoned) {
+    roof = shade(desaturate(roof, 0.85), 0.65);
+    base = shade(desaturate(base, 0.85), 0.72);
+  }
+  if (ruins) {
+    g.rect(x0, y0, w, h).fill(0x6e6a64);
+    for (let k = 0; k < 6; k++) {
+      const px = x0 + hash2(b.id, k, 3) * w;
+      const py = y0 + hash2(k, b.id, 5) * h;
+      g.circle(px, py, 2 + hash2(b.id + k, 7, 9) * 3).fill(0x8c867d);
+    }
+    g.rect(x0, y0, w, h).stroke({ width: 1, color: 0xe0553a, alpha: 0.8 });
+    return;
+  }
+  if (construction >= 0) {
+    g.rect(x0, y0, w, h).fill({ color: 0xc9b48a, alpha: 0.9 });
+    const fw = w * Math.max(0.15, construction);
+    g.rect(x0, y0, fw, h).fill({ color: base, alpha: 0.75 });
+    for (let k = 0; k <= 4; k++) g.moveTo(x0 + (w * k) / 4, y0).lineTo(x0 + (w * k) / 4, y0 + h).stroke({ width: 0.6, color: 0x7a6440, alpha: 0.6 });
+    g.rect(x0, y0, w, h).stroke({ width: 1, color: 0xf0a33a });
+    return;
+  }
+  const flatSite = v.roof === 'park' || FLAT_SITE_ROOFS.has(v.roof) || PLAN_GROUND[v.roof] !== undefined || (v.height ?? 0) <= 2;
+  if (v.roof === 'park') {
+    g.rect(x0, y0, w, h).fill(b.abandoned ? desaturate(base, 0.6) : base);
+    const n = Math.max(2, Math.round(b.w * b.h * 2));
+    for (let k = 0; k < n; k++) {
+      const px = x0 + (0.15 + hash2(b.id, k, 11) * 0.7) * w;
+      const py = y0 + (0.15 + hash2(k, b.id, 13) * 0.7) * h;
+      g.circle(px, py, 3.2).fill(0x3f8f3a);
+    }
+    return;
+  }
+  if (flatSite) {
+    g.rect(x0, y0, w, h).fill(PLAN_GROUND[v.roof] ?? roof);
+    g.rect(x0, y0, w, h).stroke({ width: 0.8, color: shade(roof, 0.6), alpha: 0.8 });
+    return;
+  }
+  // Ombre portée vers le bas et la droite, proportionnelle à la hauteur du bâtiment
+  const sh = Math.min(16, (v.height ?? 10) / 5);
+  g.rect(x0 + sh, y0 + sh, w, h).fill({ color: 0x1d2730, alpha: 0.28 });
+  g.rect(x0, y0, w, h).fill(roof);
+  // Arête de toit (toits à deux pans) ou édicule (toits plats)
+  if (v.roof === 'gable' || v.roof === 'hip') {
+    if (w >= h) g.moveTo(x0 + 2, y0 + h / 2).lineTo(x0 + w - 2, y0 + h / 2).stroke({ width: 1.2, color: shade(roof, 0.7) });
+    else g.moveTo(x0 + w / 2, y0 + 2).lineTo(x0 + w / 2, y0 + h - 2).stroke({ width: 1.2, color: shade(roof, 0.7) });
+    g.rect(x0 + w / 2, y0, w / 2, h).fill({ color: 0x000000, alpha: 0.08 });
+  } else {
+    g.rect(x0 + w * 0.3, y0 + h * 0.3, w * 0.25, h * 0.25).fill(shade(roof, 0.82));
+  }
+  g.rect(x0, y0, w, h).stroke({ width: 1, color: shade(roof, 0.55) });
+  if (b.upgrades?.length && !b.abandoned) g.circle(x0 + w - 4, y0 + h - 4, 3).fill(0xf2c230);
 }

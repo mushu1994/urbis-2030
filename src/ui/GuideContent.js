@@ -32,7 +32,8 @@ export const GUIDE = [
         items: [
           'Souris : clic droit ou molette enfoncée pour déplacer, molette pour zoomer, flèches ou ZQSD au clavier.',
           'Au doigt : un doigt avec l\'outil Sélection, deux doigts avec n\'importe quel outil, pincer pour zoomer.',
-          'Sur téléphone et tablette, la vue gyroscopique permet de parcourir la ville en inclinant l\'appareil (bouton boussole en haut, ou Paramètres).',
+          'La boussole en bas à droite fait tourner la carte d\'un quart de tour (⟲ ⟳, touches virgule et point-virgule, ou torsion à deux doigts) pour voir derrière les immeubles ; un clic sur l\'aiguille revient au nord.',
+          '« Vue de dessus » (touche V) montre la ville en plan, vue du ciel : pratique pour tracer un réseau régulier ou lire une couche de données.',
           'X rend translucides les bâtiments devant le curseur ; L fait défiler les couches de données.'
         ]
       },

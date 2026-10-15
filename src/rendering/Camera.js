@@ -1,4 +1,4 @@
-import { gridToWorld, TILE_H } from './IsometricProjection.js';
+import { gridToWorld, screenCorners, TILE_H } from './IsometricProjection.js';
 
 /**
  * Caméra 2D : position du centre de la vue (coordonnées monde) et zoom.
@@ -17,15 +17,13 @@ export class Camera {
 
   /** Limites de déplacement : l'emprise de la carte avec une marge. */
   setWorldSize(width, height) {
-    const top = gridToWorld(0, 0);
-    const right = gridToWorld(width, 0);
-    const bottom = gridToWorld(width, height);
-    const left = gridToWorld(0, height);
+    // Emprise de la carte à l'écran, quelle que soit l'orientation (v0.9)
+    const { T, R, B, L } = screenCorners(0, 0, width, height);
     this.bounds = {
-      minX: left.x,
-      maxX: right.x,
-      minY: top.y - 120,
-      maxY: bottom.y + TILE_H
+      minX: L.x,
+      maxX: R.x,
+      minY: T.y - 120,
+      maxY: B.y + TILE_H
     };
   }
 

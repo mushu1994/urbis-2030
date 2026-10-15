@@ -1469,39 +1469,99 @@ details.factors summary {
   }
 }
 
-/* ───────────── v0.9 : vue gyroscopique ───────────── */
-.hud-gyro.active {
+/* ───────────── v0.9 : navigation de la carte (rotation, boussole, vue de dessus) ───────────── */
+#nav-widget {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 13px var(--font);
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  background: var(--panel-hover);
+}
+
+.nav-view[aria-pressed='true'] {
   background: var(--sign);
   color: var(--sign-ink);
 }
 
-.gyro-pill {
+.nav-compass {
+  width: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+}
+
+.nav-needle {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+  transition: transform 0.25s ease;
+}
+
+.nav-needle i {
   position: absolute;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 12px;
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: var(--shadow);
+  top: 2px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 11px solid var(--bad);
   transform: translateX(-50%);
-  font-size: 13px;
-  white-space: nowrap;
 }
 
-.gyro-pill[hidden] {
-  display: none;
+.nav-needle b {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  font: 700 9px var(--font);
+  color: var(--ink-dim);
+  transform: translateX(-50%);
 }
 
-@media (max-width: 640px), (max-height: 520px) and (pointer: coarse) {
-  .gyro-pill {
-    bottom: calc(var(--dock-h, 132px) + 12px + env(safe-area-inset-bottom, 0px));
+/* Sur ordinateur, les notifications passent au-dessus de la boussole */
+@media (min-width: 761px) and (min-height: 501px) {
+  #toasts {
+    bottom: 62px;
+  }
+}
+
+/* Téléphone : colonne verticale sur le bord droit, à mi-hauteur (le bas de l'écran est pris par le dock) */
+@media (max-width: 760px), (max-height: 500px) {
+  #nav-widget {
+    top: 42%;
+    bottom: auto;
+    right: calc(6px + var(--safe-right, 0px));
+    flex-direction: column;
+    border-radius: 22px;
   }
 
-  .gyro-pill span {
+  .nav-view span {
     display: none;
   }
 }

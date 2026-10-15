@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { gridToWorld } from './IsometricProjection.js';
+import { gridToWorld, footDepth, depthOf } from './IsometricProjection.js';
 import { TERRAIN } from '../world/Terrain.js';
 
 /**
@@ -79,7 +79,7 @@ export class AirSeaRenderer {
     const climb = Math.max(0, u - 0.9) * 90;
     const p = { x: ground.x, y: ground.y - 4 - climb };
     const g = it.g;
-    g.zIndex = (b.x + b.y + Math.floor(u * b.w) + b.h) * 10 + 9;
+    g.zIndex = (footDepth(b.x, b.y, b.w, b.h) + 1) * 10 + 9;
     if (!this.#visible(p, rect)) return;
     if (cycle !== it.lastCycle) {
       it.lastCycle = cycle;
@@ -128,7 +128,7 @@ export class AirSeaRenderer {
     const P = { x: it.pts[a].x + (it.pts[z].x - it.pts[a].x) * f, y: it.pts[a].y + (it.pts[z].y - it.pts[a].y) * f };
     const head = it.pts[z];
     const g = it.g;
-    g.zIndex = (grid.xOf(head.i) + grid.yOf(head.i)) * 10 + 4;
+    g.zIndex = depthOf(grid.xOf(head.i), grid.yOf(head.i)) * 10 + 4;
     if (!this.#visible(P, rect)) return;
     // Corne de brume au départ de l'escale
     if (tt >= travel + 10 && it.lastCycle !== cycle) {

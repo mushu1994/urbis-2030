@@ -3,7 +3,7 @@ import { flatSession, spawn } from '../helpers/session.js';
 import { trafficDiagnosis, congestionHotspots, pollutionSources } from '../../src/simulation/TrafficAdvisor.js';
 import { GUIDE } from '../../src/ui/GuideContent.js';
 import { OVERLAY_BY_ID } from '../../src/rendering/Overlays.js';
-import { tiltSpeed, screenTilt, GyroController, GYRO_DEAD_ZONE, GYRO_SPEEDS } from '../../src/app/GyroController.js';
+import { setView, gridToWorld, worldToGridFloat, rotateTile, unrotateTile, screenCorners, depthOf, footDepth, gridDir, heightStep, TOP_TILE } from '../../src/rendering/IsometricProjection.js';
 
 /** Rue saturée artificiellement : flux et congestion écrits dans la grille, comme après un cycle de trafic. */
 function jammed() {
@@ -129,46 +129,56 @@ describe('Guide du maire (v0.9)', () => {
   });
 });
 
-describe('Vue gyroscopique (v0.9)', () => {
-  it('zone morte, vitesse progressive et plafonnée', () => {
-    expect(tiltSpeed(GYRO_DEAD_ZONE - 0.5, 700)).toBe(0);
-    expect(tiltSpeed(-2, 700)).toBe(0);
-    expect(tiltSpeed(10, 700)).toBeGreaterThan(0);
-    expect(tiltSpeed(-10, 700)).toBeLessThan(0);
-    expect(tiltSpeed(20, 700)).toBeGreaterThan(tiltSpeed(10, 700));
-    expect(tiltSpeed(80, 700)).toBe(700);
+describe('Navigation : rotation et vue de dessus (v0.9)', () => {
+  const reset = () => setView({ rot: 0, top: false, width: 40, height: 30 });
+
+  it('chaque orientation reste inversible : pointer une case la retrouve', () => {
+    for (const top of [false, true]) {
+      for (let rot = 0; rot < 4; rot++) {
+        setView({ rot, top, width: 40, height: 30 });
+        for (const [x, y] of [[0, 0], [39, 0], [12, 29], [25, 7]]) {
+          const c = gridToWorld(x + 0.5, y + 0.5, 0);
+          const f = worldToGridFloat(c.x, c.y, 0);
+          expect(Math.floor(f.x)).toBe(x);
+          expect(Math.floor(f.y)).toBe(y);
+          const [rx, ry] = rotateTile(x, y);
+          expect(unrotateTile(rx, ry)).toEqual([x, y]);
+        }
+      }
+    }
+    reset();
   });
 
-  it('tient compte de l\'orientation de l\'écran', () => {
-    expect(screenTilt(10, 5, 0)).toEqual({ x: 5, y: 10 });
-    expect(screenTilt(10, 5, 90)).toEqual({ x: 10, y: -5 });
-    expect(screenTilt(10, 5, 270)).toEqual({ x: -10, y: 5 });
-    expect(screenTilt(10, 5, 180)).toEqual({ x: -5, y: -10 });
+  it('un quart de tour à droite fait passer le coin est en bas de l\'écran', () => {
+    setView({ rot: 0, top: false, width: 40, height: 30 });
+    const eastBefore = screenCorners(0, 0, 40, 30);
+    expect(eastBefore.R).toEqual(gridToWorld(40, 0));
+    setView({ rot: 1, top: false, width: 40, height: 30 });
+    const after = screenCorners(0, 0, 40, 30);
+    expect(after.B).toEqual(gridToWorld(40, 0));
+    reset();
   });
 
-  it('déplace la caméra selon l\'écart à la position de repos, et s\'interrompt pendant un geste', () => {
-    const pans = [];
-    let blocked = false;
-    const cam = { pan: (dx, dy) => pans.push([dx, dy]) };
-    const gyro = new GyroController({ camera: () => cam, isBlocked: () => blocked });
-    gyro.active = true;
-    gyro.raw = { beta: 40, gamma: 0 };
-    gyro.update(16); // première mesure : position de repos
-    expect(pans.length).toBe(0);
-    gyro.raw = { beta: 40, gamma: 20 }; // penché vers la droite
-    for (let k = 0; k < 30; k++) gyro.update(16);
-    expect(pans.length).toBeGreaterThan(0);
-    expect(pans.at(-1)[0]).toBeLessThan(0); // la caméra avance vers la droite (pan négatif)
-    const n = pans.length;
-    blocked = true;
-    gyro.update(16);
-    expect(pans.length).toBe(n);
-    // Retour : la position actuelle devient le repos, pas d'à-coup
-    blocked = false;
-    gyro.update(16);
-    gyro.update(16);
-    expect(pans.length).toBe(n);
-    gyro.sensitivity = 'high';
-    expect(GYRO_SPEEDS.high).toBeGreaterThan(GYRO_SPEEDS.medium);
+  it('ordre du peintre : la case la plus en avant change avec l\'orientation', () => {
+    setView({ rot: 0, width: 40, height: 30 });
+    expect(depthOf(39, 29)).toBeGreaterThan(depthOf(0, 0));
+    setView({ rot: 2, width: 40, height: 30 });
+    expect(depthOf(0, 0)).toBeGreaterThan(depthOf(39, 29));
+    expect(footDepth(0, 0, 2, 2)).toBe(depthOf(0, 0));
+    // Voisins « derrière » : en orientation 2, derrière = +x et +y
+    expect(gridDir(-1, 0)).toEqual([1, 0]);
+    expect(gridDir(0, -1)).toEqual([0, 1]);
+    reset();
+  });
+
+  it('vue de dessus : plan carré, sans élévation', () => {
+    setView({ rot: 0, top: true, width: 40, height: 30 });
+    expect(gridToWorld(2, 3, 4)).toEqual({ x: 2 * TOP_TILE, y: 3 * TOP_TILE });
+    expect(heightStep()).toBe(0);
+    const c = screenCorners(2, 3, 2, 1);
+    expect(c.R.x - c.T.x).toBe(2 * TOP_TILE);
+    expect(c.B.y - c.T.y).toBe(TOP_TILE);
+    reset();
+    expect(heightStep()).toBeGreaterThan(0);
   });
 });

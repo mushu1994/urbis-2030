@@ -1,4 +1,4 @@
-import { gridToWorld, HEIGHT_STEP } from '../IsometricProjection.js';
+import { gridToWorld, heightStep, screenCorners, gridDir, VIEW } from '../IsometricProjection.js';
 import { hash2 } from '../../util/rng.js';
 import { hex, shade, mix } from './color.js';
 import { TERRAIN } from '../../world/Terrain.js';
@@ -22,7 +22,11 @@ export function foliageTint(season, snow = 0) {
   return c;
 }
 
-const corners = (x, y, alt) => [gridToWorld(x, y, alt), gridToWorld(x + 1, y, alt), gridToWorld(x + 1, y + 1, alt), gridToWorld(x, y + 1, alt)];
+/** Coins d'une case rangés par position à l'écran (haut, droite, bas, gauche), quelle que soit l'orientation. */
+const corners = (x, y, alt) => {
+  const c = screenCorners(x, y, 1, 1, alt);
+  return [c.T, c.R, c.B, c.L];
+};
 
 /**
  * Dessine une case de terrain avec ses falaises visibles (faces sud-ouest et sud-est).
@@ -34,25 +38,32 @@ export function drawTerrainTile(g, grid, x, y, { gridLines = false, snow = 0, se
   const alt = grid.altitude[i];
   const terr = grid.terrain[i];
   const [T, R, B, L] = corners(x, y, alt);
-  // Falaises vers les voisins plus bas (ou le bord de la carte)
-  const altS = y + 1 < grid.height ? grid.altitude[i + grid.width] : 0;
-  const altE = x + 1 < grid.width ? grid.altitude[i + 1] : 0;
-  const edgeS = y + 1 >= grid.height;
-  const edgeE = x + 1 >= grid.width;
-  if (alt > altS || edgeS) {
-    const dh = (alt - (edgeS ? -1 : altS)) * HEIGHT_STEP;
-    g.poly([L.x, L.y, B.x, B.y, B.x, B.y + dh, L.x, L.y + dh]).fill(shade(CLIFF, 0.9));
-  }
-  if (alt > altE || edgeE) {
-    const dh = (alt - (edgeE ? -1 : altE)) * HEIGHT_STEP;
-    g.poly([B.x, B.y, R.x, R.y, R.x, R.y + dh, B.x, B.y + dh]).fill(shade(CLIFF, 0.72));
+  // Falaises vers les voisins plus bas (ou le bord de la carte), sur les deux faces visibles à l'écran
+  // (bas-gauche et bas-droite) : leurs voisins dépendent de l'orientation de la carte
+  const step = heightStep();
+  if (step > 0) {
+    const [sx, sy] = gridDir(0, 1);
+    const [ex, ey] = gridDir(1, 0);
+    const edgeS = !grid.inBounds(x + sx, y + sy);
+    const edgeE = !grid.inBounds(x + ex, y + ey);
+    const altS = edgeS ? 0 : grid.altitude[grid.idx(x + sx, y + sy)];
+    const altE = edgeE ? 0 : grid.altitude[grid.idx(x + ex, y + ey)];
+    if (alt > altS || edgeS) {
+      const dh = (alt - (edgeS ? -1 : altS)) * step;
+      g.poly([L.x, L.y, B.x, B.y, B.x, B.y + dh, L.x, L.y + dh]).fill(shade(CLIFF, 0.9));
+    }
+    if (alt > altE || edgeE) {
+      const dh = (alt - (edgeE ? -1 : altE)) * step;
+      g.poly([B.x, B.y, R.x, R.y, R.x, R.y + dh, B.x, B.y + dh]).fill(shade(CLIFF, 0.72));
+    }
   }
   let c = TERRAIN_COLORS[terr];
   const n = hash2(x, y, 11);
   if (terr === TERRAIN.WATER) {
     c = mix(c, 0x6fb8e6, n * 0.25);
   } else {
-    c = shade(c, 0.93 + n * 0.12 + alt * 0.025);
+    // Vue de dessus : le relief se lit à la teinte (plus clair en hauteur)
+    c = shade(c, 0.93 + n * 0.12 + alt * (VIEW.top ? 0.07 : 0.025));
     // Saisons : herbe jaunie en été sec, roussie en automne, terne en hiver ; manteau neigeux
     if (terr === TERRAIN.GRASS || terr === TERRAIN.FOREST) {
       const tone = SEASON_TONE[season];
@@ -68,6 +79,18 @@ export function drawTerrainTile(g, grid, x, y, { gridLines = false, snow = 0, se
     const cx = (T.x + B.x) / 2;
     const cy = (T.y + B.y) / 2;
     g.moveTo(cx - 8, cy).lineTo(cx + 2, cy - 1).stroke({ width: 1, color: 0xd6efff, alpha: 0.6 });
+  }
+  // Vue de dessus : courbes de niveau sur les bords où l'altitude change
+  if (VIEW.top && terr !== TERRAIN.WATER) {
+    for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!grid.inBounds(nx, ny) || grid.altitude[grid.idx(nx, ny)] >= alt) continue;
+      // Arête de la case du côté de ce voisin
+      const qa = dx !== 0 ? gridToWorld(x + (dx > 0 ? 1 : 0), y) : gridToWorld(x, y + (dy > 0 ? 1 : 0));
+      const qb = dx !== 0 ? gridToWorld(x + (dx > 0 ? 1 : 0), y + 1) : gridToWorld(x + 1, y + (dy > 0 ? 1 : 0));
+      g.moveTo(qa.x, qa.y).lineTo(qb.x, qb.y).stroke({ width: 1.2, color: 0x4d5a3a, alpha: 0.55 });
+    }
   }
   if (gridLines && terr !== TERRAIN.WATER) {
     g.poly([T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y]).stroke({ width: 0.5, color: 0x000000, alpha: 0.12 });
@@ -222,7 +245,7 @@ export function drawDeliveryZoneTile(g, x, y, alt) {
  */
 export function drawBridgeTile(g, x, y, alt, conn, visual) {
   const P = (u, v, a = alt) => gridToWorld(x + u, y + v, a);
-  const dh = alt * HEIGHT_STEP;
+  const dh = alt * heightStep();
   // Sens du franchissement : nord-sud (bits 1|4) ou est-ouest (bits 2|8)
   const ns = (conn & 5) !== 0 && (conn & 10) === 0;
   const pier = 0x8d8a84;

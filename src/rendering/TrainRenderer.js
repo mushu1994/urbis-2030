@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { gridToWorld } from './IsometricProjection.js';
+import { gridToWorld, footDepth, depthOf } from './IsometricProjection.js';
 
 const RAIL_DETAILS = new Set(['train', 'hyperloop']);
 
@@ -68,7 +68,7 @@ export class TrainRenderer {
         this.gfx.set(st.id, g);
         this.layer.addChild(g);
       }
-      g.zIndex = (b.x + b.w - 1 + b.y + b.h - 1) * 10 + 5.5;
+      g.zIndex = footDepth(b.x, b.y, b.w, b.h) * 10 + 5.5;
       g.clear();
       if (!b.transitActive) continue;
       const alt = grid.altitude[grid.idx(b.x, b.y)];
@@ -126,7 +126,7 @@ export class TrainRenderer {
       else continue;
       const head = line.pts[Math.min(n - 1, Math.round(d))];
       if (head.x < rect.x0 - 120 || head.x > rect.x1 + 120 || head.y < rect.y0 - 120 || head.y > rect.y1 + 120) continue;
-      g.zIndex = (grid.xOf(head.i) + grid.yOf(head.i)) * 10 + 6.5;
+      g.zIndex = depthOf(grid.xOf(head.i), grid.yOf(head.i)) * 10 + 6.5;
       const at = (s) => {
         const k = Math.max(0, Math.min(n - 1, s));
         const a = Math.floor(k);

@@ -14,7 +14,8 @@ import { drawConstructionSite, drawRuins } from './art/EffectsArt.js';
 import { seasonKey } from '../simulation/WeatherSystem.js';
 import { SPEEDS } from '../simulation/SimulationClock.js';
 import { drawBuilding, drawTree } from './art/BuildingArt.js';
-import { gridToWorld, screenToTile } from './IsometricProjection.js';
+import { gridToWorld, screenToTile, setView, VIEW, depthOf, footDepth, screenCorners, rotatedSize, unrotateTile, gridDir } from './IsometricProjection.js';
+import { drawPlanBuilding } from './art/BuildingArt.js';
 import { OVERLAY_BY_ID } from './Overlays.js';
 import { TERRAIN } from '../world/Terrain.js';
 import { ROAD_REACH } from '../world/Grid.js';
@@ -106,6 +107,8 @@ export class Renderer {
     const state = session.state;
     const grid = state.grid;
     const bus = session.bus;
+    // Orientation et vue de dessus (v0.9) : la projection connaît la taille de la grille
+    setView({ width: grid.width, height: grid.height });
     this.effects?.reset();
     this.layers.clear();
     this.trains.reset();
@@ -137,9 +140,11 @@ export class Renderer {
         this.terrainLayer.markTile(x, y);
         this.groundLayer.markTile(x, y);
         // Les arbres des cases voisines dépendent aussi de ce qui est construit ici
-        this.dirtyTrees.add(x + y);
-        this.dirtyTrees.add(x + y + 1);
-        this.dirtyTrees.add(x + y + 2);
+        const d = depthOf(x, y);
+        this.dirtyTrees.add(d - 1);
+        this.dirtyTrees.add(d);
+        this.dirtyTrees.add(d + 1);
+        this.dirtyTrees.add(d + 2);
       }
     };
     this.unsub.push(
@@ -236,10 +241,18 @@ export class Renderer {
 
   // ───────────────────────────── Dessin des couches ─────────────────────────────
 
+  /** Parcourt les cases d'un rectangle dans l'ordre du peintre de l'orientation courante (diagonales tournées). */
   #forEachDiagonal(x0, y0, x1, y1, fn) {
-    for (let d = x0 + y0; d <= x1 - 1 + y1 - 1; d++) {
-      for (let x = Math.max(x0, d - (y1 - 1)); x <= Math.min(x1 - 1, d - y0); x++) fn(x, d - x);
+    if (VIEW.rot === 0) {
+      for (let d = x0 + y0; d <= x1 - 1 + y1 - 1; d++) {
+        for (let x = Math.max(x0, d - (y1 - 1)); x <= Math.min(x1 - 1, d - y0); x++) fn(x, d - x);
+      }
+      return;
     }
+    const tiles = [];
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) tiles.push([depthOf(x, y), x, y]);
+    tiles.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+    for (const [, x, y] of tiles) fn(x, y);
   }
 
   #drawTerrainChunk(g, x0, y0, x1, y1) {
@@ -327,8 +340,10 @@ export class Renderer {
     }
     g.clear();
     const tint = foliageTint(this.season, [0, 0.5, 0.9][this.snowLevel]);
-    for (let x = Math.max(0, d - (grid.height - 1)); x <= Math.min(grid.width - 1, d); x++) {
-      const y = d - x;
+    // Diagonale d dans le repère tourné (v0.9)
+    const rs = rotatedSize();
+    for (let rx = Math.max(0, d - (rs.h - 1)); rx <= Math.min(rs.w - 1, d); rx++) {
+      const [x, y] = unrotateTile(rx, d - rx);
       const i = grid.idx(x, y);
       if (grid.terrain[i] !== TERRAIN.FOREST || grid.building[i] || grid.road[i]) continue;
       // Pas d'arbre collé aux façades avant d'un grand bâtiment : l'ordre d'affichage par diagonale les ferait
@@ -339,20 +354,28 @@ export class Renderer {
       for (let k = 0; k < trees.length; k++) {
         if (grid.zone[i] && k % 2 === 1) continue;
         const t = trees[k];
-        drawTree(g, t.x, t.y, t.s, tint);
+        if (VIEW.top) {
+          // Vue de dessus : houppiers vus du ciel
+          g.circle(t.x, t.y, 5 * t.s).fill(tint);
+          g.circle(t.x - 1.2 * t.s, t.y - 1.2 * t.s, 2.4 * t.s).fill({ color: 0xffffff, alpha: 0.12 });
+        } else drawTree(g, t.x, t.y, t.s, tint);
       }
     }
   }
 
   #markTreesAround(b) {
-    for (let d = b.x + b.y; d <= b.x + b.w + b.y + b.h; d++) this.dirtyTrees.add(d);
+    const lo = Math.min(depthOf(b.x, b.y), depthOf(b.x + b.w - 1, b.y), depthOf(b.x, b.y + b.h - 1), depthOf(b.x + b.w - 1, b.y + b.h - 1));
+    for (let d = lo - 1; d <= footDepth(b.x, b.y, b.w, b.h) + 2; d++) this.dirtyTrees.add(d);
   }
 
   /** Case juste devant la façade gauche ou droite d'un bâtiment de plusieurs cases. */
   #besideLargeBuilding(state, x, y) {
     const grid = state.grid;
-    for (const [nx, ny] of [[x - 1, y], [x, y - 1], [x - 1, y - 1]]) {
-      if (nx < 0 || ny < 0) continue;
+    // Cases « derrière » dans l'orientation courante
+    for (const [dx, dy] of [gridDir(-1, 0), gridDir(0, -1), gridDir(-1, -1)]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!grid.inBounds(nx, ny)) continue;
       const id = grid.building[grid.idx(nx, ny)];
       if (!id) continue;
       const b = state.buildings.get(id);
@@ -385,22 +408,21 @@ export class Renderer {
     const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
     const tick = state.time.tick;
     this.drawnDef.set(id, b.defId);
-    g.zIndex = (b.x + b.w - 1 + b.y + b.h - 1) * 10 + 5;
+    const depth = footDepth(b.x, b.y, b.w, b.h);
+    g.zIndex = depth * 10 + 5;
     // Chantier simulé (bâtiment de zone neuf ou en travaux de montée de niveau), sinon chantier décoratif
     // des équipements posés par le joueur
     let end = 0;
     let start = b.builtTick;
     let target = def;
     if (b.ruins) {
-      drawRuins(g, def, b, alt);
+      if (VIEW.top) drawPlanBuilding(g, def, b, { ruins: true });
+      else drawRuins(g, def, b, alt);
       this.constructing.delete(id);
       this.effects?.setCrane(b, def, alt, false, g.zIndex);
-      const Lr = gridToWorld(b.x, b.y + b.h, alt);
-      const Rr = gridToWorld(b.x + b.w, b.y, alt);
-      const Br = gridToWorld(b.x + b.w, b.y + b.h, alt);
-      const Tr = gridToWorld(b.x, b.y, alt);
-      g.__bounds = { x0: Lr.x, x1: Rr.x, y0: Tr.y - 30, y1: Br.y };
-      g.__depth = b.x + b.w - 1 + b.y + b.h - 1;
+      const c = screenCorners(b.x, b.y, b.w, b.h, alt);
+      g.__bounds = { x0: c.L.x, x1: c.R.x, y0: c.T.y - (VIEW.top ? 0 : 30), y1: c.B.y };
+      g.__depth = depth;
       return;
     }
     if (b.repairUntil > tick) {
@@ -415,20 +437,19 @@ export class Renderer {
     }
     if (end) {
       const progress = Math.max(0, Math.min(1, (tick - start) / Math.max(1, end - start)));
-      drawConstructionSite(g, target, b, alt, progress);
+      if (VIEW.top) drawPlanBuilding(g, target, b, { construction: progress });
+      else drawConstructionSite(g, target, b, alt, progress);
       this.constructing.set(id, { end, drawn: tick });
     } else {
       drawBuilding(g, def, b, alt);
       this.constructing.delete(id);
     }
-    this.effects?.setCrane(b, target, alt, !!end, g.zIndex);
-    this.effects?.drawLights(b, def, alt);
-    const L = gridToWorld(b.x, b.y + b.h, alt);
-    const R = gridToWorld(b.x + b.w, b.y, alt);
-    const B = gridToWorld(b.x + b.w, b.y + b.h, alt);
-    const T = gridToWorld(b.x, b.y, alt);
-    g.__bounds = { x0: L.x, x1: R.x, y0: T.y - def.visual.height - 40, y1: B.y };
-    g.__depth = b.x + b.w - 1 + b.y + b.h - 1;
+    // Vue de dessus : pas de grue ni de fenêtres éclairées (volumes non dessinés)
+    this.effects?.setCrane(b, target, alt, !!end && !VIEW.top, g.zIndex);
+    if (!VIEW.top) this.effects?.drawLights(b, def, alt);
+    const c = screenCorners(b.x, b.y, b.w, b.h, alt);
+    g.__bounds = { x0: c.L.x, x1: c.R.x, y0: c.T.y - (VIEW.top ? 0 : def.visual.height + 40), y1: c.B.y };
+    g.__depth = depth;
   }
 
   #drawOverlay() {
@@ -507,12 +528,9 @@ export class Renderer {
       if (!b) continue;
       const def = this.catalog.building(b.defId);
       const alt = state.grid.altitude[state.grid.idx(b.x, b.y)];
-      const H = def.visual.height;
-      const T = gridToWorld(b.x, b.y, alt);
-      const R = gridToWorld(b.x + b.w, b.y, alt);
-      const B = gridToWorld(b.x + b.w, b.y + b.h, alt);
-      const L = gridToWorld(b.x, b.y + b.h, alt);
-      const poly = [T.x, T.y - H, R.x, R.y - H, R.x, R.y, B.x, B.y, L.x, L.y, L.x, L.y - H];
+      const H = VIEW.top ? 0 : def.visual.height;
+      const { T, R, B, L } = screenCorners(b.x, b.y, b.w, b.h, alt);
+      const poly = VIEW.top ? [T.x, T.y, R.x, R.y, B.x, B.y, L.x, L.y] : [T.x, T.y - H, R.x, R.y - H, R.x, R.y, B.x, B.y, L.x, L.y, L.x, L.y - H];
       if (pointInPolygon(wx, wy, poly)) {
         best = id;
         bestDepth = g.__depth;
@@ -532,6 +550,30 @@ export class Renderer {
     this.hover = tile;
     this.selectionDirty = true;
     if (this.xray) this.#applyXray();
+  }
+
+  /**
+   * Orientation de la carte (quarts de tour) et vue de dessus (v0.9). La case au centre de l'écran reste au centre ;
+   * toutes les couches sont redessinées dans la nouvelle orientation.
+   */
+  setViewMode({ rot = VIEW.rot, top = VIEW.top } = {}) {
+    const r = ((rot % 4) + 4) % 4;
+    if (r === VIEW.rot && !!top === VIEW.top) return;
+    if (!this.session) {
+      setView({ rot: r, top });
+      return;
+    }
+    const center = this.tileAtScreen(this.view.width / 2, this.view.height / 2);
+    const zoom = this.camera.zoom;
+    setView({ rot: r, top });
+    this.attach(this.session);
+    this.camera.zoom = zoom;
+    if (center) this.camera.centerOnTile(center.x, center.y);
+    this.lastCameraVersion = -1;
+  }
+
+  get viewMode() {
+    return { rot: VIEW.rot, top: VIEW.top };
   }
 
   /** Affiche les tracés des lignes de transport (outil de tracé, panneau des lignes), avec une ligne en évidence. */

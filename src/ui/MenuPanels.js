@@ -45,7 +45,8 @@ export const TOUCH = [
   ['Toucher un bâtiment', 'L\'inspecter (outil Sélection)'],
   ['Toucher un emplacement, puis « Valider »', 'Poser ou déplacer un bâtiment : l\'aperçu montre le coût, toucher ailleurs le déplace'],
   ['Bandeau de l\'outil', 'Valider, annuler, pivoter le bâtiment ou revenir à la sélection'],
-  ['Bouton boussole (en haut)', 'Vue gyroscopique : inclinez l\'appareil pour parcourir la ville ; « Recentrer » reprend la position de repos'],
+  ['Tourner deux doigts', 'Faire pivoter la carte d\'un quart de tour (ou boutons ⟲ ⟳ de la boussole)'],
+  ['Bouton « Vue de dessus »', 'Basculer entre la vue isométrique et le plan vu du ciel'],
   ['Toucher les jauges R C B I', 'Détail des besoins de la ville'],
   ['Bouton plein écran (en haut à droite)', 'Plein écran, ou interface réduite sur iPhone']
 ];
@@ -215,12 +216,6 @@ export class SettingsPanel {
       toggle('edgeScroll', 'Défilement de la carte au bord de l\'écran'),
       toggle('confirmDemolish', 'Demander confirmation avant une démolition coûteuse'),
       toggle('confirmPlacement', 'Valider la pose des bâtiments par un bouton, aussi à la souris (toujours actif au doigt)'),
-      h('h3', 'Vue gyroscopique (téléphone et tablette)'),
-      h('label.setting', h('span', 'Sensibilité de l\'inclinaison'),
-        h('select', { 'aria-label': 'Sensibilité de l\'inclinaison', on: { change: (e) => { this.settings.set('gyroSensitivity', e.target.value); this.apply(); } } },
-          [['low', 'Douce'], ['medium', 'Normale'], ['high', 'Rapide']].map(([v, l]) => h('option', { value: v, selected: (this.settings.get('gyroSensitivity') ?? 'medium') === v }, l)))),
-      toggle('gyroInvert', 'Inverser le sens (pencher à droite fait glisser la ville vers la gauche)'),
-      h('p.hint', 'S\'active avec le bouton boussole de la barre du haut. Incliner l\'appareil fait glisser la vue ; « Recentrer » reprend la position actuelle comme position de repos. La vue s\'interrompt pendant un geste au doigt ou quand un panneau est ouvert.'),
       h('h3', 'Performances'),
       toggle('simWorker', 'Simulation en arrière-plan (Web Worker) : l\'affichage reste fluide pendant les calculs', true),
       h('p.hint', 'Prend effet au prochain chargement ou à la prochaine partie.'),

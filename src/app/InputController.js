@@ -11,8 +11,10 @@ export class InputController {
    * @param {{canvas:HTMLCanvasElement, renderer:any, tools:import('./ToolController.js').ToolController,
    *          shortcuts:Record<string, (e:KeyboardEvent)=>void>, settings:any, isBlocked:()=>boolean}} deps
    */
-  constructor({ canvas, renderer, tools, shortcuts, settings, isBlocked }) {
+  constructor({ canvas, renderer, tools, shortcuts, settings, isBlocked, onRotate }) {
     this.canvas = canvas;
+    /** Rotation de la carte d'un quart de tour (geste de torsion à deux doigts, v0.9). */
+    this.onRotate = onRotate;
     this.renderer = renderer;
     this.tools = tools;
     this.shortcuts = shortcuts;
@@ -86,13 +88,24 @@ export class InputController {
     if (!a || !b) return;
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
     const g = this.gesture;
+    let base = angle;
     if (g) {
       const cam = this.renderer.camera;
       cam.pan(mid.x - g.mid.x, mid.y - g.mid.y);
       cam.zoomAt(dist / g.dist, mid.x, mid.y, this.renderer.view);
+      // Torsion à deux doigts : au-delà de 50°, la carte tourne d'un quart de tour dans le même sens
+      base = g.base;
+      let turn = angle - base;
+      while (turn > Math.PI) turn -= 2 * Math.PI;
+      while (turn < -Math.PI) turn += 2 * Math.PI;
+      if (Math.abs(turn) > (50 * Math.PI) / 180 && this.onRotate) {
+        this.onRotate(turn > 0 ? 1 : -1);
+        base = angle;
+      }
     }
-    this.gesture = { mid, dist };
+    this.gesture = { mid, dist, base };
   }
 
   #move(e) {

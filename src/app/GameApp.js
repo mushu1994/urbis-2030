@@ -12,7 +12,6 @@ import { TerritoryPanel } from '../ui/TerritoryPanel.js';
 import { LinesPanel } from '../ui/LinesPanel.js';
 import { TrafficPanel } from '../ui/TrafficPanel.js';
 import { GuidePanel } from '../ui/GuidePanel.js';
-import { GyroController } from './GyroController.js';
 import { SettingsService } from '../persistence/SettingsService.js';
 import { HUD } from '../ui/HUD.js';
 import { Toolbar } from '../ui/Toolbar.js';
@@ -33,6 +32,7 @@ import { formatMoney } from '../util/money.js';
 import { confirmDialog } from '../ui/Dialog.js';
 import { FullscreenController } from './Fullscreen.js';
 import { h, icon, setChildren } from '../ui/dom.js';
+import { gridToWorld, setView } from '../rendering/IsometricProjection.js';
 import { buildingSummary } from '../ui/BuildingSheet.js';
 import { LocalSimHost, WorkerSimHost } from './SimHost.js';
 import { setupChallenge, CHALLENGE_BY_ID } from './challenges.js';
@@ -81,16 +81,23 @@ export class GameApp {
       onMute: () => this.togglePanel('sound'),
       onAlert: (kind) => this.locateAlert(kind),
       onDemand: (k) => (this.panelHost.openId === 'demand' && this.panelHost.tab === k ? this.panelHost.close() : this.openPanel('demand', k)),
-      onWeather: () => this.openPanel('city', 'risks'),
-      gyroSupported: GyroController.supported,
-      onGyro: () => this.gyro.toggle()
+      onWeather: () => this.openPanel('city', 'risks')
     });
-    // Bandeau de la vue gyroscopique : recentrer ou arrêter
-    this.gyroPill = h('div.gyro-pill', { hidden: true, role: 'status' },
-      h('span', 'Inclinez pour parcourir la ville'),
-      h('button.btn.small', { type: 'button', on: { click: () => this.gyro.recenter() } }, 'Recentrer'),
-      h('button.btn.small', { type: 'button', on: { click: () => this.gyro.disable() } }, 'Arrêter'));
-    this.$('#stage').append(this.gyroPill);
+    // Navigation (v0.9) : faire tourner la carte d'un quart de tour, boussole, vue de dessus
+    const needle = h('span.nav-needle', { 'aria-hidden': 'true' }, h('i'), h('b', 'N'));
+    const compass = h('button.nav-btn.nav-compass', { type: 'button', 'aria-label': 'Boussole : revenir à l\'orientation d\'origine', on: { click: () => this.rotateView(-this.renderer.viewMode.rot) } }, needle);
+    const view = h('button.nav-btn.nav-view', { type: 'button', 'aria-pressed': 'false', on: { click: () => this.toggleTopView() } });
+    this.nav = {
+      needle,
+      compass,
+      view,
+      root: h('div#nav-widget', { role: 'group', 'aria-label': 'Navigation de la carte' },
+        h('button.nav-btn', { type: 'button', title: 'Tourner la carte vers la gauche (,)', 'aria-label': 'Tourner la carte vers la gauche', on: { click: () => this.rotateView(-1) } }, icon('rotl', 18)),
+        compass,
+        h('button.nav-btn', { type: 'button', title: 'Tourner la carte vers la droite (;)', 'aria-label': 'Tourner la carte vers la droite', on: { click: () => this.rotateView(1) } }, icon('rotr', 18)),
+        view)
+    };
+    this.$('#stage').append(this.nav.root);
     this.toolbar = new Toolbar(this.$('#toolbar'), {
       catalog: this.catalog,
       onTool: (t) => this.tools.setTool(t),
@@ -200,19 +207,14 @@ export class GameApp {
       },
       confirmPlacement: () => !!this.settings.get('confirmPlacement')
     });
-    this.gyro = new GyroController({
-      camera: () => this.renderer.camera,
-      isBlocked: () => !!this.panelHost.openId || this.menu?.visible || (this.input?.pointers?.size ?? 0) > 0 || !this.session,
-      onChange: (active) => this.#gyroChanged(active),
-      notify
-    });
     this.input = new InputController({
       canvas: this.renderer.canvas,
       renderer: this.renderer,
       tools: this.tools,
       settings: this.settings,
       isBlocked: () => !this.session || this.menu.visible || !!document.querySelector('.dialog-backdrop'),
-      shortcuts: this.#shortcuts()
+      shortcuts: this.#shortcuts(),
+      onRotate: (dir) => this.rotateView(dir)
     });
 
     // Toucher la carte referme les menus ouverts (utile au doigt, où il n'y a pas de survol).
@@ -272,6 +274,11 @@ export class GameApp {
       t: () => this.togglePanel('territory'),
       e: () => this.togglePanel('politics'),
       k: () => this.togglePanel('lines'),
+      // v0.9 : orientation de la carte et vue de dessus
+      ',': () => this.rotateView(-1),
+      ';': () => this.rotateView(1),
+      '.': () => this.rotateView(1),
+      v: () => this.toggleTopView(),
       p: () => this.togglePanel('traffic'),
       g: () => this.togglePanel('guide'),
       i: () => this.togglePanel('ai'),
@@ -352,10 +359,6 @@ export class GameApp {
   }
 
   applySettings() {
-    if (this.gyro) {
-      this.gyro.sensitivity = this.settings.get('gyroSensitivity') ?? 'medium';
-      this.gyro.invert = !!this.settings.get('gyroInvert');
-    }
     const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.renderer.setEffects({
       dayNight: this.settings.get('dayNight') !== false,
@@ -452,7 +455,10 @@ export class GameApp {
     this.session = session;
     this.bus = session.bus;
     this.host = await this.#createHost(session);
+    // Orientation et vue de dessus mémorisées (v0.9)
+    setView({ rot: Number(this.settings.get('viewRot')) || 0, top: !!this.settings.get('viewTop') });
     this.renderer.attach(session);
+    this.#updateNav();
     this.select(null);
     this.panelHost.close();
     this.toolbar.select({ id: 'select', kind: 'select', label: 'Sélection' });
@@ -544,10 +550,37 @@ export class GameApp {
     this.notifications.push({ level: 'warning', message: `Circulation saturée (${Math.round(c * 100)} % de charge moyenne) : le conseiller circulation propose des solutions (touche P).`, panel: 'traffic' });
   }
 
-  #gyroChanged(active) {
-    this.hud.setGyro(active);
-    this.gyroPill.hidden = !active;
-    if (active) this.notifications.push({ level: 'info', message: 'Vue gyroscopique : tenez l\'appareil confortablement, puis inclinez-le pour faire glisser la ville. « Recentrer » reprend la position actuelle comme repos.', key: 'gyro' });
+  /** Fait tourner la carte d'un quart de tour (+1 : sens des aiguilles d'une montre). */
+  rotateView(dir = 1) {
+    if (!this.session) return;
+    const v = this.renderer.viewMode;
+    this.renderer.setViewMode({ rot: v.rot + dir });
+    this.settings.set('viewRot', this.renderer.viewMode.rot);
+    this.#updateNav();
+  }
+
+  /** Bascule entre la vue isométrique et la vue de dessus. */
+  toggleTopView(on = !this.renderer.viewMode.top) {
+    if (!this.session) return;
+    this.renderer.setViewMode({ top: on });
+    this.settings.set('viewTop', !!on);
+    this.#updateNav();
+  }
+
+  /** Boussole : l'aiguille montre le nord de la carte ; libellé du bouton de vue. */
+  #updateNav() {
+    const nav = this.nav;
+    if (!nav) return;
+    const v = this.renderer.viewMode;
+    // Direction du nord (vers les y décroissants de la grille) à l'écran
+    const a = gridToWorld(10, 10);
+    const b = gridToWorld(10, 9);
+    const deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + 90;
+    nav.needle.style.transform = `rotate(${deg}deg)`;
+    nav.compass.title = `Nord de la carte · orientation ${v.rot * 90}° (clic : orientation d'origine)`;
+    setChildren(nav.view, icon(v.top ? 'isoview' : 'topview', 18), h('span', v.top ? 'Vue 3D' : 'Vue de dessus'));
+    nav.view.setAttribute('aria-pressed', String(v.top));
+    nav.view.title = v.top ? 'Revenir à la vue isométrique (V)' : 'Vue de dessus : la ville en plan (V)';
   }
 
   /** Guide du maire : « Montre-moi » ouvre l'outil, le panneau, la couche ou le menu concernés. */
@@ -767,8 +800,6 @@ export class GameApp {
     if (!this.session) {
       return;
     }
-    // Vue gyroscopique (v0.9) : l'inclinaison de l'appareil fait glisser la caméra
-    this.gyro.update(dt);
     // Tracés des lignes : pendant le tracé d'une ligne et tant que le panneau des lignes est ouvert (v0.8)
     this.renderer.setShowRoutes(this.tools.tool.kind === 'line' || this.panelHost.openId === 'lines', this.panels.lines.highlight);
     this.renderer.render(dt, { paused: this.clock.paused, speedIndex: this.clock.speedIndex });
