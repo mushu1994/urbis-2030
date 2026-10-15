@@ -18,6 +18,8 @@ export const LAYER_SPECS = {
   deliveryZone: { type: Uint8Array, persistent: true },
   /** Voie ferrée (v0.6) : 1 = voie posée. Peut croiser une route (passage à niveau). */
   rail: { type: Uint8Array, persistent: true, optional: true },
+  /** Rails de tramway posés sur la chaussée (v0.8) : 1 = voie posée sur la route de la case. */
+  tram: { type: Uint8Array, persistent: true, optional: true },
   /** Pont : altitude du tablier + 1 (0 = pas de pont). */
   bridge: { type: Uint8Array, persistent: true },
   tileVersion: { type: Uint32Array, persistent: true },
@@ -47,6 +49,8 @@ export const LAYER_SPECS = {
   transitBus: { type: Float32Array },
   transitMetro: { type: Float32Array },
   transitRail: { type: Float32Array },
+  /** Desserte par le tramway (v0.8). */
+  transitTram: { type: Float32Array },
   /**
    * Attractivité d'implantation (v0.6) : valeur foncière pour le logement, attractivité commerciale,
    * tertiaire ou industrielle pour les autres zones (0..100). Sert aux paliers d'évolution.

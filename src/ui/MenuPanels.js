@@ -23,6 +23,7 @@ export const SHORTCUTS = [
   ['C', 'Tableau de bord de la ville'],
   ['T', 'Territoire : acheter des extensions de 32 × 32 cases'],
   ['E', 'Mairie et élections : popularité, promesses, campagne'],
+  ['K', 'Lignes de bus et de tramway : fréquence, flotte, fréquentation'],
   ['I', 'IA urbaine et politiques'],
   ['L', 'Couche de données suivante'],
   ['X', 'Rendre translucides les bâtiments devant le curseur'],

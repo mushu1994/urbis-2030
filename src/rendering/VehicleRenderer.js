@@ -43,7 +43,10 @@ export class VehicleRenderer {
     this.target = Math.min(450, Math.round(total / 18));
     this.avShare = state.tech.researched.autonomous_vehicles ? 0.35 : 0;
     // Bus : une part des véhicules affichés, proportionnelle aux voyageurs (environ 40 par bus)
-    const busTrips = (state.transit?.stats?.passengers?.bus ?? 0) / 40;
+    // Lignes tracées (v0.8) : les bus des lignes suivent leur parcours (LineRenderer) ; seuls les bus du réseau de
+    // base circulent au hasard
+    const ts = state.transit?.stats ?? {};
+    const busTrips = ((ts.busNetwork && ts.busNetwork !== 'auto' ? ts.basePassengers : ts.passengers?.bus) ?? 0) / 40;
     const carTrips = state.traffic?.stats?.vehicleTrips ?? 0;
     this.busShare = carTrips + busTrips > 0 ? Math.min(0.3, busTrips / (carTrips + busTrips)) : 0;
     this.era = state.progression?.era ?? 1;

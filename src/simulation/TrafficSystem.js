@@ -110,7 +110,7 @@ export class TrafficSystem {
     const outShare = s.employed > 0 ? Math.min(0.8, s.commutersOut / s.employed) : 0;
     // Les voyageurs des transports en commun laissent leur voiture (un bus reste un peu sur la route).
     const tr = b.transit ?? { bus: 0, metro: 0, rail: 0, regional: 0 };
-    const transitShare = Math.min(0.95, tr.bus * (1 - BUS_ROAD_FACTOR) + tr.metro + (tr.rail ?? 0));
+    const transitShare = Math.min(0.95, tr.bus * (1 - BUS_ROAD_FACTOR) + tr.metro + (tr.rail ?? 0) + (tr.tram ?? 0));
     const workV = this.transport.vehicleTrips(state, b.employed * SIM.TRIPS_PER_WORKER) * (1 - transitShare);
     const shopV = this.transport.vehicleTrips(state, b.residents * SIM.TRIPS_PER_RESIDENT) * (1 - transitShare * 0.6);
 

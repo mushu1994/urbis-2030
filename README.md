@@ -6,6 +6,66 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.8 — lignes de transport, quartiers, dette et marché régional
+
+> **Anciennes parties.** Rien ne change tant que vous ne tracez pas de ligne : le réseau de bus automatique continue de
+> fonctionner. Les quartiers démarrent sans écart de taux, les emprunts en cours restent à annuités constantes et le
+> marché régional démarre au cours de référence.
+
+### Lignes de bus et de tramway (menu Transports, panneau des lignes : touche K)
+
+- **Tracer une ligne** : outil « Tracer une ligne de bus » ou « de tramway », puis touchez les arrêts dans l'ordre du
+  parcours ; Valider (ou toucher à nouveau le premier arrêt) crée la ligne. Elle fait la boucle par le plus court
+  chemin routier ; l'aperçu montre le parcours, la longueur, l'intervalle entre deux passages et le coût des rails.
+  Échap retire le dernier arrêt choisi.
+- **Fréquence et flotte** : chaque ligne a son nombre de véhicules (boutons − et +). Avec la longueur de la boucle, il
+  donne l'intervalle entre deux passages : un passage toutes les 6 minutes = desserte optimale, au-delà de 20 minutes
+  la desserte tombe à 30 %. La capacité suit la flotte (160 voyageurs par jour et par bus, 650 par rame de tramway) ;
+  une ligne saturée laisse des voyageurs à quai. Chaque véhicule coûte un entretien mensuel (bus 350 €, rame 1 500 €).
+- **Dépôts** : un dépôt de bus abrite 14 bus, un dépôt de tramway 10 rames, pour les lignes du même réseau routier ;
+  au-delà, la flotte est réduite (alerte « flotte limitée par les dépôts »).
+- **Réseau de base** : les arrêts de bus hors des lignes restent desservis par les bus que les lignes laissent au
+  dépôt, avec une desserte réduite (60 %) : une ville existante ne perd rien en traçant sa première ligne.
+- **Tramway** (dès 2 500 habitants) : stations et dépôt de tramway ; les rails sont posés sur les rues, avenues et
+  boulevards du parcours (1 400 € par case nouvelle, entretien 3 € par case et par mois), jamais sur l'autoroute. Le
+  tramway ne prend pas de voiture sur la route, fait monter la valeur foncière autour des stations et coûte moins cher
+  à exploiter par voyageur. Démolir une rue coupe les rails et interrompt la ligne (Ctrl+Z la rétablit) ; supprimer une
+  ligne dépose les rails qu'aucune autre ligne n'emprunte.
+- **Sur la carte** : tracés colorés et arrêts pendant le tracé, dans le panneau des lignes (survol : ligne en évidence)
+  et avec la couche « Transports en commun » ; bus et rames circulent le long de leur ligne, en nombre égal à la flotte
+  en service. L'inspecteur d'un arrêt indique les lignes qui le desservent et leur fréquence.
+
+### Fiscalité par quartier (Finances → Quartiers)
+
+- Chaque parcelle de 32 × 32 cases de la commune forme un **quartier** au nom stable (le centre-ville est celui de la
+  mairie), renommable. Les résultats des élections par quartier utilisent ces noms.
+- Pour chaque quartier, un **écart de taux** de −5 à +5 points par rapport au taux de la commune, pour l'impôt
+  résidentiel, commercial, des bureaux et industriel. Effets : chaque bâtiment est imposé au taux de son quartier ;
+  la taxe d'habitation locale pèse sur la satisfaction des habitants du quartier ; un quartier moins taxé attire les
+  constructions de son secteur (+7 % par point, jusqu'à +35 %), un quartier plus taxé les décourage. La demande et la
+  popularité suivent le taux moyen effectivement payé, affiché dans « Fiscalité et tarifs ».
+- Couche « Fiscalité par quartier » : quartiers moins taxés en bleu, plus taxés en orange, limites de quartier.
+
+### Dette par échéances (Finances → Emprunts)
+
+- Trois **profils de remboursement** : annuités constantes (comme avant), amortissement constant (même part de capital
+  chaque mois, premières échéances plus lourdes, moins d'intérêts au total) et **in fine** (intérêts seuls, capital à
+  l'échéance, taux +0,4 point ; alerte trois mois avant). L'aperçu donne la première et la dernière échéance et le coût
+  total des intérêts.
+- **Échéancier** des 12 prochains mois (intérêts, capital) et **profil d'extinction** de la dette année par année.
+- **Remboursement anticipé** : indemnité de six mois d'intérêts, au plus 3 % du capital remboursé.
+
+### Marché régional à prix variables (Finances → Échanges régionaux)
+
+- Les prix d'achat et de vente de l'électricité, de l'eau et du traitement des déchets changent chaque mois :
+  conjoncture régionale (marche aléatoire bornée de 70 % à 140 %), **saisons** (électricité chère en hiver et un peu
+  en plein été, bon marché au printemps ; eau chère en été) et **événements** : vague de froid (électricité ×1,7 pendant
+  deux mois), sécheresse régionale (eau ×1,8 pendant trois mois), surproduction renouvelable au printemps (×0,6).
+- **Profondeur du marché** : vendre beaucoup fait baisser le prix moyen obtenu, acheter beaucoup le fait monter.
+- **Contrats à prix fixe** de 12 mois, à l'achat (prime de 5 %) ou à la vente (décote de 5 %) : le panneau suit le gain
+  ou la perte du contrat par rapport au marché ; résiliation anticipée avec indemnité.
+- Courbe des cours sur 24 mois ; les montants sont comptabilisés dans les lignes d'achats et de ventes à la région.
+
 ## Nouveautés de la version 0.7 — la politique au cœur de la ville
 
 > **Anciennes parties.** La vie politique démarre au chargement : premières élections municipales dans 3 ans
@@ -663,7 +723,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 268 tests Vitest (24 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 316 tests Vitest (32 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -672,14 +732,19 @@ crises (déclenchement, réponses, fin, propagation du feu selon les pompiers, d
 victoire, échec), migration v4 → v5, simulation dans un Web Worker (réplique identique, déterminisme, événements) ;
 v0.4 : démolition des routes seules, dézonage d'une parcelle bâtie et annulation, déplacement d'un équipement (coût,
 annulation), terrassement (élever, abaisser, aplanir, planter, défricher), gisements et filières agricole et
-d'extraction, note de la dette et emprunt maximal.
-`npm run test:e2e` : 10 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+d'extraction, note de la dette et emprunt maximal ; v0.8 : lignes de bus (boucle, réseau de base, flotte et dépôts,
+coût mensuel), tramway (rails payants, dépôt, autoroute interdite, rue démolie puis rétablie, suppression),
+fiscalité par quartier (recettes, satisfaction, implantation), profils d'emprunt et remboursement anticipé, marché
+régional (saisons, événements, déterminisme, contrats), sauvegarde des lignes et anciennes parties.
+`npm run test:e2e` : 13 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
 gare animée et notifications ; fiche dépliable et notification fermée au doigt ; fonder une ville à la souris ; pont, bus, couches, progression, tutoriel
 et débogage depuis l'interface ; aucun bouton principal décoratif ; pas de duplication d'objets graphiques ni de fuite
-mémoire ; iPhone (gestes, pose validée par bouton, mode immersif).
+mémoire ; iPhone (gestes, pose validée par bouton, mode immersif) ; v0.8 : ligne de bus tracée à l'outil et validée,
+ligne de tramway, panneau des lignes (flotte), écart de taux d'un quartier, emprunt in fine et échéancier, contrat à
+prix fixe, couche des quartiers, sauvegarde.
 
 ## Performances mesurées
 
@@ -700,13 +765,13 @@ s'en approche : les tronçons hors écran sont masqués et seuls les tronçons m
 
 ## Limites connues et suites
 
-- Lignes de transport implicites (desserte par rayon et par réseau) : pas de tracé manuel de lignes ni d'horaires.
+- Lignes de transport : boucles uniquement (pas de lignes en navette aller-retour ni d'horaires) ; le métro et le train
+  restent desservis par rayon et par réseau.
 - Le cycle jour/nuit est visuel (un tick = un jour) ; les chantiers des équipements posés par le joueur sont décoratifs.
 - Les e2e Playwright ne couvrent pas l'installation hors ligne : elle a été vérifiée sur le build de production
   (`vite preview`, rechargement sans réseau).
 - Ponts droits uniquement ; pas de tunnels ni de ponts au-dessus des routes.
-- Piétons, tramway, dette par échéances complexes, fiscalité différenciée par quartier : non implémentés.
+- Piétons : non implémentés.
 - Graphismes 100 % procéduraux et originaux ; les dossiers `public/assets/*` accueilleront des sprites.
 - Les e2e Playwright sont lents sans GPU (rendu logiciel, environ 1,5 image par seconde : une vingtaine de minutes pour les 8 parcours) ; ils coupent le son et les effets décoratifs (`storageState` de `playwright.config.js`) et passent avec les délais configurés.
-- Les gares n'ont pas de voies tracées sur la carte : le réseau ferré régional est implicite.
-- Prix des échanges régionaux fixes (pas de marché qui varie selon la saison ou la demande).
+- Une gare sans voie ferrée posée par le joueur garde un réseau ferré régional implicite.

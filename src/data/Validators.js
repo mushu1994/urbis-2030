@@ -12,7 +12,7 @@ export const CATEGORIES = [
 /** Conditions d'évolution reconnues (voir BuildingSystem.growthChecks). */
 export const GROWTH_REQUIREMENTS = ['power', 'water', 'waste', 'education', 'health', 'transit', 'era2', 'era3'];
 export const WASTE_KINDS = ['landfill', 'incinerator', 'recycling', 'biogas', 'valorisation'];
-export const TRANSIT_MODES = ['bus', 'metro', 'rail'];
+export const TRANSIT_MODES = ['bus', 'metro', 'rail', 'tram'];
 
 import { UPGRADE_EFFECTS } from './Upgrades.js';
 

@@ -18,6 +18,8 @@ import { CrisisSystem } from './CrisisSystem.js';
 import { ScenarioSystem } from './ScenarioSystem.js';
 import { PoliticsSystem } from './PoliticsSystem.js';
 import { ResourceSystem } from './ResourceSystem.js';
+import { MarketSystem } from './MarketSystem.js';
+import { LineSystem } from './LineSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -51,6 +53,11 @@ export class Simulation {
     this.scenario = new ScenarioSystem({ bus });
     this.politics = new PoliticsSystem({ catalog, economy: this.economy, bus });
     this.resources = new ResourceSystem({ catalog, economy: this.economy, bus });
+    // v0.8 : marché régional à prix variables, lignes de bus et de tramway
+    this.market = new MarketSystem({ bus, economy: this.economy });
+    this.economy.market = this.market;
+    this.lines = new LineSystem({ catalog, economy: this.economy, bus });
+    this.economy.lines = this.lines;
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -67,6 +74,7 @@ export class Simulation {
     state.dirty.roadReach = false;
     if (!state.modifiers || !('roadCapacityMult' in state.modifiers)) this.ai.refreshModifiers(state);
     this.economy.ensurePeriod(state);
+    this.market.ensure(state);
     this.environment.waterProximity = null;
   }
 
@@ -116,7 +124,13 @@ export class Simulation {
     if (t % F.logistics === 0) this.#time('logistics', () => this.ai.updateLogistics(state));
     // Décalés dans le cycle de 10 jours pour répartir la charge de calcul
     if (t % F.waste === 3) this.#time('waste', () => this.waste.update(state, F.waste));
-    if (t % F.transit === 6) this.#time('transit', () => this.transit.update(state));
+    if (t % F.transit === 6 || state.dirty.transit) {
+      this.#time('transit', () => {
+        this.lines.validate(state);
+        this.transit.update(state);
+      });
+      state.dirty.transit = false;
+    }
     this.#time('traffic', () => this.traffic.step(state));
     this.economy.accrueDaily(state);
 
@@ -135,6 +149,8 @@ export class Simulation {
     // Ressources (v0.7) : importations et exportations du mois, avant la clôture des comptes
     this.#time('resources', () => this.resources.monthly(state));
     const period = this.economy.closeMonth(state);
+    // Marché régional (v0.8) : nouveaux cours pour le mois qui commence
+    this.market.monthly(state);
     const sum = EconomySystem.summarize(period);
     const s = state.stats;
     state.history.push({

@@ -1,5 +1,6 @@
 import { SIM } from './config.js';
 import { hash2 } from '../util/rng.js';
+import { effectiveTaxes, districtName, centreKey } from './Districts.js';
 import { PARCEL } from '../world/Land.js';
 
 /**
@@ -46,9 +47,6 @@ export const RIVALS = [
   ['Thomas Girard', 'Fiers de {city}']
 ];
 
-const DISTRICT_NAMES = ['Les Tilleuls', 'Bellevue', 'La Gare', 'Les Coteaux', 'Le Port', 'Les Prés', 'Les Vignes', 'La Forge', 'Le Moulin', 'Les Jardins',
-  'La Croix-Blanche', 'Les Sablons', 'Le Plateau', 'Les Hauts', 'Le Faubourg', 'Les Rives', 'La Clairière', 'Les Charmilles', 'Le Marché', 'Les Peupliers',
-  'La Fontaine', 'Les Brosses', 'Le Champ-Fleuri', 'Les Écluses', 'La Roseraie', 'Le Belvédère', 'Les Ormes', 'La Prairie', 'Les Terrasses', 'Le Verger'];
 
 /** Thèmes de campagne et d'engagements, avec le facteur de popularité qu'ils mettent en avant. */
 export const THEMES = {
@@ -175,7 +173,8 @@ export class PoliticsSystem {
   factors(state) {
     const p = this.ensure(state);
     const s = state.stats;
-    const t = state.economy.taxes;
+    // Taux moyens effectivement payés (v0.8 : fiscalité par quartier)
+    const t = effectiveTaxes(state);
     const m = monthOf(state);
     const out = [];
     const add = (id, label, value, detail) => out.push({ id, label, value: round1(value), detail });
@@ -266,7 +265,7 @@ export class PoliticsSystem {
       this.#notify(state, 'info', `🏛 Nouveauté : la vie politique arrive à ${state.meta.name}. Prochaines élections municipales dans ${Math.max(1, Math.round((p.nextElection - m) / 12))} ans — surveillez votre popularité (Mairie, touche E).`, { panel: 'politics' });
     }
     // Mémoire des taux d'imposition sur 12 mois (hausses récentes)
-    p.memory.taxes.push({ ...state.economy.taxes });
+    p.memory.taxes.push({ ...effectiveTaxes(state) });
     if (p.memory.taxes.length > 12) p.memory.taxes.shift();
     // Crises restées sans réponse
     for (const c of state.crises?.history ?? []) {
@@ -542,18 +541,12 @@ export class PoliticsSystem {
       d.raw = share + (d.sat - avgSat) * 0.35 + (d.cov - avgCov) * 10;
     }
     const mean = list.reduce((a, d) => a + d.raw * d.residents, 0) / pop;
-    const used = new Set();
+    // Noms de quartiers stables (v0.8), partagés avec la fiscalité par quartier
     const lb = state.land?.box ?? { x0: 0, y0: 0 };
-    return list.map((d, k) => {
+    const centre = centreKey(state);
+    return list.map((d) => {
       const [gx, gy] = d.key.split(',').map(Number);
-      let name;
-      if (k === 0) name = 'Centre-ville';
-      else {
-        let j = Math.floor(hash2(gx + lb.x0 * 97, gy + lb.y0 * 89, (state.meta.seed ?? 2030) ^ 0xd157) * DISTRICT_NAMES.length);
-        while (used.has(j)) j = (j + 1) % DISTRICT_NAMES.length;
-        used.add(j);
-        name = DISTRICT_NAMES[j];
-      }
+      const name = districtName(state, `${gx + lb.x0},${gy + lb.y0}`, centre);
       return { name, x: gx, y: gy, residents: d.residents, share: round1(clamp(d.raw + share - mean, 2, 98)), satisfaction: Math.round(d.sat) };
     });
   }

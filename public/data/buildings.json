@@ -4546,7 +4546,7 @@
         "roofColor": "#e2b13c",
         "detail": "busstop"
       },
-      "description": "Dessert les habitants et les emplois dans un rayon de 5 cases. Il faut un dépôt de bus relié par la route pour que les bus passent."
+      "description": "Dessert les habitants et les emplois dans un rayon de 5 cases. Il faut un dépôt de bus relié par la route. Un arrêt placé sur une ligne tracée (outil « Tracer une ligne de bus ») est desservi selon la fréquence de la ligne ; sinon, par le réseau de base."
     },
     {
       "id": "bus_depot",
@@ -4597,7 +4597,7 @@
         "roofColor": "#e2b13c",
         "detail": "busdepot"
       },
-      "description": "Remise et flotte de bus : fournit la capacité de transport aux arrêts du même réseau routier. Sans dépôt, aucun arrêt n'est desservi."
+      "description": "Remise et flotte de bus : fournit la capacité de transport aux arrêts du même réseau routier (réseau automatique) ou abrite jusqu'à 14 bus pour les lignes tracées. Sans dépôt, aucun arrêt n'est desservi."
     },
     {
       "id": "metro_station",
@@ -4649,6 +4649,105 @@
         "detail": "metro"
       },
       "description": "Les stations sont reliées entre elles en souterrain : il en faut au moins deux. Rapide, n'encombre pas les rues et fait monter la valeur foncière."
+    },
+    {
+      "id": "tram_stop",
+      "name": "Station de tramway",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "rotatable": false,
+      "cost": 4500,
+      "upkeep": 60,
+      "lifeYears": 40,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 4
+      },
+      "capacity": {
+        "transit": {
+          "mode": "tram",
+          "radius": 7,
+          "stop": true
+        }
+      },
+      "environment": {
+        "landValue": 5,
+        "radius": 5
+      },
+      "unlock": {
+        "population": 2500
+      },
+      "visual": {
+        "height": 7,
+        "color": "#d7dde3",
+        "roof": "tramstop",
+        "roofColor": "#2fae6a",
+        "detail": "tramstop"
+      },
+      "description": "Station d'une ligne de tramway : dessert un rayon de 7 cases et fait monter la valeur foncière. Reliez au moins deux stations par une ligne (outil « Tracer une ligne de tramway ») et construisez un dépôt de tramway sur le même réseau routier."
+    },
+    {
+      "id": "tram_depot",
+      "name": "Dépôt de tramway",
+      "category": "transport",
+      "kind": "plop",
+      "footprint": {
+        "w": 3,
+        "h": 2
+      },
+      "rotatable": true,
+      "cost": 90000,
+      "upkeep": 1400,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true
+      },
+      "networks": {
+        "power": 40,
+        "water": 5
+      },
+      "capacity": {
+        "jobs": 30,
+        "qualification": 0.45,
+        "transit": {
+          "mode": "tram",
+          "capacity": 0,
+          "depot": true
+        }
+      },
+      "environment": {
+        "noise": 4,
+        "radius": 3
+      },
+      "unlock": {
+        "population": 2500
+      },
+      "visual": {
+        "height": 12,
+        "color": "#dde3e6",
+        "roof": "flat",
+        "roofColor": "#2fae6a",
+        "detail": "tramdepot"
+      },
+      "description": "Atelier et remisage des rames : abrite jusqu'à 10 tramways pour les lignes du même réseau routier. Sans dépôt, aucune ligne de tramway ne circule."
     },
     {
       "id": "train_station",

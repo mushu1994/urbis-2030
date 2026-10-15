@@ -62,9 +62,11 @@ test('fiches du menu, améliorations, échanges régionaux, train et notificatio
   await page.keyboard.press('b');
   await page.getByRole('tab', { name: 'Échanges régionaux' }).click();
   await expect(page.locator('.trade-card')).toHaveCount(3);
-  await page.getByLabel(/Acheter en cas de pénurie \(3,20|Acheter en cas de pénurie \(3.20/).click();
+  // v0.8 : prix du marché régional affiché à part (cours variable)
+  await expect(page.locator('.trade-card').first().locator('.market-price').first()).toContainText('/ u.');
+  await page.locator('.trade-card').first().getByLabel('Acheter en cas de pénurie').click();
   expect(await page.evaluate(() => window.__urbis.session.state.trade.power.buy)).toBe(true);
-  await page.getByLabel(/Vendre les excédents \(0.30|Vendre les excédents \(0,30/).click();
+  await page.locator('.trade-card').first().getByLabel('Vendre les excédents').click();
   expect(await page.evaluate(() => window.__urbis.session.state.trade.power.sell)).toBe(true);
   await page.keyboard.press('Escape');
 

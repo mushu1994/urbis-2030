@@ -1,5 +1,7 @@
 import { RAMPS, ramp, mix } from './art/color.js';
 import { congestionColor } from './art/GroundArt.js';
+import { deltaAt } from '../simulation/Districts.js';
+import { PARCEL } from '../world/Land.js';
 
 /**
  * Couches cartographiques. Chaque couche lit un champ réel de la simulation et le convertit en couleur.
@@ -115,15 +117,16 @@ export const OVERLAYS = [
     id: 'transit',
     group: 'Mobilité',
     label: 'Transports en commun',
-    legend: { swatches: [[0xe2b13c, 'Bus'], [0x2f6fc0, 'Métro'], [0x9b59b6, 'Train et hyperboucle']], note: 'Intensité : qualité de la desserte' },
+    legend: { swatches: [[0xe2b13c, 'Bus'], [0x2fae6a, 'Tramway'], [0x2f6fc0, 'Métro'], [0x9b59b6, 'Train et hyperboucle']], note: 'Intensité : qualité de la desserte (fréquence des lignes). Les tracés des lignes s\'affichent avec cette couche.' },
     color: (s, i) => {
       const g = s.grid;
       const b = g.transitBus[i];
       const m = g.transitMetro[i];
       const r = g.transitRail[i];
-      const best = Math.max(b, m, r);
+      const t = g.transitTram?.[i] ?? 0;
+      const best = Math.max(b, m, r, t);
       if (best < 0.05 || g.terrain[i] === 1) return -1;
-      const base = m === best ? 0x2f6fc0 : r === best ? 0x9b59b6 : 0xe2b13c;
+      const base = m === best ? 0x2f6fc0 : r === best ? 0x9b59b6 : t === best ? 0x2fae6a : 0xe2b13c;
       return mix(0xf4f4f4, base, 0.35 + best * 0.65);
     }
   },
@@ -221,5 +224,25 @@ export const SERVICE_OVERLAYS = [
 ];
 
 OVERLAYS.push(...SERVICE_OVERLAYS);
+
+/** Fiscalité par quartier (v0.8) : écart de la taxe d'habitation (ou moyen) par rapport au taux de la commune. */
+const TAX_RAMP_LOW = [0xeef6fb, 0x9cc9e6, 0x3f8fc9, 0x1d5a92];
+const TAX_RAMP_HIGH = [0xfdf1ec, 0xf6b49a, 0xe0663f, 0xa8331a];
+OVERLAYS.push({
+  id: 'districtTax',
+  group: 'Ville',
+  label: 'Fiscalité par quartier',
+  legend: { swatches: [[0x3f8fc9, 'Moins taxé que la commune'], [0xe0663f, 'Plus taxé'], [0x5b6570, 'Limite de quartier']], note: 'Écart moyen des quatre taux du quartier (Finances → Quartiers).' },
+  color: (s, i) => {
+    const g = s.grid;
+    const x = i % g.width;
+    const y = (i - x) / g.width;
+    if (x % PARCEL === 0 || y % PARCEL === 0) return 0x5b6570;
+    const d = (deltaAt(s, x, y, 'R') + deltaAt(s, x, y, 'C') + deltaAt(s, x, y, 'O') + deltaAt(s, x, y, 'I')) / 4;
+    if (Math.abs(d) < 0.05) return -1;
+    const k = 0.3 + 0.7 * Math.min(1, Math.abs(d) / 2.5);
+    return d < 0 ? ramp(k, TAX_RAMP_LOW) : ramp(k, TAX_RAMP_HIGH);
+  }
+});
 
 export const OVERLAY_BY_ID = new Map(OVERLAYS.map((o) => [o.id, o]));

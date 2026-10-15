@@ -398,6 +398,7 @@ export class ConstructionService {
     const { removedBuildings, removedAssets, writeOffs } = this.removeBuildings(state, buildings);
     for (const i of pv.roads) {
       g.road[i] = 0;
+      if (g.tram) g.tram[i] = 0; // les rails de tramway disparaissent avec la chaussée (v0.8)
       if (!g.rail[i] || pv.rails.includes(i)) g.bridge[i] = 0;
       g.touch(i);
     }
@@ -725,6 +726,7 @@ export class ConstructionService {
       g.zone[t.i] = t.zone;
       g.road[t.i] = t.road;
       if (t.rail !== undefined) g.rail[t.i] = t.rail;
+      if (t.tram !== undefined && g.tram) g.tram[t.i] = t.tram;
       g.building[t.i] = t.building;
       g.deliveryZone[t.i] = t.deliveryZone;
       g.bridge[t.i] = t.bridgeDeck;
@@ -767,6 +769,7 @@ export class ConstructionService {
       zone: g.zone[i],
       road: g.road[i],
       rail: g.rail[i],
+      tram: g.tram?.[i] ?? 0,
       building: g.building[i],
       deliveryZone: g.deliveryZone[i],
       bridgeDeck: g.bridge[i]

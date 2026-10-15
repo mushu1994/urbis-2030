@@ -8,6 +8,7 @@ import { WASTE_KIND_LABELS } from '../simulation/WasteSystem.js';
 import { TRANSIT_LABELS } from '../simulation/TransitSystem.js';
 import { isUnlocked } from '../systems/ConstructionService.js';
 import { formatUpgradeEffect, isGoodEffect } from '../data/Upgrades.js';
+import { LINE_MODES } from '../simulation/LineSystem.js';
 import { repairCostCents } from '../simulation/CrisisSystem.js';
 
 const RUIN_CAUSES = { fire: 'incendie', flood: 'inondation', riot: 'émeute' };
@@ -156,7 +157,7 @@ export class InspectorPanel {
           row('Qualification', `${Math.round((b.qualification ?? 0) * 100)} %`),
           row('Loyer moyen', `${formatNumber(b.rent, 0)} €/mois`),
           row('Trajet domicile-travail', `${b.commute.toFixed(0)} min`),
-          b.transit ? row('Trajets en transports en commun', `${Math.round((b.transit.bus + b.transit.metro + (b.transit.rail ?? 0)) * 100)} %`) : null,
+          b.transit ? row('Trajets en transports en commun', `${Math.round((b.transit.bus + b.transit.metro + (b.transit.rail ?? 0) + (b.transit.tram ?? 0)) * 100)} %`) : null,
           b.transit?.regional ? row('Trajets vers la région en train', `${Math.round(b.transit.regional * 100)} %`) : null
         ),
         h('section', h('h3', `Satisfaction : ${Math.round(b.satisfaction)} / 100`),
@@ -222,8 +223,18 @@ export class InspectorPanel {
           ? 'Plusieurs gares : le train assure aussi des trajets internes à la ville.'
           : 'Une seconde gare permettrait aussi des trajets internes à la ville.'));
       }
+      // Lignes tracées (v0.8) : lignes qui desservent cet arrêt
+      if (tr.stop && (tr.mode === 'bus' || tr.mode === 'tram')) {
+        const ls = (state.lines?.list ?? []).filter((l) => l.stops.includes(b.id));
+        prod.push(row('Lignes', ls.length ? ls.map((l) => `${l.name}${l.stats?.headway ? ` (toutes les ${Math.max(1, Math.round(l.stats.headway))} min)` : ''}`).join(', ') : tr.mode === 'bus' && (state.lines?.list ?? []).some((l) => l.mode === 'bus') ? 'aucune : réseau de base' : 'aucune', ls.length ? 'pos' : ''));
+        if (!ls.length && tr.mode === 'tram') prod.push(h('p.hint', 'Reliez cette station à une autre par une ligne (outil « Tracer une ligne de tramway », panneau K).'));
+      }
+      if (tr.depot && (tr.mode === 'bus' || tr.mode === 'tram')) {
+        const M = LINE_MODES[tr.mode];
+        prod.push(row('Véhicules abrités pour les lignes', `${M.depotSlots}`));
+      }
       if (!b.transitActive) {
-        const why = tr.mode === 'bus' && !tr.depot ? 'Aucun dépôt de bus relié par la route' : tr.mode === 'metro' ? 'Il faut au moins deux stations alimentées' : 'Hors service (électricité, accès ou personnel)';
+        const why = tr.mode === 'bus' && !tr.depot ? 'Aucun dépôt de bus relié par la route' : tr.mode === 'tram' && !tr.depot ? 'Aucune ligne de tramway en service ne dessert cette station (ligne, dépôt de tramway, électricité)' : tr.mode === 'metro' ? 'Il faut au moins deux stations alimentées' : 'Hors service (électricité, accès ou personnel)';
         prod.push(h('p.hint.neg', why));
       }
     }

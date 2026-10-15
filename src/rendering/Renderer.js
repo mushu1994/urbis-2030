@@ -5,8 +5,9 @@ import { SelectionRenderer } from './SelectionRenderer.js';
 import { VehicleRenderer } from './VehicleRenderer.js';
 import { TrainRenderer } from './TrainRenderer.js';
 import { AirSeaRenderer } from './AirSeaRenderer.js';
+import { LineRenderer } from './LineRenderer.js';
 import { isOwned, fullyOwned } from '../world/Land.js';
-import { drawRailTile } from './art/GroundArt.js';
+import { drawRailTile, drawTramTracks } from './art/GroundArt.js';
 import { drawTerrainTile, drawRoadTile, drawBridgeTile, drawZoneTile, drawDeliveryZoneTile, forestTrees, corners, foliageTint } from './art/GroundArt.js';
 import { EffectsRenderer } from './EffectsRenderer.js';
 import { drawConstructionSite, drawRuins } from './art/EffectsArt.js';
@@ -34,6 +35,7 @@ export class Renderer {
     this.vehicles = new VehicleRenderer(this.layers.vehicles);
     this.trains = new TrainRenderer(this.layers.objects);
     this.airsea = new AirSeaRenderer(this.layers.objects);
+    this.transitLines = new LineRenderer(this.layers.transitVehicles, this.layers.routes);
     this.buildingGfx = new Map();
     this.treeGfx = new Map();
     this.overlayId = null;
@@ -108,6 +110,7 @@ export class Renderer {
     this.layers.clear();
     this.trains.reset();
     this.airsea.reset();
+    this.transitLines.reset();
     this.buildingGfx.clear();
     this.treeGfx.clear();
     this.constructing.clear();
@@ -276,6 +279,16 @@ export class Renderer {
           const d = (n) => grid.surfaceAlt(n) - alt;
           const rise = [conn & 1 ? d(i - grid.width) : 0, conn & 2 ? d(i + 1) : 0, conn & 4 ? d(i + grid.width) : 0, conn & 8 && x > 0 ? d(i - 1) : 0];
           drawRoadTile(g, x, y, alt, conn, road.visual, { era: state.progression?.era ?? 1, rise: rise.some((r) => r > 0) ? rise : null });
+        }
+        if (grid.tram?.[i]) {
+          // Rails de tramway (v0.8) : reliés aux cases voisines équipées
+          const on = (n) => grid.tram[n] && Math.abs(grid.surfaceAlt(n) - alt) <= 1;
+          let tc = 0;
+          if (y > 0 && on(i - grid.width)) tc |= 1;
+          if (x < grid.width - 1 && on(i + 1)) tc |= 2;
+          if (y < grid.height - 1 && on(i + grid.width)) tc |= 4;
+          if (x > 0 && on(i - 1)) tc |= 8;
+          drawTramTracks(g, x, y, alt, tc);
         }
       }
       if (grid.rail[i]) {
@@ -521,6 +534,12 @@ export class Renderer {
     if (this.xray) this.#applyXray();
   }
 
+  /** Affiche les tracés des lignes de transport (outil de tracé, panneau des lignes), avec une ligne en évidence. */
+  setShowRoutes(on, highlight = 0) {
+    this.showRoutes = !!on;
+    this.transitLines.highlight = highlight;
+  }
+
   setPreview(preview) {
     this.preview = preview;
     this.selectionDirty = true;
@@ -645,6 +664,8 @@ export class Renderer {
     this.vehicles.update(state, dtMs, rect, paused);
     this.trains.update(state, this.catalog, rect, dtMs, paused);
     this.airsea.update(state, this.catalog, rect, dtMs, paused);
+    this.transitLines.showRoutes = this.showRoutes || this.overlayId === 'transit';
+    this.transitLines.update(state, rect, dtMs, paused);
     this.effects?.update({ state, catalog: this.catalog, camera: cam, view: this.view, rect, dtMs, paused, speedIndex: this.speedIndex ?? 1, ticksPerSecond: SPEEDS[this.speedIndex ?? 1]?.ticksPerSecond ?? 0.5, buildingGfx: this.buildingGfx });
     this.app.renderer.render(this.app.stage);
     const frame = performance.now() - t0;

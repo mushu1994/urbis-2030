@@ -321,3 +321,24 @@ export function drawRailTile(g, x, y, alt, conn, { bridge = false, crossing = fa
     g.rect(c.x + 4, c.y - 1, 3, 2).fill(0xd9473a);
   }
 }
+
+/**
+ * Rails de tramway encastrés dans la chaussée (v0.8) : deux rails sombres du centre de la case vers chaque voisin
+ * équipé, et une bande de roulement claire.
+ */
+export function drawTramTracks(g, x, y, alt, conn) {
+  const P = (u, v) => gridToWorld(x + u, y + v, alt);
+  const dirs = [];
+  if (conn & 1) dirs.push([0.5, 0]);
+  if (conn & 2) dirs.push([1, 0.5]);
+  if (conn & 4) dirs.push([0.5, 1]);
+  if (conn & 8) dirs.push([0, 0.5]);
+  if (!dirs.length) dirs.push([0.5, 0], [0.5, 1]);
+  if (dirs.length === 1) dirs.push([1 - dirs[0][0], 1 - dirs[0][1]]);
+  for (const [u, v] of dirs) {
+    const horiz = v === 0.5;
+    const q = (s, k) => P(0.5 + (u - 0.5) * s + (horiz ? 0 : k), 0.5 + (v - 0.5) * s + (horiz ? k : 0));
+    g.poly([...xy(q(0, -0.13)), ...xy(q(1, -0.13)), ...xy(q(1, 0.13)), ...xy(q(0, 0.13))]).fill({ color: 0x8f969c, alpha: 0.55 });
+    for (const k of [-0.08, 0.08]) g.moveTo(q(0, k).x, q(0, k).y).lineTo(q(1, k).x, q(1, k).y).stroke({ width: 1.1, color: 0x3d4247 });
+  }
+}

@@ -2,7 +2,11 @@ import { RESOURCES, RESOURCE_KEYS, NEEDS_PER_1000 } from '../simulation/Resource
 import { h } from './dom.js';
 import { lineChart } from './charts.js';
 import { formatMoney, formatNumber } from '../util/money.js';
-import { EconomySystem, CATEGORY_LABELS } from '../simulation/EconomySystem.js';
+import { EconomySystem, CATEGORY_LABELS, LOAN_TYPES, loanPreview, loanSchedule } from '../simulation/EconomySystem.js';
+import { MARKET_EVENTS, CONTRACT_MONTHS, contractOffer, contractPenaltyCents, marketPrice } from '../simulation/MarketSystem.js';
+import { districtList, TAX_DELTA_MAX, SECTORS, effectiveTaxes } from '../simulation/Districts.js';
+import { WORLD_PARCELS, landOf } from '../world/Land.js';
+import { confirmDialog } from './Dialog.js';
 import { MONTH_NAMES, SIM } from '../simulation/config.js';
 
 const monthLabel = (mi) => `${MONTH_NAMES[mi % 12]} ${String(SIM.START_YEAR + Math.floor(mi / 12)).slice(2)}`;
@@ -30,6 +34,7 @@ export class FinancePanel {
       { id: 'pnl', label: 'Compte de résultat' },
       { id: 'cash', label: 'Trésorerie' },
       { id: 'taxes', label: 'Fiscalité et tarifs' },
+      { id: 'districts', label: 'Quartiers' },
       { id: 'trade', label: 'Échanges régionaux' },
       { id: 'resources', label: 'Ressources' },
       { id: 'loans', label: 'Emprunts' },
@@ -48,6 +53,8 @@ export class FinancePanel {
         return this.#taxes(session, rerender);
       case 'loans':
         return this.#loans(session, rerender);
+      case 'districts':
+        return this.#districts(session, rerender);
       case 'trade':
         return this.#trade(session, rerender);
       case 'resources':
@@ -157,9 +164,11 @@ export class FinancePanel {
     const a = eco.accrual;
     const days = Math.max(1, a.days);
     const bases = { R: a.taxR / days, C: a.taxC / days, O: a.taxO / days, I: a.taxI / days, property: a.property / days / 12 };
+    const eff = effectiveTaxes(s);
     const rows = Object.entries(TAX_LABELS).map(([k, [label, unit]]) => {
       const value = eco.taxes[k];
-      const est = (bases[k] * value) / 100;
+      // Bases imposées au taux de leur quartier (v0.8) quand des écarts existent
+      const est = eff !== eco.taxes && eff[k] !== undefined && k !== 'property' ? (bases[k] * eff[k]) / 100 : (bases[k] * value) / 100;
       const out = h('output', `${value.toFixed(1)} %`);
       const input = h('input', {
         type: 'range',
@@ -176,7 +185,8 @@ export class FinancePanel {
           }
         }
       });
-      return h('div.slider-row', h('label', label, h('small', unit)), input, out, h('span.est', a.days ? `≈ ${formatMoney(Math.round(est * 100))}/mois` : '—'));
+      const effNote = eff !== eco.taxes && k !== 'property' && Math.abs((eff[k] ?? value) - value) >= 0.05 ? ` · taux moyen payé ${String(eff[k]).replace('.', ',')} %` : '';
+      return h('div.slider-row', h('label', label, h('small', unit + effNote)), input, out, h('span.est', a.days ? `≈ ${formatMoney(Math.round(est * 100))}/mois` : '—'));
     });
     const tariffRows = [
       ['water', 'Prix de l\'eau', '€ par unité consommée et par mois'],
@@ -191,7 +201,7 @@ export class FinancePanel {
         h('span.est', `≈ ${formatMoney(Math.round((k === 'transit' ? (a.transit ?? 0) * (30 / days) * value * (s.modifiers['transit.fareMult'] ?? 1) : (a[k] / days) * value) * 100))}/mois`));
     });
     return [
-      h('p.hint', 'Chaque impôt s\'applique à une base taxable calculée par la simulation. Au-delà de 9 %, la fiscalité pèse sur la demande et sur la satisfaction des habitants.'),
+      h('p.hint', 'Chaque impôt s\'applique à une base taxable calculée par la simulation. Au-delà de 9 %, la fiscalité pèse sur la demande et sur la satisfaction des habitants. Taux différents selon les quartiers : onglet Quartiers.'),
       h('div.sliders', rows),
       h('h3', 'Tarifs des services publics'),
       h('div.sliders', tariffRows),
@@ -199,14 +209,18 @@ export class FinancePanel {
     ];
   }
 
-  /** Vente des excédents d'électricité et d'eau, achats en cas de pénurie, traitement extérieur des déchets. */
+  /**
+   * Échanges régionaux (v0.8 : marché à prix variables) : vente des excédents, achats en cas de pénurie, traitement
+   * extérieur des déchets, cours du mois, événements régionaux et contrats à prix fixe.
+   */
   #trade(session, rerender) {
     const s = session.state;
-    const T = SIM.TRADE;
+    const M = session.sim.market.ensure(s);
     const eur = (v) => `${v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
     const pw = s.utilities.power ?? {};
     const wa = s.utilities.water ?? {};
     const ws = s.waste.stats ?? {};
+    const month = Math.floor(s.time.tick / SIM.DAYS_PER_MONTH);
     const toggle = (resource, side, label) =>
       h('label.check.trade-toggle',
         h('input', {
@@ -215,59 +229,117 @@ export class FinancePanel {
           on: { change: (e) => { this.execute({ type: 'trade', resource, side, enabled: e.target.checked }); rerender(); } }
         }),
         label);
-    const perMonth = (units, price) => `${formatMoney(Math.round(units * price * 100))} / mois`;
-    const card = ({ title, situation, balance, toggles, flows, connected }) =>
+    const price = (good, side) => marketPrice(s, good, side);
+    const ref = (good, side) => SIM.TRADE[good][side];
+    const priceLine = (good, side, label) => {
+      const p = price(good, side);
+      const d = p / ref(good, side) - 1;
+      const c = M.contracts[`${good}:${side}`];
+      return h('div.market-price',
+        h('span', label),
+        h('strong', `${eur(p)} / u.`),
+        h('span.delta', { class: Math.abs(d) < 0.02 ? '' : (side === 'sell') === d > 0 ? 'pos' : 'neg' }, `${d >= 0 ? '+' : '−'}${Math.round(Math.abs(d) * 100)} % / référence`),
+        c && month < c.until ? h('small', `prix du contrat (jusqu'en ${monthLabel(c.until)})`) : null);
+    };
+    const perMonth = (good, side, units) => `${formatMoney(Math.round(units * price(good, side) * 100))} / mois`;
+    const contract = (good, side) => {
+      const key = `${good}:${side}`;
+      const c = M.contracts[key];
+      const what = side === 'buy' ? 'd\'achat' : 'de vente';
+      if (c && month < c.until) {
+        const penalty = contractPenaltyCents(s, good, side);
+        return h('div.contract-box',
+          h('div.kv', h('span', `Contrat ${what} à prix fixe`), h('strong', `${eur(c.price)} / u. jusqu'en ${monthLabel(c.until)}`)),
+          h('div.kv', h('span', 'Gain ou perte par rapport au marché'), h('strong', { class: (c.gainCents ?? 0) >= 0 ? 'pos' : 'neg' }, formatMoney(c.gainCents ?? 0))),
+          h('button.btn.small.danger', {
+            type: 'button',
+            on: {
+              click: async () => {
+                if (!(await confirmDialog(`Résilier le contrat ? Indemnité : ${formatMoney(penalty)}.`, { confirmLabel: 'Résilier', danger: true }))) return;
+                const r = this.execute({ type: 'contract', good, side, enabled: false });
+                this.notify(r.ok ? 'info' : 'warning', r.ok ? `Contrat résilié (indemnité ${formatMoney(r.penalty)})` : r.reason);
+                rerender();
+              }
+            }
+          }, `Résilier (${formatMoney(penalty, { compact: true })})`));
+      }
+      const offer = contractOffer(s, good, side);
+      return h('div.contract-box',
+        h('div.kv', h('span', `Contrat ${what} sur ${CONTRACT_MONTHS} mois`), h('strong', `${eur(offer)} / u.`)),
+        h('small', side === 'buy' ? 'Prix fixe, prime de 5 % : protège des flambées (vague de froid, sécheresse).' : 'Prix fixe, décote de 5 % : protège des chutes de prix (surproduction).'),
+        h('button.btn.small', {
+          type: 'button',
+          on: { click: () => { const r = this.execute({ type: 'contract', good, side, enabled: true }); this.notify(r.ok ? 'success' : 'warning', r.ok ? `Contrat signé à ${eur(r.price)} / u. pour ${CONTRACT_MONTHS} mois` : r.reason); rerender(); } }
+        }, 'Signer'));
+    };
+    const card = ({ title, situation, balance, toggles, prices, flows, contracts, connected }) =>
       h('section.trade-card',
         h('h3', title),
         h('div.kv', h('span', 'Situation'), h('strong', { class: balance < 0 ? 'neg' : 'pos' }, situation)),
         connected === false ? h('p.hint.neg', "Aucun réseau de la ville n'est relié à l'accès autoroutier : échanges impossibles.") : null,
+        prices,
         h('div.trade-toggles', toggles),
-        flows);
+        flows,
+        h('details', h('summary', 'Contrats à prix fixe'), contracts));
     const pBalance = (pw.capacity ?? 0) - (pw.demand ?? 0);
     const wBalance = (wa.capacity ?? 0) - (wa.demand ?? 0);
+    const ev = M.event ? MARKET_EVENTS[M.event.kind] : null;
+    const hist = M.history.slice(-24);
     return [
-      h('p.hint', "Les réseaux reliés à l'accès autoroutier peuvent échanger avec la région. Vendre un excédent rapporte peu ; acheter coûte très cher : c'est un dépannage, pas une solution durable. L'interconnexion couvre au plus 60 % des besoins."),
+      h('p.hint', "Les réseaux reliés à l'accès autoroutier peuvent échanger avec la région. Les prix suivent le marché régional : saison (électricité chère en hiver, eau chère en été), conjoncture et événements. Vendre beaucoup fait baisser le prix moyen obtenu, acheter beaucoup le fait monter. L'interconnexion couvre au plus 60 % des besoins."),
+      ev ? h('p.demand-warn', `${ev.mult > 1 ? '⚠' : 'ℹ'} ${ev.label} en cours jusqu'en ${monthLabel(M.event.until)} : prix ${ev.good === 'water' ? 'de l\'eau' : 'de l\'électricité'} ×${String(ev.mult).replace('.', ',')}.`) : null,
       h('div.trade-grid',
         card({
           title: 'Électricité',
           situation: pBalance >= 0 ? `excédent de ${formatNumber(pBalance, 0)} u.` : `déficit de ${formatNumber(-pBalance, 0)} u.`,
           balance: pBalance,
           connected: pw.connected,
-          toggles: [
-            toggle('power', 'sell', `Vendre les excédents (${eur(T.power.sell)} / u. / mois)`),
-            toggle('power', 'buy', `Acheter en cas de pénurie (${eur(T.power.buy)} / u. / mois)`)
-          ],
+          prices: [priceLine('power', 'sell', 'Prix de vente'), priceLine('power', 'buy', 'Prix d\'achat')],
+          toggles: [toggle('power', 'sell', 'Vendre les excédents'), toggle('power', 'buy', 'Acheter en cas de pénurie')],
           flows: [
-            h('div.kv', h('span', 'Vendu à la région'), h('strong.pos', `${formatNumber(pw.exported ?? 0, 0)} u. · ${perMonth(pw.exported ?? 0, T.power.sell)}`)),
-            h('div.kv', h('span', 'Acheté à la région'), h('strong', { class: pw.imported ? 'neg' : '' }, `${formatNumber(pw.imported ?? 0, 0)} u. · ${perMonth(pw.imported ?? 0, T.power.buy)}`)),
+            h('div.kv', h('span', 'Vendu à la région'), h('strong.pos', `${formatNumber(pw.exported ?? 0, 0)} u. · ${perMonth('power', 'sell', pw.exported ?? 0)}`)),
+            h('div.kv', h('span', 'Acheté à la région'), h('strong', { class: pw.imported ? 'neg' : '' }, `${formatNumber(pw.imported ?? 0, 0)} u. · ${perMonth('power', 'buy', pw.imported ?? 0)}`)),
             h('p.small', `Les habitants paient ${eur(s.economy.tariffs.power)} / u. : chaque unité achetée à la région est revendue à perte.`)
-          ]
+          ],
+          contracts: [contract('power', 'sell'), contract('power', 'buy')]
         }),
         card({
           title: 'Eau potable',
           situation: wBalance >= 0 ? `excédent de ${formatNumber(wBalance, 0)} u.` : `déficit de ${formatNumber(-wBalance, 0)} u.`,
           balance: wBalance,
           connected: wa.connected,
-          toggles: [
-            toggle('water', 'sell', `Vendre les excédents (${eur(T.water.sell)} / u. / mois)`),
-            toggle('water', 'buy', `Acheter en cas de pénurie (${eur(T.water.buy)} / u. / mois)`)
-          ],
+          prices: [priceLine('water', 'sell', 'Prix de vente'), priceLine('water', 'buy', 'Prix d\'achat')],
+          toggles: [toggle('water', 'sell', 'Vendre les excédents'), toggle('water', 'buy', 'Acheter en cas de pénurie')],
           flows: [
-            h('div.kv', h('span', 'Vendue à la région'), h('strong.pos', `${formatNumber(wa.exported ?? 0, 0)} u. · ${perMonth(wa.exported ?? 0, T.water.sell)}`)),
-            h('div.kv', h('span', 'Achetée à la région'), h('strong', { class: wa.imported ? 'neg' : '' }, `${formatNumber(wa.imported ?? 0, 0)} u. · ${perMonth(wa.imported ?? 0, T.water.buy)}`))
-          ]
+            h('div.kv', h('span', 'Vendue à la région'), h('strong.pos', `${formatNumber(wa.exported ?? 0, 0)} u. · ${perMonth('water', 'sell', wa.exported ?? 0)}`)),
+            h('div.kv', h('span', 'Achetée à la région'), h('strong', { class: wa.imported ? 'neg' : '' }, `${formatNumber(wa.imported ?? 0, 0)} u. · ${perMonth('water', 'buy', wa.imported ?? 0)}`))
+          ],
+          contracts: [contract('water', 'sell'), contract('water', 'buy')]
         }),
         card({
           title: 'Déchets',
           situation: ws.limitedBy === 'processing' ? 'capacité de traitement insuffisante' : ws.limitedBy === 'coverage' ? 'collecte incomplète' : ws.limitedBy === 'collection' ? 'bennes insuffisantes' : 'tout est traité',
           balance: ws.limitedBy ? -1 : 1,
-          toggles: [toggle('waste', 'buy', `Faire traiter le surplus hors de la ville (${eur(T.waste.buy)} / unité)`)],
+          prices: [priceLine('waste', 'buy', 'Prix du traitement extérieur')],
+          toggles: [toggle('waste', 'buy', 'Faire traiter le surplus hors de la ville')],
           flows: [
-            h('div.kv', h('span', 'Envoyé hors de la ville'), h('strong', { class: ws.exportedPerDay ? 'neg' : '' }, `${formatNumber(ws.exportedPerDay ?? 0, 0)} u./j · ${formatMoney(Math.round((ws.exportedPerDay ?? 0) * 30 * T.waste.buy * 100))} / mois`)),
+            h('div.kv', h('span', 'Envoyé hors de la ville'), h('strong', { class: ws.exportedPerDay ? 'neg' : '' }, `${formatNumber(ws.exportedPerDay ?? 0, 0)} u./j · ${formatMoney(Math.round((ws.exportedPerDay ?? 0) * 30 * price('waste', 'buy') * 100))} / mois`)),
             h('p.small', 'Il faut toujours des bennes (centre de collecte) pour ramasser les déchets.')
-          ]
+          ],
+          contracts: [contract('waste', 'buy')]
         })
-      )
+      ),
+      h('h3', 'Cours du marché régional (prix d\'achat, € par unité)'),
+      lineChart({
+        labels: hist.map((x) => monthLabel(x.month)),
+        series: [
+          { label: 'Électricité', color: '#f2c230', values: hist.map((x) => x.power.buy) },
+          { label: 'Eau', color: '#6ec6ff', values: hist.map((x) => x.water.buy) },
+          { label: 'Traitement des déchets', color: '#a3d977', values: hist.map((x) => x.waste.buy) }
+        ],
+        format: (v) => eur(v)
+      }),
+      h('p.hint', `Cours de référence : électricité ${eur(SIM.TRADE.power.buy)} à l'achat et ${eur(SIM.TRADE.power.sell)} à la vente ; eau ${eur(SIM.TRADE.water.buy)} et ${eur(SIM.TRADE.water.sell)} ; déchets ${eur(SIM.TRADE.waste.buy)}. Nouveaux cours chaque mois.`)
     ];
   }
 
@@ -275,7 +347,6 @@ export class FinancePanel {
     const s = session.state;
     const econ = session.sim.economy;
     const cap = econ.debtCapacity(s);
-    const rate = econ.loanRate(s);
     const rating = econ.creditRating(s);
     const maxEuros = econ.maxLoanEuros(s);
     const amount = h('input', { type: 'number', min: 1000, max: maxEuros, step: 1000, value: Math.min(100000, Math.floor(maxEuros / 10000) * 10000), 'aria-label': 'Montant en euros' });
@@ -286,37 +357,162 @@ export class FinancePanel {
       on: { click: () => { amount.value = String(maxEuros); updatePreview(); } }
     }, 'Max');
     const months = h('select', { 'aria-label': 'Durée' }, [24, 60, 120, 240].map((m) => h('option', { value: m, selected: m === 120 }, `${m / 12} ans`)));
+    const type = h('select', { 'aria-label': 'Profil de remboursement' }, Object.entries(LOAN_TYPES).map(([id, t]) => h('option', { value: id }, t.label)));
     const preview = h('p.hint');
+    const rateOut = h('strong');
     const updatePreview = () => {
       const P = Number(amount.value) * 100;
       const n = Number(months.value);
-      const r = rate / 12;
-      const pay = (P * r) / (1 - Math.pow(1 + r, -n));
-      preview.textContent = Number.isFinite(pay) && P > 0 ? `Annuité mensuelle : ${formatMoney(Math.ceil(pay))} — coût total des intérêts : ${formatMoney(Math.round(pay * n - P))}` : '';
+      const rate = econ.loanRate(s, type.value);
+      rateOut.textContent = `${(rate * 100).toFixed(2)} %`;
+      if (!(P > 0)) {
+        preview.textContent = '';
+        return;
+      }
+      const pv = loanPreview(Math.round(P), rate, n, type.value);
+      const t = LOAN_TYPES[type.value];
+      preview.textContent = `${t.desc} Première échéance : ${formatMoney(pv.first)}${type.value === 'annuity' ? '' : ` — dernière : ${formatMoney(pv.last)}`} — coût total des intérêts : ${formatMoney(pv.interest)}.`;
     };
     amount.addEventListener('input', updatePreview);
     months.addEventListener('change', updatePreview);
+    type.addEventListener('change', updatePreview);
     updatePreview();
+    const loans = s.economy.loans;
+    // Échéancier agrégé des 12 prochains mois et profil d'extinction annuel
+    const horizon = Math.max(0, ...loans.map((l) => l.monthsLeft));
+    const byMonth = Array.from({ length: Math.min(12, horizon) }, () => ({ interest: 0, principal: 0 }));
+    const years = Array.from({ length: Math.ceil(horizon / 12) }, () => ({ interest: 0, principal: 0, end: 0 }));
+    for (const l of loans) {
+      for (const row of loanSchedule(l)) {
+        if (row.month <= 12) {
+          byMonth[row.month - 1].interest += row.interest;
+          byMonth[row.month - 1].principal += row.principal;
+        }
+        const y = years[Math.floor((row.month - 1) / 12)];
+        y.interest += row.interest;
+        y.principal += row.principal;
+      }
+    }
+    let remaining = loans.reduce((a, l) => a + l.remaining, 0);
+    for (const y of years) {
+      remaining -= y.principal;
+      y.end = remaining;
+    }
+    const startMonth = Math.floor(s.time.tick / SIM.DAYS_PER_MONTH) + 1;
+    const repay = (l) => h('button.btn.small', {
+      type: 'button',
+      title: `Indemnité : ${formatMoney(econ.prepaymentPenalty(l))}`,
+      disabled: s.economy.treasury < l.remaining + econ.prepaymentPenalty(l),
+      on: {
+        click: async () => {
+          const pen = econ.prepaymentPenalty(l);
+          if (!(await confirmDialog(`Rembourser par anticipation l'emprunt n°${l.id} : ${formatMoney(l.remaining)} de capital et ${formatMoney(pen)} d'indemnité ?`, { confirmLabel: 'Rembourser' }))) return;
+          const r = this.execute({ type: 'repayLoan', loanId: l.id });
+          this.notify(r.ok ? 'success' : 'warning', r.ok ? `Emprunt n°${l.id} remboursé (indemnité ${formatMoney(r.penalty)})` : r.reason);
+          rerender();
+        }
+      }
+    }, 'Rembourser');
     return [
       h('div.kpis',
         h('div.kpi', h('span', 'Capacité d\'emprunt'), h('strong', formatMoney(cap))),
-        h('div.kpi', h('span', 'Taux proposé'), h('strong', `${(rate * 100).toFixed(2)} %`), h('small', 'taux fixe annuel')),
+        h('div.kpi', h('span', 'Taux proposé'), rateOut, h('small', 'taux fixe annuel, selon le profil')),
         h('div.kpi.credit', h('span', 'Note de la dette'), h('strong', { class: `grade grade-${gradeClass(rating.grade)}` }, rating.grade), h('small', rating.provisional ? 'note provisoire (aucun mois clos)' : `score ${rating.score}/100`))
       ),
       creditDetails(rating),
       h('form.loan-form', { on: { submit: (e) => {
         e.preventDefault();
-        const r = this.execute({ type: 'loan', amountEuros: Number(amount.value), months: Number(months.value) });
-        this.notify(r.ok ? 'success' : 'warning', r.ok ? `Emprunt souscrit : ${formatMoney(r.loan.principal)}` : r.reason);
+        const r = this.execute({ type: 'loan', amountEuros: Number(amount.value), months: Number(months.value), loanType: type.value });
+        this.notify(r.ok ? 'success' : 'warning', r.ok ? `Emprunt souscrit : ${formatMoney(r.loan.principal)} (${LOAN_TYPES[r.loan.type].short})` : r.reason);
         rerender();
       } } },
-        h('label', 'Montant (€)', h('span.loan-amount', amount, maxBtn)), h('label', 'Durée', months), h('button.btn.primary', { type: 'submit', disabled: maxEuros <= 0 }, 'Emprunter')
+        h('label', 'Montant (€)', h('span.loan-amount', amount, maxBtn)), h('label', 'Durée', months), h('label', 'Remboursement', type), h('button.btn.primary', { type: 'submit', disabled: maxEuros <= 0 }, 'Emprunter')
       ),
       preview,
-      s.economy.loans.length
-        ? h('table.fin', h('thead', h('tr', h('th', 'Emprunt'), h('th.num', 'Capital initial'), h('th.num', 'Restant dû'), h('th.num', 'Taux'), h('th.num', 'Annuité'), h('th.num', 'Mois restants'))),
-          h('tbody', s.economy.loans.map((l) => h('tr', h('td', `n°${l.id}`), money(l.principal), money(l.remaining), h('td.num', `${(l.rateAnnual * 100).toFixed(2)} %`), money(l.payment), h('td.num', String(l.monthsLeft))))))
-        : h('p.empty', 'Aucun emprunt en cours.')
+      loans.length
+        ? h('div.table-wrap', h('table.fin',
+          h('thead', h('tr', h('th', 'Emprunt'), h('th', 'Profil'), h('th.num', 'Capital initial'), h('th.num', 'Restant dû'), h('th.num', 'Taux'), h('th.num', 'Prochaine échéance'), h('th.num', 'Mois restants'), h('th', ''))),
+          h('tbody', loans.map((l) => {
+            const next = loanSchedule(l, 1)[0];
+            return h('tr', h('td', `n°${l.id}`), h('td', LOAN_TYPES[l.type ?? 'annuity'].label), money(l.principal), money(l.remaining), h('td.num', `${(l.rateAnnual * 100).toFixed(2)} %`), money(next ? next.interest + next.principal : 0), h('td.num', String(l.monthsLeft)), h('td', h('div.loan-actions', repay(l))));
+          }))))
+        : h('p.empty', 'Aucun emprunt en cours.'),
+      loans.length ? [
+        h('h3', 'Échéancier des 12 prochains mois'),
+        h('div.table-wrap', h('table.fin.compact.schedule-table',
+          h('thead', h('tr', h('th', ''), byMonth.map((_, k) => h('th.num', monthLabel(startMonth + k))))),
+          h('tbody',
+            h('tr', h('td', 'Intérêts'), byMonth.map((m) => money(m.interest))),
+            h('tr', h('td', 'Capital'), byMonth.map((m) => money(m.principal))),
+            h('tr.total', h('td', 'Total'), byMonth.map((m) => money(m.interest + m.principal)))))),
+        h('h3', 'Profil d\'extinction de la dette'),
+        h('div.table-wrap', h('table.fin.compact.schedule-table',
+          h('thead', h('tr', h('th', 'Année'), h('th.num', 'Intérêts'), h('th.num', 'Capital remboursé'), h('th.num', 'Dette en fin d\'année'))),
+          h('tbody', years.map((y, k) => h('tr', h('td', `${SIM.START_YEAR + Math.floor((startMonth + k * 12) / 12)}`), money(y.interest), money(y.principal), money(y.end)))))),
+        h('p.hint', 'Remboursement anticipé : indemnité de six mois d\'intérêts, au plus 3 % du capital remboursé. Un emprunt in fine demande de provisionner son capital : une alerte prévient trois mois avant l\'échéance.')
+      ] : null
+    ];
+  }
+
+  /** Fiscalité par quartier (v0.8) : carte des quartiers de la commune et écarts de taux. */
+  #districts(session, rerender) {
+    const s = session.state;
+    const list = districtList(s);
+    const land = landOf(s);
+    if (!this.district || !list.some((d) => d.key === this.district)) this.district = list[0]?.key ?? null;
+    const sel = list.find((d) => d.key === this.district);
+    const byKey = new Map(list.map((d) => [d.key, d]));
+    const x0 = land.box.x0;
+    const y0 = land.box.y0;
+    const nx = land.box.x1 - x0 + 1;
+    const ny = land.box.y1 - y0 + 1;
+    const cells = [];
+    for (let gy = y0; gy < y0 + ny; gy++) {
+      for (let gx = x0; gx < x0 + nx; gx++) {
+        const d = byKey.get(`${gx},${gy}`);
+        if (!d) {
+          cells.push(h('div.district-cell.empty'));
+          continue;
+        }
+        const avg = (d.tax.R + d.tax.C + d.tax.O + d.tax.I) / 4;
+        cells.push(h('button.district-cell', {
+          type: 'button',
+          class: [d.key === this.district ? 'active' : '', avg < -0.05 ? 'lower' : avg > 0.05 ? 'higher' : ''].join(' '),
+          title: `${d.name} — ${formatNumber(d.residents, 0)} habitants`,
+          on: { click: () => { this.district = d.key; rerender(); } }
+        }, h('span', d.name), h('small', d.residents ? `${formatNumber(d.residents, 0)} hab.` : '—')));
+      }
+    }
+    const t = s.economy.taxes;
+    const editor = sel ? h('section.district-editor',
+      h('h3',
+        h('input.line-name', { type: 'text', value: sel.name, maxLength: 32, 'aria-label': 'Nom du quartier', on: { change: (e) => { this.execute({ type: 'districtName', key: sel.key, name: e.target.value }); rerender(); } } }),
+        h('small', `${formatNumber(sel.residents, 0)} habitants · ${formatNumber(sel.jobs, 0)} emplois · satisfaction ${sel.satisfaction ?? '—'}`)),
+      h('div.sliders', SECTORS.map((k) => {
+        const delta = sel.tax[k] ?? 0;
+        const out = h('output', fmtDelta(delta, t[k]));
+        return h('div.slider-row',
+          h('label', TAX_LABELS[k][0], h('small', `taux de la commune ${String(t[k]).replace('.', ',')} %`)),
+          h('input', {
+            type: 'range', min: -TAX_DELTA_MAX, max: TAX_DELTA_MAX, step: 0.5, value: delta, 'aria-label': `${TAX_LABELS[k][0]} — écart du quartier`,
+            on: {
+              input: (e) => (out.textContent = fmtDelta(Number(e.target.value), t[k])),
+              change: (e) => { this.execute({ type: 'districtTax', key: sel.key, sector: k, value: Number(e.target.value) }); rerender(); }
+            }
+          }),
+          out);
+      })),
+      h('p.hint', 'Un quartier moins taxé attire les constructions de ce secteur (jusqu\'à +35 % à −5 points) et ses habitants sont plus satisfaits ; un quartier plus taxé rapporte davantage mais se développe moins vite. La demande et la popularité suivent le taux moyen effectivement payé.')
+    ) : h('p.empty', 'Aucun quartier.');
+    return [
+      h('p.hint', `Chaque parcelle de 32 × 32 cases de la commune forme un quartier (${list.length} quartier${list.length > 1 ? 's' : ''}). Choisissez un quartier pour ajuster ses taux par rapport à ceux de la commune (de −${TAX_DELTA_MAX} à +${TAX_DELTA_MAX} points). La couche « Fiscalité par quartier » montre les écarts sur la carte.`),
+      h('div.district-map', { style: { gridTemplateColumns: `repeat(${Math.min(WORLD_PARCELS, nx)}, minmax(0, 72px))` } }, cells),
+      editor,
+      h('div.table-wrap', h('table.fin.compact',
+        h('thead', h('tr', h('th', 'Quartier'), h('th.num', 'Habitants'), h('th.num', 'Emplois'), h('th.num', 'Satisfaction'), ...SECTORS.map((k) => h('th.num', k === 'R' ? 'Hab.' : k === 'C' ? 'Com.' : k === 'O' ? 'Bur.' : 'Ind.')))),
+        h('tbody', list.map((d) => h('tr', { class: d.key === this.district ? 'strong' : '' },
+          h('td', d.name), h('td.num', formatNumber(d.residents, 0)), h('td.num', formatNumber(d.jobs, 0)), h('td.num', d.satisfaction ?? '—'),
+          ...SECTORS.map((k) => h('td.num', { class: d.tax[k] > 0 ? 'neg' : d.tax[k] < 0 ? 'pos' : '' }, d.tax[k] ? `${d.tax[k] > 0 ? '+' : '−'}${String(Math.abs(d.tax[k])).replace('.', ',')}` : '0')))))))
     ];
   }
 
@@ -386,4 +582,10 @@ function creditDetails(rating) {
     h('p.hint', `Échelle : ${SCALE}. Une bonne note abaisse le taux des nouveaux emprunts ; au-delà de 12 ans de capacité de désendettement, la note se dégrade fortement.`)
   );
 
+}
+
+/** Écart de taux d'un quartier, avec le taux résultant. */
+function fmtDelta(delta, base) {
+  const sign = delta > 0 ? '+' : delta < 0 ? '−' : '±';
+  return `${sign}${String(Math.abs(delta)).replace('.', ',')} pt → ${String(Math.max(0, Math.round((base + delta) * 10) / 10)).replace('.', ',')} %`;
 }

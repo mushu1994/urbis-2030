@@ -8,6 +8,9 @@ import { defaultWeather } from '../simulation/WeatherSystem.js';
 import { defaultCrises, defaultOptions } from '../simulation/CrisisSystem.js';
 import { defaultPolitics } from '../simulation/PoliticsSystem.js';
 import { defaultResources } from '../simulation/ResourceSystem.js';
+import { defaultMarket } from '../simulation/MarketSystem.js';
+import { defaultLines } from '../simulation/LineSystem.js';
+import { defaultDistricts } from '../simulation/Districts.js';
 
 /**
  * @typedef {Object} Building
@@ -108,6 +111,12 @@ export class GameState {
     this.politics = defaultPolitics(this);
     /** Ressources : cours, chocs et bilan du dernier mois (v0.7). */
     this.resources = defaultResources();
+    /** Marché régional : cours de l'électricité, de l'eau et des déchets, contrats (v0.8). */
+    this.market = defaultMarket();
+    /** Lignes de bus et de tramway tracées par le joueur (v0.8). */
+    this.lines = defaultLines();
+    /** Quartiers : noms et fiscalité différenciée (v0.8). */
+    this.districts = defaultDistricts();
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};
@@ -160,6 +169,11 @@ export function emptyAccrual() {
     taxC: 0,
     taxO: 0,
     taxI: 0,
+    /** Bases imposées au taux de leur quartier (somme base × taux, v0.8). */
+    taxRv: 0,
+    taxCv: 0,
+    taxOv: 0,
+    taxIv: 0,
     property: 0,
     water: 0,
     power: 0,

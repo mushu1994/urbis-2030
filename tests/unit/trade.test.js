@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { flatSession, spawn } from '../helpers/session.js';
 import { SIM } from '../../src/simulation/config.js';
 import { checkInvariants } from '../../src/debug/Invariants.js';
+import { marketPrice, tradeValue } from '../../src/simulation/MarketSystem.js';
+
+/** Montant attendu au prix du marché régional (v0.8), profondeur du marché comprise. */
+const atMarket = (s, good, side, units) => Math.round(tradeValue(good, side, units, marketPrice(s.state, good, side)) * 100);
 
 /** Rue reliée à l'autoroute (ligne 15) et immeubles habités le long de la rue. */
 function town({ connected = true } = {}) {
@@ -36,8 +40,9 @@ describe('Échanges régionaux', () => {
     s.sim.utilities.update(s.state);
     const imported = power(s).imported;
     s.sim.economy.accrueDaily(s.state);
+    const expected = atMarket(s, 'power', 'buy', imported);
     const p = s.sim.economy.closeMonth(s.state);
-    expect(p.opex.importPower).toBe(Math.round(imported * SIM.TRADE.power.buy * 100));
+    expect(p.opex.importPower).toBe(expected);
     expect(p.opex.importPower).toBeGreaterThan(p.revenue.power);
     expect(SIM.TRADE.power.buy).toBeGreaterThan(3 * SIM.START_TARIFFS.power);
   });
@@ -65,8 +70,9 @@ describe('Échanges régionaux', () => {
     expect(power(s).exported).toBeLessThan(p.exported);
     expect(bat.charge).toBeGreaterThan(0);
     s.sim.economy.accrueDaily(s.state);
+    const expected = atMarket(s, 'power', 'sell', power(s).exported);
     const period = s.sim.economy.closeMonth(s.state);
-    expect(period.revenue.exportPower).toBe(Math.round(power(s).exported * SIM.TRADE.power.sell * 100));
+    expect(period.revenue.exportPower).toBe(expected);
   });
 
   it('eau : achat en cas de pénurie, vente des excédents', () => {
@@ -102,8 +108,9 @@ describe('Échanges régionaux', () => {
     expect(ws.collected).toBeGreaterThan(0);
     expect(ws.exportedPerDay).toBeCloseTo(ws.collected, 6);
     s.sim.economy.accrueDaily(s.state);
+    const expected = atMarket(s, 'waste', 'buy', ws.exportedPerDay);
     const p = s.sim.economy.closeMonth(s.state);
-    expect(p.opex.wasteExport).toBe(Math.round(ws.exportedPerDay * SIM.TRADE.waste.buy * 100));
+    expect(p.opex.wasteExport).toBe(expected);
   });
 
   it('commande invalide refusée ; la comptabilité reste cohérente', () => {

@@ -1,6 +1,8 @@
 import { SIM, dateOfTick } from './config.js';
 import { emptyAccrual } from '../app/GameState.js';
 import { toCents } from '../util/money.js';
+import { deltaGrid } from './Districts.js';
+import { PARCEL } from '../world/Land.js';
 
 /**
  * Catégories comptables (libellés affichés dans les panneaux financiers).
@@ -44,7 +46,10 @@ export const CATEGORY_LABELS = {
   principal: 'Remboursement du capital',
   crisis: 'Crises et catastrophes',
   resourcesExport: 'Redevances sur les ressources exportées',
-  resourcesImport: 'Importations de ressources'
+  resourcesImport: 'Importations de ressources',
+  marketFees: 'Résiliations de contrats d\'énergie et d\'eau',
+  tramTracks: 'Voies de tramway',
+  fleet: 'Flotte des lignes de bus et de tramway'
 };
 
 /** Rattachement des catégories de bâtiments aux catégories comptables et aux modificateurs d'entretien. */
@@ -226,15 +231,48 @@ export class EconomySystem {
     const g = state.grid;
     const salesRatio = state.stats.salesRatio || 0;
     const goodsSold = state.stats.goodsProduced > 0 ? Math.min(1, 0.4 + 0.6 * (state.stats.goodsSoldRatio ?? 1)) : 0;
+    // Fiscalité par quartier (v0.8) : chaque base est imposée au taux de son quartier
+    const t = state.economy.taxes;
+    const dg = deltaGrid(state);
+    let vR = 0;
+    let vC = 0;
+    let vO = 0;
+    let vI = 0;
+    if (a.taxRv === undefined) {
+      a.taxRv = a.taxR * t.R;
+      a.taxCv = a.taxC * t.C;
+      a.taxOv = a.taxO * t.O;
+      a.taxIv = a.taxI * t.I;
+    }
 
     for (const b of state.buildings.values()) {
       if (b.abandoned) continue;
       const def = cat.buildingFor(b);
-      if (b.employed) baseR += b.employed * SIM.TAXABLE_INCOME[b.incomeClass ?? 'mid'];
+      let o = -1;
+      if (dg) {
+        const px = Math.floor(b.x / PARCEL);
+        const py = Math.floor(b.y / PARCEL);
+        if (px < dg.nx && py < dg.ny) o = (py * dg.nx + px) * 4;
+      }
+      if (b.employed) {
+        const base = b.employed * SIM.TAXABLE_INCOME[b.incomeClass ?? 'mid'];
+        baseR += base;
+        vR += base * (o >= 0 ? Math.max(0, t.R + dg.d[o]) : t.R);
+      }
       if (b.jobsFilled && def.kind === 'growable') {
-        if (def.category === 'commerce') baseC += b.jobsFilled * SIM.VALUE_ADDED_PER_JOB.commerce * Math.min(1, salesRatio);
-        else if (def.category === 'offices') baseO += b.jobsFilled * SIM.VALUE_ADDED_PER_JOB.offices;
-        else if (def.category === 'industry') baseI += b.jobsFilled * SIM.VALUE_ADDED_PER_JOB.industry * goodsSold;
+        if (def.category === 'commerce') {
+          const base = b.jobsFilled * SIM.VALUE_ADDED_PER_JOB.commerce * Math.min(1, salesRatio);
+          baseC += base;
+          vC += base * (o >= 0 ? Math.max(0, t.C + dg.d[o + 1]) : t.C);
+        } else if (def.category === 'offices') {
+          const base = b.jobsFilled * SIM.VALUE_ADDED_PER_JOB.offices;
+          baseO += base;
+          vO += base * (o >= 0 ? Math.max(0, t.O + dg.d[o + 2]) : t.O);
+        } else if (def.category === 'industry') {
+          const base = b.jobsFilled * SIM.VALUE_ADDED_PER_JOB.industry * goodsSold;
+          baseI += base;
+          vI += base * (o >= 0 ? Math.max(0, t.I + dg.d[o + 3]) : t.I);
+        }
       }
       if (def.kind === 'growable') {
         // Valeur cadastrale : uniquement les biens privés.
@@ -249,6 +287,13 @@ export class EconomySystem {
     a.taxC += baseC;
     a.taxO += baseO;
     a.taxI += baseI;
+    a.taxRv += vR;
+    a.taxCv += vC;
+    a.taxOv += vO;
+    a.taxIv += vI;
+    // Taux moyens effectivement payés (demande, popularité, panneaux)
+    const avg = (v, base, rate) => (base > 0 ? Math.round((v / base) * 10) / 10 : rate);
+    state.economy.effTaxes = dg ? { R: avg(vR, baseR, t.R), C: avg(vC, baseC, t.C), O: avg(vO, baseO, t.O), I: avg(vI, baseI, t.I) } : null;
     a.property += property;
     a.water += state.utilities.water?.consumed ?? 0;
     a.power += state.utilities.power?.consumed ?? 0;
@@ -278,11 +323,13 @@ export class EconomySystem {
     const eff = mods.taxEfficiency ?? 1;
     const t = eco.taxes;
 
+    // Bases imposées au taux de leur quartier (v0.8) ; anciennes périodes : taux de la commune
+    const taxed = (k) => (a[`tax${k}v`] ?? a[`tax${k}`] * t[k]) / 100;
     const revenueLines = [
-      ['taxR', (a.taxR / days) * (t.R / 100) * eff],
-      ['taxC', (a.taxC / days) * (t.C / 100) * eff],
-      ['taxO', (a.taxO / days) * (t.O / 100) * eff],
-      ['taxI', (a.taxI / days) * (t.I / 100) * eff],
+      ['taxR', (taxed('R') / days) * eff],
+      ['taxC', (taxed('C') / days) * eff],
+      ['taxO', (taxed('O') / days) * eff],
+      ['taxI', (taxed('I') / days) * eff],
       ['property', ((a.property / days) * (t.property / 100) * eff) / 12],
       ['water', (a.water / days) * eco.tariffs.water],
       ['power', (a.power / days) * eco.tariffs.power]
@@ -308,9 +355,21 @@ export class EconomySystem {
     const fare = Math.max(0, (eco.tariffs.transit ?? 0) * (mods['transit.fareMult'] ?? 1));
     revenueLines.push(['transit', (a.transit ?? 0) * fare]);
     revenueLines.push(['recycling', (a.recycling ?? 0) * RECYCLING_PRICE]);
-    // Ventes à la région (volumes moyens du mois, comme les ventes aux habitants)
-    revenueLines.push(['exportPower', ((a.powerExport ?? 0) / days) * SIM.TRADE.power.sell]);
-    revenueLines.push(['exportWater', ((a.waterExport ?? 0) / days) * SIM.TRADE.water.sell]);
+    // Échanges avec la région (v0.8) : prix du marché régional ou des contrats, volumes moyens du mois
+    const volumes = {
+      power: { sell: (a.powerExport ?? 0) / days, buy: (a.powerImport ?? 0) / days },
+      water: { sell: (a.waterExport ?? 0) / days, buy: (a.waterImport ?? 0) / days },
+      waste: { buy: a.wasteExport ?? 0 }
+    };
+    const trade = this.market
+      ? this.market.settle(state, volumes)
+      : {
+          power: { sell: volumes.power.sell * SIM.TRADE.power.sell, buy: volumes.power.buy * SIM.TRADE.power.buy },
+          water: { sell: volumes.water.sell * SIM.TRADE.water.sell, buy: volumes.water.buy * SIM.TRADE.water.buy },
+          waste: { buy: volumes.waste.buy * SIM.TRADE.waste.buy }
+        };
+    revenueLines.push(['exportPower', trade.power.sell]);
+    revenueLines.push(['exportWater', trade.water.sell]);
 
     for (const [category, euros] of revenueLines) {
       const amount = toCents(euros);
@@ -341,12 +400,18 @@ export class EconomySystem {
 
     // Exploitation des transports en commun : proportionnelle au nombre de voyageurs
     upkeep.transport = (upkeep.transport ?? 0) + Math.round((a.transitOps ?? 0) * 100);
+    // Lignes tracées (v0.8) : flotte de bus et de tramways, entretien des rails
+    if (this.lines) {
+      const lc = this.lines.monthlyCosts(state);
+      if (lc.fleet) upkeep.fleet = lc.fleet * (mods['upkeep.transport'] ?? 1);
+      if (lc.tracks) upkeep.tramTracks = lc.tracks;
+    }
 
     // Achats à la région : prix prohibitifs, comptabilisés à part pour rester visibles
     const purchases = [
-      ['importPower', ((a.powerImport ?? 0) / days) * SIM.TRADE.power.buy],
-      ['importWater', ((a.waterImport ?? 0) / days) * SIM.TRADE.water.buy],
-      ['wasteExport', (a.wasteExport ?? 0) * SIM.TRADE.waste.buy]
+      ['importPower', trade.power.buy],
+      ['importWater', trade.water.buy],
+      ['wasteExport', trade.waste.buy]
     ];
     for (const [category, euros] of purchases) {
       const amount = toCents(euros);
@@ -366,15 +431,18 @@ export class EconomySystem {
     for (const id of Object.keys(state.policies.active)) polCost += policyMonthlyCents(cat.policyById.get(id), state.stats.population);
     if (polCost) this.post(state, { kind: 'opex', category: 'policies', label: 'Politiques publiques', amount: -polCost });
 
-    // Service de la dette (annuités constantes)
+    // Service de la dette selon le profil de chaque emprunt (v0.8 : annuités, amortissement constant, in fine)
     for (const loan of eco.loans) {
       if (loan.monthsLeft <= 0) continue;
-      const interest = Math.round((loan.remaining * loan.rateAnnual) / 12);
-      const principal = Math.min(loan.remaining, loan.payment - interest);
-      this.post(state, { kind: 'interest', category: 'interest', label: `Intérêts — emprunt n°${loan.id}`, amount: -interest, ref: loan.id });
-      this.post(state, { kind: 'principal', category: 'principal', label: `Capital — emprunt n°${loan.id}`, amount: -principal, ref: loan.id });
+      const { interest, principal } = loanInstallment(loan);
+      if (interest > 0) this.post(state, { kind: 'interest', category: 'interest', label: `Intérêts — emprunt n°${loan.id}`, amount: -interest, ref: loan.id });
+      if (principal > 0) this.post(state, { kind: 'principal', category: 'principal', label: `Capital — emprunt n°${loan.id}${loan.type === 'bullet' ? ' (remboursement in fine)' : ''}`, amount: -principal, ref: loan.id });
       loan.remaining -= principal;
       loan.monthsLeft -= 1;
+      // Emprunt in fine : alerte trois mois avant le remboursement du capital
+      if (loan.type === 'bullet' && loan.monthsLeft === 3) {
+        this.bus?.emit('notify', { level: 'warning', message: `Emprunt n°${loan.id} in fine : ${formatEuros(loan.remaining)} de capital à rembourser dans 3 mois.`, key: `bullet-${loan.id}`, panel: 'finance' });
+      }
     }
     eco.loans = eco.loans.filter((l) => l.monthsLeft > 0 && l.remaining > 0);
 
@@ -485,11 +553,11 @@ export class EconomySystem {
     return { grade, score, spread, provisional, debt, years, factors };
   }
 
-  /** Taux annuel proposé : taux de base + prime de risque liée à la note + poids de l'encours. */
-  loanRate(state) {
+  /** Taux annuel proposé : taux de base + prime de risque liée à la note + poids de l'encours (+ prime du profil). */
+  loanRate(state, type = 'annuity') {
     const outstanding = state.economy.loans.reduce((s, l) => s + l.remaining, 0);
     const { spread } = this.creditRating(state);
-    return Math.round(Math.max(0.012, 0.032 + spread + outstanding / 1e9) * 10000) / 10000;
+    return Math.round(Math.max(0.012, 0.032 + spread + outstanding / 1e9 + (LOAN_TYPES[type]?.spread ?? 0)) * 10000) / 10000;
   }
 
   /** Montant maximal empruntable maintenant, arrondi à l'euro inférieur (en euros). */
@@ -498,28 +566,68 @@ export class EconomySystem {
   }
 
   /**
-   * Souscrit un emprunt à annuités constantes.
+   * Souscrit un emprunt (v0.8 : profil au choix).
+   * - annuités constantes : même montant chaque mois ;
+   * - amortissement constant : même part de capital chaque mois, intérêts dégressifs (premières échéances plus lourdes) ;
+   * - in fine : intérêts seuls, capital remboursé en une fois à l'échéance (taux un peu plus élevé).
    * @returns {{ok:boolean, reason?:string, loan?:any}}
    */
-  takeLoan(state, amountCents, months) {
+  takeLoan(state, amountCents, months, type = 'annuity') {
     if (!Number.isInteger(amountCents) || amountCents <= 0) return { ok: false, reason: 'Montant invalide' };
+    if (!LOAN_TYPES[type]) return { ok: false, reason: 'Profil d\'emprunt inconnu' };
+    if (!Number.isInteger(months) || months < 12 || months > 360) return { ok: false, reason: 'Durée invalide' };
     if (amountCents > this.debtCapacity(state)) return { ok: false, reason: 'Capacité d\'emprunt dépassée' };
-    const rateAnnual = this.loanRate(state);
-    const r = rateAnnual / 12;
-    const payment = Math.ceil((amountCents * r) / (1 - Math.pow(1 + r, -months)));
+    const rateAnnual = this.loanRate(state, type);
     const loan = {
       id: state.economy.nextLoanId++,
+      type,
       principal: amountCents,
       remaining: amountCents,
       rateAnnual,
       months,
       monthsLeft: months,
-      payment,
+      payment: annuityPayment(amountCents, rateAnnual, months),
       startTick: state.time.tick
     };
+    if (type !== 'annuity') {
+      const first = loanInstallment(loan);
+      loan.payment = first.interest + first.principal;
+    }
     state.economy.loans.push(loan);
-    this.post(state, { kind: 'loan', category: 'loan', label: `Emprunt n°${loan.id} (${months} mois)`, amount: amountCents, ref: loan.id });
+    this.post(state, { kind: 'loan', category: 'loan', label: `Emprunt n°${loan.id} (${months} mois, ${LOAN_TYPES[type].short})`, amount: amountCents, ref: loan.id });
     return { ok: true, loan };
+  }
+
+  /** Indemnité de remboursement anticipé (centimes) : six mois d'intérêts, au plus 3 % du capital remboursé. */
+  prepaymentPenalty(loan, amountCents = loan.remaining) {
+    const amt = Math.min(loan.remaining, amountCents);
+    return Math.round(Math.min((amt * loan.rateAnnual) / 2, amt * 0.03));
+  }
+
+  /**
+   * Remboursement anticipé, total ou partiel. L'échéancier est recalculé sur la durée restante.
+   * @returns {{ok:boolean, reason?:string, penalty?:number, amount?:number}}
+   */
+  repayLoan(state, loanId, amountCents = null) {
+    const eco = state.economy;
+    const loan = eco.loans.find((l) => l.id === loanId);
+    if (!loan) return { ok: false, reason: 'Emprunt introuvable' };
+    const amount = Math.min(loan.remaining, amountCents === null || amountCents === undefined ? loan.remaining : Math.round(amountCents));
+    if (!(amount > 0)) return { ok: false, reason: 'Montant invalide' };
+    const penalty = this.prepaymentPenalty(loan, amount);
+    if (eco.treasury < amount + penalty) return { ok: false, reason: 'Trésorerie insuffisante' };
+    this.post(state, { kind: 'principal', category: 'principal', label: `Remboursement anticipé — emprunt n°${loan.id}`, amount: -amount, ref: loan.id });
+    if (penalty > 0) this.post(state, { kind: 'interest', category: 'interest', label: `Indemnité de remboursement anticipé — emprunt n°${loan.id}`, amount: -penalty, ref: loan.id });
+    loan.remaining -= amount;
+    if (loan.remaining <= 0) eco.loans = eco.loans.filter((l) => l.id !== loan.id);
+    else {
+      if ((loan.type ?? 'annuity') === 'annuity') loan.payment = annuityPayment(loan.remaining, loan.rateAnnual, loan.monthsLeft);
+      else {
+        const next = loanInstallment(loan);
+        loan.payment = next.interest + next.principal;
+      }
+    }
+    return { ok: true, penalty, amount };
   }
 
   /**
@@ -553,8 +661,7 @@ export class EconomySystem {
       let debtService = 0;
       for (const l of loans) {
         if (l.monthsLeft <= 0) continue;
-        const interest = Math.round((l.remaining * l.rateAnnual) / 12);
-        const principal = Math.min(l.remaining, l.payment - interest);
+        const { interest, principal } = loanInstallment(l);
         debtService += interest + principal;
         l.remaining -= principal;
         l.monthsLeft--;
@@ -570,4 +677,64 @@ export class EconomySystem {
 export function policyMonthlyCents(pol, population = 0) {
   if (!pol) return 0;
   return pol.monthlyCostCents + Math.round(((pol.costPer1000Cents ?? 0) * Math.max(0, population)) / 1000);
+}
+
+/** Profils d'emprunt (v0.8). `spread` : prime de taux demandée par les prêteurs. */
+export const LOAN_TYPES = {
+  annuity: { label: 'Annuités constantes', short: 'annuités constantes', spread: 0, desc: 'Le même montant chaque mois : la part d\'intérêts diminue, celle du capital augmente.' },
+  linear: { label: 'Amortissement constant', short: 'amortissement constant', spread: 0, desc: 'La même part de capital chaque mois : premières échéances plus lourdes, coût total des intérêts plus faible.' },
+  bullet: { label: 'In fine', short: 'in fine', spread: 0.004, desc: 'Intérêts seuls chaque mois, tout le capital à l\'échéance : soulage la trésorerie aujourd\'hui, mais il faut provisionner le remboursement.' }
+};
+
+/** Mensualité d'un emprunt à annuités constantes (centimes). */
+export function annuityPayment(amountCents, rateAnnual, months) {
+  const r = rateAnnual / 12;
+  if (!(months > 0)) return amountCents;
+  return r > 0 ? Math.ceil((amountCents * r) / (1 - Math.pow(1 + r, -months))) : Math.ceil(amountCents / months);
+}
+
+/** Échéance du mois à venir d'un emprunt : intérêts et capital (centimes). La dernière solde le capital restant. */
+export function loanInstallment(loan) {
+  const interest = Math.round((loan.remaining * loan.rateAnnual) / 12);
+  if (loan.monthsLeft <= 1) return { interest, principal: loan.remaining };
+  let principal;
+  switch (loan.type) {
+    case 'linear':
+      principal = Math.ceil(loan.remaining / loan.monthsLeft);
+      break;
+    case 'bullet':
+      principal = 0;
+      break;
+    default:
+      principal = Math.max(0, loan.payment - interest);
+  }
+  return { interest, principal: Math.min(loan.remaining, principal) };
+}
+
+/**
+ * Échéancier d'un emprunt (simulation sur une copie) : une ligne par mois restant.
+ * @returns {{month:number, interest:number, principal:number, remaining:number}[]}
+ */
+export function loanSchedule(loan, horizon = loan.monthsLeft) {
+  const l = { ...loan };
+  const out = [];
+  for (let m = 0; m < Math.min(horizon, loan.monthsLeft); m++) {
+    const { interest, principal } = loanInstallment(l);
+    l.remaining -= principal;
+    l.monthsLeft--;
+    out.push({ month: m + 1, interest, principal, remaining: l.remaining });
+  }
+  return out;
+}
+
+/** Coût total des intérêts d'un emprunt simulé (aperçu avant souscription). */
+export function loanPreview(amountCents, rateAnnual, months, type) {
+  const loan = { type, principal: amountCents, remaining: amountCents, rateAnnual, months, monthsLeft: months, payment: annuityPayment(amountCents, rateAnnual, months) };
+  const sched = loanSchedule(loan);
+  const interest = sched.reduce((a, x) => a + x.interest, 0);
+  return { first: sched[0] ? sched[0].interest + sched[0].principal : 0, last: sched.at(-1) ? sched.at(-1).interest + sched.at(-1).principal : 0, interest };
+}
+
+function formatEuros(cents) {
+  return `${Math.round(cents / 100).toLocaleString('fr-FR')} €`;
 }

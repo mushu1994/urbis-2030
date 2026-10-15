@@ -157,7 +157,7 @@ export class CityPanel {
       h('section',
         h('h3', 'Fréquentation'),
         h('table.fin.compact', h('thead', h('tr', h('th', 'Réseau'), h('th.num', 'Voyageurs/j'), h('th.num', 'Demande'), h('th.num', 'Capacité'), h('th.num', 'Charge'))),
-          h('tbody', line('bus', 'Bus'), line('metro', 'Métro'), line('rail', 'Train et hyperboucle'))),
+          h('tbody', line('bus', 'Bus'), line('tram', 'Tramway'), line('metro', 'Métro'), line('rail', 'Train et hyperboucle'))),
         row('Habitants desservis', pct(t.coveredShare)),
         row('Trajets en voiture évités / jour', formatNumber(t.carTripsAvoided ?? 0, 0)),
         row('Prix effectif du billet', `${(t.fare ?? 0).toFixed(2)} €`),
@@ -167,9 +167,12 @@ export class CityPanel {
         h('h3', 'Équipements'),
         row('Arrêts de bus (actifs / construits)', `${t.activeStops ?? 0} / ${t.stops ?? 0}`, (t.stops ?? 0) > (t.activeStops ?? 0) ? 'warn' : ''),
         row('Dépôts de bus', formatNumber(t.depots ?? 0)),
+        row('Réseau de bus', { auto: 'automatique (aucune ligne tracée)', mixed: 'lignes tracées + réseau de base', lines: 'lignes tracées' }[t.busNetwork ?? 'auto']),
+        row('Stations de tramway (actives / construites)', `${t.activeTramStops ?? 0} / ${t.tramStops ?? 0}`, (t.tramStops ?? 0) > (t.activeTramStops ?? 0) ? 'warn' : ''),
+        row('Lignes de bus et de tramway (en service / tracées)', `${t.activeLines ?? 0} / ${t.lines ?? 0}`, (t.lines ?? 0) > (t.activeLines ?? 0) ? 'warn' : ''),
         row('Stations de métro', formatNumber(t.metroStations ?? 0), t.metroStations === 1 ? 'warn' : ''),
         row('Gares et stations d\'hyperboucle', formatNumber(t.railStations ?? 0)),
-        h('p.hint', 'Un arrêt de bus ne fonctionne que s\'il est relié par la route à un dépôt alimenté. Le métro demande au moins deux stations. Le train transporte les navetteurs vers la région.')
+        h('p.hint', 'Un arrêt de bus ne fonctionne que s\'il est relié par la route à un dépôt alimenté ; les arrêts hors des lignes tracées restent desservis par le réseau de base, moins fréquent. Le tramway roule sur ses lignes. Le métro demande au moins deux stations. Le train transporte les navetteurs vers la région. Lignes : touche K.')
       )
     );
   }

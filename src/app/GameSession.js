@@ -7,6 +7,7 @@ import { ZoningService } from '../systems/ZoningService.js';
 import { getTile } from '../world/Tile.js';
 import { toCents } from '../util/money.js';
 import { ruinBuilding } from '../simulation/CrisisSystem.js';
+import { setDistrictTax, renameDistrict } from '../simulation/Districts.js';
 
 /**
  * Une partie en cours : état + simulation + services, sans aucune dépendance graphique.
@@ -75,6 +76,8 @@ export class GameSession {
         return this.construction.previewParcel(s, cmd);
       case 'rail':
         return this.construction.previewRail(s, cmd);
+      case 'line':
+        return this.sim.lines.preview(s, cmd);
       default:
         return { ok: false, reasons: ['unknown'], messages: [`Commande inconnue : ${cmd.type}`] };
     }
@@ -165,7 +168,27 @@ export class GameSession {
         break;
       }
       case 'loan':
-        r = this.sim.economy.takeLoan(s, toCents(cmd.amountEuros), cmd.months);
+        r = this.sim.economy.takeLoan(s, toCents(cmd.amountEuros), Number(cmd.months), cmd.loanType ?? 'annuity');
+        break;
+      case 'repayLoan':
+        // Remboursement anticipé (v0.8), total ou partiel
+        r = this.sim.economy.repayLoan(s, cmd.loanId, cmd.amountEuros === undefined || cmd.amountEuros === null ? null : toCents(cmd.amountEuros));
+        break;
+      case 'line':
+        // Lignes de bus et de tramway (v0.8)
+        if (cmd.op === 'update') r = this.sim.lines.update(s, cmd);
+        else if (cmd.op === 'remove') r = this.sim.lines.remove(s, cmd);
+        else r = this.sim.lines.create(s, cmd);
+        break;
+      case 'districtTax':
+        r = setDistrictTax(s, cmd.key, cmd.sector, cmd.value);
+        break;
+      case 'districtName':
+        r = renameDistrict(s, cmd.key, cmd.name);
+        break;
+      case 'contract':
+        // Contrat à prix fixe avec la région (v0.8)
+        r = this.sim.market.setContract(s, cmd.good, cmd.side, !!cmd.enabled);
         break;
       case 'trade': {
         // Échanges régionaux : vente des excédents ou achat en cas de pénurie

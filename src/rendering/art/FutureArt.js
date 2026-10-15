@@ -50,7 +50,7 @@ function tree(g, x, y, s = 1, c = LEAF) {
 
 // ───────────────────────────── Sites au sol (sans volume principal) ─────────────────────────────
 
-export const FLAT_SITE_ROOFS = new Set(['landfill', 'plaza', 'field', 'zoo', 'stadium', 'runway', 'busstop']);
+export const FLAT_SITE_ROOFS = new Set(['landfill', 'plaza', 'field', 'zoo', 'stadium', 'runway', 'busstop', 'tramstop']);
 
 export function drawFlatSite(g, def, b, alt, T, R, B, L) {
   const v = def.visual;
@@ -179,6 +179,19 @@ export function drawFlatSite(g, def, b, alt, T, R, B, L) {
       const pole = at(T, R, L, 0.18, 0.3);
       g.rect(pole.x - 0.7, pole.y - 14, 1.4, 14).fill(0x666666);
       g.circle(pole.x, pole.y - 15, 3).fill(ab ? 0x888888 : 0xe2b13c);
+      return;
+    }
+    case 'tramstop': {
+      // Quai surélevé, abri vitré à toit vert, totem « T » (v0.8)
+      quad(g, T, R, L, 0.05, 0.08, 0.95, 0.92, 0xd8d2c4);
+      quad(g, T, R, L, 0.08, 0.12, 0.92, 0.2, 0xf0f0ea);
+      box(g, T, R, L, 0.3, 0.6, 0.85, 0.78, 10, 0xa9d8ea);
+      quad(g, T, R, L, 0.25, 0.55, 0.9, 0.83, ab ? 0x8a8a8a : 0x2fae6a, 11);
+      const pole = at(T, R, L, 0.18, 0.35);
+      g.rect(pole.x - 0.8, pole.y - 17, 1.6, 17).fill(0x5b636b);
+      g.rect(pole.x - 4, pole.y - 24, 8, 8).fill(ab ? 0x888888 : 0x2fae6a);
+      g.rect(pole.x - 2.6, pole.y - 22.5, 5.2, 1.4).fill(0xffffff);
+      g.rect(pole.x - 0.7, pole.y - 22, 1.4, 5).fill(0xffffff);
       return;
     }
     default:
@@ -440,6 +453,16 @@ export function drawFutureDetail(g, d, c) {
         const p = at(T, R, L, 0.2 + k * 0.28, 1.08);
         g.poly([p.x - 9, p.y, p.x + 1, p.y - 5, p.x + 1, p.y - 10, p.x - 9, p.y - 5]).fill(on ? 0xe2b13c : 0x888888);
         g.poly([p.x - 8, p.y - 3, p.x, p.y - 7, p.x, p.y - 9, p.x - 8, p.y - 5]).fill(0x9fd0e6);
+      }
+      return;
+    }
+    case 'tramdepot': {
+      // Rames de tramway garées devant le dépôt (v0.8)
+      for (let k = 0; k < 2; k++) {
+        const p = at(T, R, L, 0.18 + k * 0.42, 1.08);
+        g.poly([p.x - 16, p.y + 2, p.x + 2, p.y - 7, p.x + 2, p.y - 13, p.x - 16, p.y - 4]).fill(on ? 0xf2f4f6 : 0x8a8a8a);
+        g.poly([p.x - 15, p.y - 1, p.x + 1, p.y - 9, p.x + 1, p.y - 11, p.x - 15, p.y - 3]).fill(on ? 0x2fae6a : 0x777777);
+        g.poly([p.x - 14, p.y - 2.5, p.x, p.y - 9.5, p.x, p.y - 10.3, p.x - 14, p.y - 3.3]).fill(0x9fd0e6);
       }
       return;
     }

@@ -9,6 +9,7 @@ import { Renderer } from '../rendering/Renderer.js';
 import { SaveService, serializeState, deserializeState } from '../persistence/SaveService.js';
 import { expandSave } from '../persistence/WorldExpansion.js';
 import { TerritoryPanel } from '../ui/TerritoryPanel.js';
+import { LinesPanel } from '../ui/LinesPanel.js';
 import { SettingsService } from '../persistence/SettingsService.js';
 import { HUD } from '../ui/HUD.js';
 import { Toolbar } from '../ui/Toolbar.js';
@@ -123,6 +124,16 @@ export class GameApp {
       demand: new DemandPanel({ execute, notify }),
       politics: new PoliticsPanel({ execute, notify }),
       territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price) }),
+      lines: new LinesPanel({
+        execute,
+        notify,
+        onTool: (id) => {
+          this.panelHost.close();
+          this.toolbar.selectById(id);
+        },
+        onFocus: (x, y) => this.focus(x, y),
+        confirm: (message) => confirmDialog(message, { confirmLabel: 'Supprimer', danger: true })
+      }),
       sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
       help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
       debug: new DebugPanel({ getRenderer: () => this.renderer, getLoop: () => this.loop, settings: this.settings, apply: () => this.applySettings(), notify })
@@ -224,6 +235,7 @@ export class GameApp {
       c: () => this.togglePanel('city'),
       t: () => this.togglePanel('territory'),
       e: () => this.togglePanel('politics'),
+      k: () => this.togglePanel('lines'),
       i: () => this.togglePanel('ai'),
       h: () => this.togglePanel('help'),
       F1: () => this.togglePanel('help'),
@@ -272,6 +284,7 @@ export class GameApp {
       deliveryZone: 'Glissez pour délimiter',
       terraform: 'Glissez pour délimiter',
       move: this.tools.moveSource ? 'Choisissez le nouvel emplacement' : 'Touchez l\'équipement à déplacer',
+      line: this.tools.lineStops?.length ? `${this.tools.lineStops.length} arrêt(s) : touchez le suivant, ou Valider` : 'Touchez les arrêts dans l\'ordre du parcours',
       building: 'Choisissez l\'emplacement'
     }[tool.kind];
     // Bâtiment : rappel des effets principaux pendant la pose
@@ -676,6 +689,8 @@ export class GameApp {
     if (!this.session) {
       return;
     }
+    // Tracés des lignes : pendant le tracé d'une ligne et tant que le panneau des lignes est ouvert (v0.8)
+    this.renderer.setShowRoutes(this.tools.tool.kind === 'line' || this.panelHost.openId === 'lines', this.panels.lines.highlight);
     this.renderer.render(dt, { paused: this.clock.paused, speedIndex: this.clock.speedIndex });
     const now = performance.now();
     if (now - this.uiTimers.audio > 300) {

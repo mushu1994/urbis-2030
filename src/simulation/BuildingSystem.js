@@ -4,6 +4,7 @@ import { createBuilding, removeBuilding, changeBuildingDef } from '../systems/Bu
 import { constructionDaysFor, isUnderConstruction } from './Construction.js';
 import { findAccess } from '../world/PlacementSystem.js';
 import { hash2 } from '../util/rng.js';
+import { districtGrowthFactor } from './Districts.js';
 
 /** Tirage pondéré (champ « weight » des données, 10 par défaut) à partir d'un nombre de 0 à 1. */
 function pickWeighted(list, u) {
@@ -197,7 +198,9 @@ export class BuildingSystem {
         const i = list[k];
         if (g.building[i]) continue;
         const lvFactor = 0.55 + (code <= 2 ? g.landValue[i] : g.siteValue[i]) / 110;
-        if (!state.rng.chance((demand / 100) * 0.9 * lvFactor * growth)) continue;
+        // Fiscalité du quartier (v0.8) : un quartier moins taxé attire les constructions de son secteur
+        const local = districtGrowthFactor(state, g.xOf(i), g.yOf(i), ZONE_KEYS[code]);
+        if (!state.rng.chance((demand / 100) * 0.9 * lvFactor * growth * local)) continue;
         // Format et variante (v0.6) : tirages par hachage, pour ne pas perturber le générateur de la partie
         const t = state.time.tick;
         let def = null;
@@ -329,6 +332,7 @@ export class BuildingSystem {
         c.upgrade = ok ? (c.upgrade ?? 0) + dt : 0;
         let growth = mods['growth.all'] ?? 1;
         if (def.capacity.residents) growth *= mods['growth.R'] ?? 1;
+        if (ZONE_KEYS[def.zoneCode]) growth *= districtGrowthFactor(state, b.x, b.y, ZONE_KEYS[def.zoneCode]);
         if (c.upgrade >= SIM.UPGRADE_STABLE_DAYS && state.rng.chance(0.25 * growth)) {
           // Travaux de montée de niveau : 1,25 fois le délai du niveau précédent
           b.upgradeTo = next.id;

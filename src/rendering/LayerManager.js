@@ -15,20 +15,24 @@ export class LayerManager {
     this.ground = new Container();
     this.overlay = new Graphics();
     this.vehicles = new Graphics();
+    /** Bus et tramways des lignes tracées (v0.8). */
+    this.transitVehicles = new Graphics();
     this.objects = new Container();
     this.objects.sortableChildren = true;
     this.alerts = new Graphics();
+    /** Tracés des lignes de transport (v0.8). */
+    this.routes = new Graphics();
     this.selection = new Graphics();
     this.ghost = new Graphics();
     this.ghost.alpha = 0.62;
-    this.world.addChild(this.terrain, this.ground, this.overlay, this.vehicles, this.objects, this.alerts, this.ghost, this.selection);
+    this.world.addChild(this.terrain, this.ground, this.overlay, this.vehicles, this.transitVehicles, this.objects, this.alerts, this.routes, this.ghost, this.selection);
   }
 
   clear() {
     for (const c of [this.terrain, this.ground, this.objects]) {
       for (const child of c.removeChildren()) child.destroy();
     }
-    for (const g of [this.overlay, this.vehicles, this.alerts, this.selection, this.ghost]) g.clear();
+    for (const g of [this.overlay, this.vehicles, this.transitVehicles, this.alerts, this.routes, this.selection, this.ghost]) g.clear();
   }
 }
 

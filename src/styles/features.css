@@ -1020,3 +1020,235 @@ details.factors summary {
 .demand-advice .btn.small {
   margin-left: 8px;
 }
+
+/* ───────────── v0.8 : lignes de bus et de tramway ───────────── */
+.lines-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.lines-list {
+  display: grid;
+  gap: 10px;
+}
+
+.line-card {
+  padding: 10px 12px;
+  border-left: 5px solid var(--sign);
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.line-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.line-head small {
+  color: var(--ink-faint);
+}
+
+.line-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.line-name {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+}
+
+.line-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 10px 0 6px;
+}
+
+.line-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+
+.line-grid span,
+.line-grid small {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.line-grid strong {
+  font-family: var(--font-num);
+  font-size: 18px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper strong {
+  min-width: 2ch;
+  text-align: center;
+}
+
+.line-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.line-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.line-color {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.line-color.active {
+  border-color: #fff;
+}
+
+/* ───────────── v0.8 : quartiers, marché, emprunts ───────────── */
+.district-map {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0 12px;
+}
+
+.district-cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel-raised);
+  color: var(--ink-dim);
+  font: 600 10px/1.15 var(--font);
+  overflow: hidden;
+  cursor: pointer;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+}
+
+.district-cell small {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.district-cell.active {
+  outline: 2px solid var(--sign);
+}
+
+.district-cell.lower {
+  background: #24506f;
+  color: #fff;
+}
+
+.district-cell.higher {
+  background: #7a3626;
+  color: #fff;
+}
+
+.district-cell.empty {
+  visibility: hidden;
+}
+
+.district-editor {
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.district-editor h3 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 0;
+}
+
+.market-price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  margin: 4px 0;
+}
+
+.market-price .delta {
+  font-size: 12px;
+}
+
+.contract-box {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-s);
+}
+
+.loan-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.schedule-table td,
+.schedule-table th {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .line-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Quartiers : trois colonnes (libellé, curseur, écart et taux résultant) */
+.district-editor .slider-row {
+  grid-template-columns: minmax(150px, 220px) 1fr 130px;
+}
+
+.district-editor .slider-row output {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .district-editor .slider-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .district-editor .slider-row output {
+    text-align: left;
+  }
+}

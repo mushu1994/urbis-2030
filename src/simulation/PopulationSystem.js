@@ -1,5 +1,6 @@
 import { SIM } from './config.js';
 import { emptyStats } from '../app/GameState.js';
+import { localTax, effectiveTaxes } from './Districts.js';
 
 const BRACKETS = ['low', 'mid', 'high'];
 
@@ -50,11 +51,12 @@ export class PopulationSystem {
     f.unemployment = -Math.min(15, s.unemploymentRate * 45);
     const burden = b.rent / (SIM.RENT_BASE[cls] || 40) - 1;
     f.rent = -clamp(burden * (cls === 'low' ? 14 : 8), -4, 14);
-    f.taxes = -(state.economy.taxes.R - 9) * 1.3;
+    // Taxe d'habitation du quartier (v0.8 : fiscalité par quartier)
+    f.taxes = -(localTax(state, b.x, b.y, 'R') - 9) * 1.3;
     f.sanitation = -(state.utilities.water?.untreatedShare ?? 0) * 12;
     f.delivery = g.delivery[i] * 2;
     f.garbage = -Math.min(12, (b.garbage ?? 0) * 12);
-    f.transit = Math.max(g.transitBus[i], g.transitMetro[i], g.transitRail[i]) * 3;
+    f.transit = Math.max(g.transitBus[i], g.transitMetro[i], g.transitRail[i], g.transitTram?.[i] ?? 0) * 3;
     f.policies = (mods['satisfaction.all'] ?? 0) + (mods[`satisfaction.${cls}`] ?? 0);
     // Sinistre en cours (inondation, incendie) : habitants évacués ou relogés
     if (b.disasterUntil > state.time.tick) f.disaster = -30;
@@ -299,7 +301,8 @@ export class PopulationSystem {
  */
 export function demandBreakdown(state, connected = state.stats.regionConnected !== false) {
   const s = state.stats;
-  const t = state.economy.taxes;
+  // Taux moyens effectivement payés (v0.8 : fiscalité par quartier)
+  const t = effectiveTaxes(state);
   const m = state.modifiers;
   const pop = s.population;
   const jobVacancy = s.jobs > 0 ? (s.jobs - s.jobsFilled) / Math.max(40, s.jobs) : 0;

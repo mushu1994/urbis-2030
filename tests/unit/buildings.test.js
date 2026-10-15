@@ -122,6 +122,6 @@ describe('Catalogue des équipements', () => {
     const data = structuredClone(defaultData.buildings);
     data.buildings.find((b) => b.id === 'res_low_1').growth.requires.push('teleportation');
     expect(() => new Catalog(data, defaultData.technologies, defaultData.policies)).toThrow(/teleportation/);
-    expect(getCatalog().buildings.size).toBe(115);
+    expect(getCatalog().buildings.size).toBe(117);
   });
 });
