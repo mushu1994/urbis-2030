@@ -6,6 +6,45 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 0.9 — conseiller circulation, guide du maire, vue gyroscopique
+
+### Conseiller « Circulation et pollution » (touche P, ou tableau de bord → Mobilité)
+
+- **Diagnostic** de la ville : niveau de circulation (fluide, chargée, saturée), déplacements en voiture, part des
+  transports en commun et habitants desservis, durée moyenne des trajets, part de la pollution due au trafic
+  (estimée avec les formules de la simulation).
+- **Points noirs** : les axes saturés (au-delà de 90 % de leur capacité) sont regroupés par tronçons contigus, classés
+  par flux, avec le type de route et l'élargissement possible (rue → avenue → boulevard) ; « Voir » centre la carte et
+  affiche la couche Congestion.
+- **Conseils classés par impact**, calculés sur la situation réelle : élargir et mailler le réseau, desservir les
+  quartiers en transports en commun, renforcer les lignes saturées, créer un tramway ou un métro, rapprocher emplois et
+  logements, politiques (télétravail, gratuité, zone à faibles émissions, livraisons de nuit), technologies (feux
+  prédictifs, optimisation des trajets, MaaS, navettes autonomes), écrans végétaux le long des axes, seconde sortie
+  d'autoroute, prix du billet, quartiers isolés. Chaque conseil a ses actions directes : outil, couche, panneau,
+  adoption d'une politique ou déploiement d'une technologie (coût affiché, bouton grisé si verrouillé).
+- Onglet **« Comprendre les leviers »** : comment se forment embouteillages et pollution, tableau des leviers chiffrés
+  et de leurs contreparties (et le piège des véhicules autonomes).
+- Une notification, au plus une fois par an, signale une circulation saturée et ouvre le conseiller.
+
+### Guide du maire (touche G, aide, ou « Comment jouer ? » sur l'écran d'accueil)
+
+- Tutoriel détaillé en **13 chapitres** : premiers pas, routes et accès, zones et croissance, électricité, eau et
+  déchets, services publics, habitants et emploi, circulation et transports, finances, mairie et élections, crises,
+  technologies et ères, territoire, conseils de maire.
+- Boutons **« Montre-moi »** : ouvrent l'outil, le panneau, la couche ou le menu dont parle la section.
+- Chapitres lus cochés (mémorisés dans le navigateur), navigation précédent / suivant ; lisible hors partie depuis
+  l'écran d'accueil. Une notification le signale au premier lancement.
+
+### Vue gyroscopique (téléphone et tablette)
+
+- Bouton boussole dans la barre du haut : incliner l'appareil fait glisser la ville, comme une maquette qu'on penche.
+- La position au moment de l'activation sert de repos (zone morte de 3°, vitesse progressive jusqu'à 25°) ;
+  « Recentrer » reprend la position actuelle, « Arrêter » coupe la vue.
+- Portrait et paysage pris en compte ; la vue s'interrompt pendant un geste au doigt et quand un panneau est ouvert,
+  puis se recale sans à-coup.
+- iPhone et iPad : l'autorisation « Mouvement et orientation » est demandée au premier appui.
+- Paramètres : sensibilité (douce, normale, rapide) et sens inversé.
+
 ## Nouveautés de la version 0.8 — lignes de transport, quartiers, dette et marché régional
 
 > **Anciennes parties.** Rien ne change tant que vous ne tracez pas de ligne : le réseau de bus automatique continue de
@@ -367,6 +406,7 @@ coûts que le joueur) puis le simule pendant un an.
 | Ctrl+Z | Annuler la dernière action (30 jours de jeu, si rien n'a changé depuis) |
 | Espace, 1, 2, 3 | Pause, vitesse normale (un mois par minute), rapide (×3), très rapide (×9) |
 | B, C, I, T, E | Finances, tableau de bord de la ville, IA et politiques, territoire, mairie et élections |
+| K, P, G | Lignes de bus et de tramway, conseiller circulation et pollution, guide du maire |
 | L | Couche de données suivante |
 | X | Rendre translucides les bâtiments devant le curseur |
 | Ctrl+S | Sauvegarde rapide |
@@ -723,7 +763,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 316 tests Vitest (32 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 330 tests Vitest (33 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -735,8 +775,10 @@ annulation), terrassement (élever, abaisser, aplanir, planter, défricher), gis
 d'extraction, note de la dette et emprunt maximal ; v0.8 : lignes de bus (boucle, réseau de base, flotte et dépôts,
 coût mensuel), tramway (rails payants, dépôt, autoroute interdite, rue démolie puis rétablie, suppression),
 fiscalité par quartier (recettes, satisfaction, implantation), profils d'emprunt et remboursement anticipé, marché
-régional (saisons, événements, déterminisme, contrats), sauvegarde des lignes et anciennes parties.
-`npm run test:e2e` : 13 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+régional (saisons, événements, déterminisme, contrats), sauvegarde des lignes et anciennes parties ; v0.9 :
+points noirs, part de pollution due au trafic, conseils classés et actions valides, chapitres du guide et cibles de
+« Montre-moi », vitesse et orientation de la vue gyroscopique.
+`npm run test:e2e` : 14 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -744,7 +786,8 @@ gare animée et notifications ; fiche dépliable et notification fermée au doig
 et débogage depuis l'interface ; aucun bouton principal décoratif ; pas de duplication d'objets graphiques ni de fuite
 mémoire ; iPhone (gestes, pose validée par bouton, mode immersif) ; v0.8 : ligne de bus tracée à l'outil et validée,
 ligne de tramway, panneau des lignes (flotte), écart de taux d'un quartier, emprunt in fine et échéancier, contrat à
-prix fixe, couche des quartiers, sauvegarde.
+prix fixe, couche des quartiers, sauvegarde ; v0.9 : guide depuis l'accueil et en partie (« Montre-moi »),
+conseiller (politique adoptée, point noir localisé), vue gyroscopique au téléphone (inclinaison, recentrage, arrêt).
 
 ## Performances mesurées
 

@@ -4,9 +4,9 @@ import { h } from './dom.js';
  * Boîtes de dialogue intégrées à la page (pas de confirm()/alert() natifs, bloqués dans certains
  * environnements d'intégration).
  */
-function open(content, { onClose } = {}) {
+function open(content, { onClose, wide = false } = {}) {
   const backdrop = h('div.dialog-backdrop', { role: 'presentation' });
-  const box = h('div.dialog', { role: 'dialog', 'aria-modal': 'true' }, content);
+  const box = h('div.dialog', { role: 'dialog', 'aria-modal': 'true', class: wide ? 'wide' : '' }, content);
   backdrop.append(box);
   document.body.append(backdrop);
   const close = () => {
@@ -105,4 +105,9 @@ export function pasteDialog(title) {
     );
     area.focus();
   });
+}
+
+/** Fenêtre de contenu libre (guide du maire hors partie). @returns {{box:HTMLElement, close:()=>void}} */
+export function contentDialog(content, { wide = false, onClose } = {}) {
+  return open(content, { wide, onClose });
 }

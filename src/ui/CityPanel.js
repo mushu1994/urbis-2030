@@ -15,7 +15,8 @@ const monthLabel = (mi) => `${MONTH_NAMES[mi % 12]} ${String(SIM.START_YEAR + Ma
  * Tableau de bord de la ville : population, emploi, demande, énergie, eau, mobilité, environnement.
  */
 export class CityPanel {
-  constructor({ onFocus, getRenderStats, getHostStats, execute, notify }) {
+  constructor({ onFocus, getRenderStats, getHostStats, execute, notify, onPanel }) {
+    this.onPanel = onPanel;
     this.getRenderStats = getRenderStats;
     this.getHostStats = getHostStats;
     this.execute = execute;
@@ -127,6 +128,7 @@ export class CityPanel {
     return h('div.grid2',
       h('section',
         h('h3', 'Déplacements'),
+        this.onPanel ? h('p', h('button.btn.primary', { type: 'button', on: { click: () => this.onPanel('traffic') } }, 'Conseiller circulation et pollution (P)')) : null,
         row('Déplacements motorisés / jour', formatNumber(t.vehicleTrips ?? 0)),
         row('Véhicules × km / jour', formatNumber(t.vkt ?? 0)),
         row('Trajet domicile-travail moyen', `${(t.avgCommute ?? 0).toFixed(1)} min`),

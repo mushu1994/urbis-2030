@@ -3,6 +3,7 @@ import { formatMoney, formatNumber } from '../util/money.js';
 import { confirmDialog, textDialog, pasteDialog } from './Dialog.js';
 import { CHALLENGES } from '../app/challenges.js';
 import { DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
+import { openGuideDialog } from './GuidePanel.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -24,6 +25,8 @@ export const SHORTCUTS = [
   ['T', 'Territoire : acheter des extensions de 32 × 32 cases'],
   ['E', 'Mairie et élections : popularité, promesses, campagne'],
   ['K', 'Lignes de bus et de tramway : fréquence, flotte, fréquentation'],
+  ['P', 'Conseiller circulation et pollution : points noirs et leviers'],
+  ['G', 'Guide du maire : comment fonctionne le jeu, chapitre par chapitre'],
   ['I', 'IA urbaine et politiques'],
   ['L', 'Couche de données suivante'],
   ['X', 'Rendre translucides les bâtiments devant le curseur'],
@@ -42,13 +45,15 @@ export const TOUCH = [
   ['Toucher un bâtiment', 'L\'inspecter (outil Sélection)'],
   ['Toucher un emplacement, puis « Valider »', 'Poser ou déplacer un bâtiment : l\'aperçu montre le coût, toucher ailleurs le déplace'],
   ['Bandeau de l\'outil', 'Valider, annuler, pivoter le bâtiment ou revenir à la sélection'],
+  ['Bouton boussole (en haut)', 'Vue gyroscopique : inclinez l\'appareil pour parcourir la ville ; « Recentrer » reprend la position de repos'],
   ['Toucher les jauges R C B I', 'Détail des besoins de la ville'],
   ['Bouton plein écran (en haut à droite)', 'Plein écran, ou interface réduite sur iPhone']
 ];
 
 export class HelpPanel {
-  constructor({ onShowObjectives } = {}) {
+  constructor({ onShowObjectives, onPanel } = {}) {
     this.onShowObjectives = onShowObjectives;
+    this.onPanel = onPanel;
     this.id = 'help';
     this.title = 'Aide';
     this.static = true;
@@ -67,7 +72,10 @@ export class HelpPanel {
       return h('table.fin.keys', h('tbody', TOUCH.map(([k, d]) => h('tr', h('td', h('strong', k)), h('td', d)))));
     }
     return h('div',
-      this.onShowObjectives ? h('p', h('button.btn.primary', { on: { click: () => this.onShowObjectives() } }, 'Afficher les objectifs guidés')) : null,
+      h('div.help-actions',
+        this.onPanel ? h('button.btn.primary', { type: 'button', on: { click: () => this.onPanel('guide') } }, 'Guide du maire : tout comprendre (G)') : null,
+        this.onPanel ? h('button.btn', { type: 'button', on: { click: () => this.onPanel('traffic') } }, 'Conseiller circulation et pollution (P)') : null,
+        this.onShowObjectives ? h('button.btn', { on: { click: () => this.onShowObjectives() } }, 'Afficher les objectifs guidés') : null),
       h('ol.steps',
       h('li', h('strong', 'Reliez-vous à l\'autoroute. '), 'Tracez une rue depuis l\'accès autoroutier (bord ouest de la carte). Sans liaison, personne ne s\'installe.'),
       h('li', h('strong', 'Produisez de l\'électricité. '), 'Construisez une centrale le long d\'une route : routes et bâtiments contigus transportent le courant.'),
@@ -207,6 +215,12 @@ export class SettingsPanel {
       toggle('edgeScroll', 'Défilement de la carte au bord de l\'écran'),
       toggle('confirmDemolish', 'Demander confirmation avant une démolition coûteuse'),
       toggle('confirmPlacement', 'Valider la pose des bâtiments par un bouton, aussi à la souris (toujours actif au doigt)'),
+      h('h3', 'Vue gyroscopique (téléphone et tablette)'),
+      h('label.setting', h('span', 'Sensibilité de l\'inclinaison'),
+        h('select', { 'aria-label': 'Sensibilité de l\'inclinaison', on: { change: (e) => { this.settings.set('gyroSensitivity', e.target.value); this.apply(); } } },
+          [['low', 'Douce'], ['medium', 'Normale'], ['high', 'Rapide']].map(([v, l]) => h('option', { value: v, selected: (this.settings.get('gyroSensitivity') ?? 'medium') === v }, l)))),
+      toggle('gyroInvert', 'Inverser le sens (pencher à droite fait glisser la ville vers la gauche)'),
+      h('p.hint', 'S\'active avec le bouton boussole de la barre du haut. Incliner l\'appareil fait glisser la vue ; « Recentrer » reprend la position actuelle comme position de repos. La vue s\'interrompt pendant un geste au doigt ou quand un panneau est ouvert.'),
       h('h3', 'Performances'),
       toggle('simWorker', 'Simulation en arrière-plan (Web Worker) : l\'affichage reste fluide pendant les calculs', true),
       h('p.hint', 'Prend effet au prochain chargement ou à la prochaine partie.'),
@@ -343,6 +357,8 @@ export class StartMenu {
         h('div.menu-cols', { hidden: this.tab === 'scenarios' },
           newForm,
           h('div.menu-load',
+            h('div.menu-guide',
+              h('button.btn.big.guide-open', { type: 'button', on: { click: () => openGuideDialog() } }, 'Comment jouer ?', h('small', 'Le guide du maire : 13 chapitres pour tout comprendre'))),
             h('h2', 'Reprendre'),
             canResume ? h('button.btn.big', { on: { click: () => { this.hide(); this.onClose(); } } }, 'Retour à la partie en cours') : null,
             latest ? h('button.btn.big', { on: { click: () => { this.hide(); this.onContinue(latest.id); } } }, `Continuer « ${latest.name} »`, h('small', `${latest.summary.date} · ${formatNumber(latest.summary.population)} hab.`)) : h('p.hint', 'Aucune partie sauvegardée dans ce navigateur.'),

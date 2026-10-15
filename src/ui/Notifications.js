@@ -15,9 +15,10 @@ export class Notifications {
    * @param {HTMLElement} root
    * @param {{onLocate?:(x:number,y:number)=>void}} [opts]
    */
-  constructor(root, { onLocate } = {}) {
+  constructor(root, { onLocate, onPanel } = {}) {
     this.root = root;
     this.onLocate = onLocate;
+    this.onPanel = onPanel;
     this.lastByKey = new Map();
     /** @type {{el:HTMLElement, message:string, count:number, timer:any}[]} */
     this.items = [];
@@ -27,7 +28,7 @@ export class Notifications {
     this.clearBtn = h('button.toast-clear', { type: 'button', on: { click: () => this.clear() } }, 'Tout effacer');
   }
 
-  push({ level = 'info', message, x, y, key }) {
+  push({ level = 'info', message, x, y, key, panel, tab }) {
     const now = performance.now();
     if (key) {
       const last = this.lastByKey.get(key);
@@ -50,6 +51,9 @@ export class Notifications {
       h('span.toast-count'),
       hasPos && this.onLocate
         ? h('button.link', { type: 'button', on: { click: (e) => { e.stopPropagation(); this.onLocate(x, y); this.dismiss(item); } } }, 'Voir')
+        : null,
+      panel && this.onPanel
+        ? h('button.link', { type: 'button', on: { click: (e) => { e.stopPropagation(); this.onPanel(panel, tab); this.dismiss(item); } } }, 'Ouvrir')
         : null,
       h('button.toast-close', { type: 'button', 'aria-label': 'Fermer la notification', on: { click: (e) => { e.stopPropagation(); this.dismiss(item); } } }, icon('close', 12))
     );

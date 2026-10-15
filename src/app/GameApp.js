@@ -10,6 +10,9 @@ import { SaveService, serializeState, deserializeState } from '../persistence/Sa
 import { expandSave } from '../persistence/WorldExpansion.js';
 import { TerritoryPanel } from '../ui/TerritoryPanel.js';
 import { LinesPanel } from '../ui/LinesPanel.js';
+import { TrafficPanel } from '../ui/TrafficPanel.js';
+import { GuidePanel } from '../ui/GuidePanel.js';
+import { GyroController } from './GyroController.js';
 import { SettingsService } from '../persistence/SettingsService.js';
 import { HUD } from '../ui/HUD.js';
 import { Toolbar } from '../ui/Toolbar.js';
@@ -68,7 +71,7 @@ export class GameApp {
 
   async init() {
     await this.renderer.init(this.$('#viewport'));
-    this.notifications = new Notifications(this.$('#toasts'), { onLocate: (x, y) => this.focus(x, y) });
+    this.notifications = new Notifications(this.$('#toasts'), { onLocate: (x, y) => this.focus(x, y), onPanel: (id, tab) => this.openPanel(id, tab) });
     this.hud = new HUD(this.$('#hud'), {
       onSpeed: (i) => this.setSpeed(i),
       onMenu: () => this.showMenu(),
@@ -78,8 +81,16 @@ export class GameApp {
       onMute: () => this.togglePanel('sound'),
       onAlert: (kind) => this.locateAlert(kind),
       onDemand: (k) => (this.panelHost.openId === 'demand' && this.panelHost.tab === k ? this.panelHost.close() : this.openPanel('demand', k)),
-      onWeather: () => this.openPanel('city', 'risks')
+      onWeather: () => this.openPanel('city', 'risks'),
+      gyroSupported: GyroController.supported,
+      onGyro: () => this.gyro.toggle()
     });
+    // Bandeau de la vue gyroscopique : recentrer ou arrêter
+    this.gyroPill = h('div.gyro-pill', { hidden: true, role: 'status' },
+      h('span', 'Inclinez pour parcourir la ville'),
+      h('button.btn.small', { type: 'button', on: { click: () => this.gyro.recenter() } }, 'Recentrer'),
+      h('button.btn.small', { type: 'button', on: { click: () => this.gyro.disable() } }, 'Arrêter'));
+    this.$('#stage').append(this.gyroPill);
     this.toolbar = new Toolbar(this.$('#toolbar'), {
       catalog: this.catalog,
       onTool: (t) => this.tools.setTool(t),
@@ -109,7 +120,7 @@ export class GameApp {
     this.panels = {
       finance: new FinancePanel({ execute, notify }),
       ai: new TechPanel({ execute, notify }),
-      city: new CityPanel({ onFocus: (x, y) => this.focus(x, y), getRenderStats: () => this.renderer.stats, getHostStats: () => this.host?.stats, execute, notify }),
+      city: new CityPanel({ onFocus: (x, y) => this.focus(x, y), onPanel: (id, tab) => this.openPanel(id, tab), getRenderStats: () => this.renderer.stats, getHostStats: () => this.host?.stats, execute, notify }),
       saves: new SavesPanel({ saves: this.saves, settings: this.settings, onSave: (o) => this.save(o), onLoad: (id) => this.load(id), notify }),
       settings: new SettingsPanel({
         settings: this.settings,
@@ -135,7 +146,26 @@ export class GameApp {
         confirm: (message) => confirmDialog(message, { confirmLabel: 'Supprimer', danger: true })
       }),
       sound: new SoundPanel({ settings: this.settings, apply: () => this.applySettings(), audio: this.audio }),
-      help: new HelpPanel({ onShowObjectives: () => this.objectives.show() }),
+      help: new HelpPanel({ onShowObjectives: () => this.objectives.show(), onPanel: (id) => this.openPanel(id) }),
+      // v0.9 : conseiller circulation et pollution (P), guide du maire (G)
+      traffic: new TrafficPanel({
+        execute,
+        notify,
+        onTool: (id) => {
+          this.panelHost.close();
+          this.toolbar.selectById(id);
+        },
+        onFocus: (x, y) => {
+          this.panelHost.close();
+          this.focus(x, y);
+        },
+        onOverlay: (id) => {
+          this.panelHost.close();
+          this.overlays.set(id);
+        },
+        onPanel: (id, tab) => this.openPanel(id, tab)
+      }),
+      guide: new GuidePanel({ onAction: (a) => this.#guideAction(a) }),
       debug: new DebugPanel({ getRenderer: () => this.renderer, getLoop: () => this.loop, settings: this.settings, apply: () => this.applySettings(), notify })
     };
     this.objectives = new ObjectivesCard(this.$('#objectives'), { notify });
@@ -169,6 +199,12 @@ export class GameApp {
         this.#autoServiceOverlay(tool);
       },
       confirmPlacement: () => !!this.settings.get('confirmPlacement')
+    });
+    this.gyro = new GyroController({
+      camera: () => this.renderer.camera,
+      isBlocked: () => !!this.panelHost.openId || this.menu?.visible || (this.input?.pointers?.size ?? 0) > 0 || !this.session,
+      onChange: (active) => this.#gyroChanged(active),
+      notify
     });
     this.input = new InputController({
       canvas: this.renderer.canvas,
@@ -236,6 +272,8 @@ export class GameApp {
       t: () => this.togglePanel('territory'),
       e: () => this.togglePanel('politics'),
       k: () => this.togglePanel('lines'),
+      p: () => this.togglePanel('traffic'),
+      g: () => this.togglePanel('guide'),
       i: () => this.togglePanel('ai'),
       h: () => this.togglePanel('help'),
       F1: () => this.togglePanel('help'),
@@ -314,6 +352,10 @@ export class GameApp {
   }
 
   applySettings() {
+    if (this.gyro) {
+      this.gyro.sensitivity = this.settings.get('gyroSensitivity') ?? 'medium';
+      this.gyro.invert = !!this.settings.get('gyroInvert');
+    }
     const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.renderer.setEffects({
       dayNight: this.settings.get('dayNight') !== false,
@@ -420,7 +462,15 @@ export class GameApp {
       this.notifications.push(n);
       if (n.kind !== 'crisis') this.audio.play(n.level === 'danger' ? 'danger' : n.level === 'warning' ? 'warning' : n.level === 'success' ? 'success' : 'info');
     });
-    this.bus.on('sim:month', () => this.panelHost.refresh());
+    this.bus.on('sim:month', () => {
+      this.panelHost.refresh();
+      this.#trafficTip();
+    });
+    // v0.9 : une seule fois, on signale le guide du maire au nouveau joueur
+    if (!this.settings.get('guideHint')) {
+      this.settings.set('guideHint', true);
+      this.notifications.push({ level: 'info', message: 'Premier mandat ? Le guide du maire explique tout le jeu, chapitre par chapitre (touche G).', panel: 'guide' });
+    }
     this.bus.on('command:done', ({ cmd }) => {
       const sfx = { road: 'road', rail: 'road', buyParcel: 'money', building: 'build', zone: 'zone', deliveryZone: 'zone', demolish: 'demolish', upgrade: 'money', loan: 'money', research: 'tech', undo: 'undo', crisisResponse: 'money' }[cmd.type];
       if (sfx) this.audio.play(sfx);
@@ -480,6 +530,34 @@ export class GameApp {
     this.audio.applyVolumes();
     this.hud.setMuted(muted);
     this.notifications.push({ level: 'info', message: muted ? 'Son coupé (N pour le rétablir)' : 'Son activé', key: 'mute' });
+  }
+
+  /** v0.9 : au plus une fois par an, quand la circulation sature, on oriente vers le conseiller (touche P). */
+  #trafficTip() {
+    const st = this.session?.state;
+    if (!st) return;
+    const c = st.traffic?.stats?.avgCongestion ?? 0;
+    const m = Math.floor(st.time.tick / 30);
+    if (c < 0.6 || (st.stats.population ?? 0) < 1000) return;
+    if (this.lastTrafficTip !== undefined && m - this.lastTrafficTip < 12) return;
+    this.lastTrafficTip = m;
+    this.notifications.push({ level: 'warning', message: `Circulation saturée (${Math.round(c * 100)} % de charge moyenne) : le conseiller circulation propose des solutions (touche P).`, panel: 'traffic' });
+  }
+
+  #gyroChanged(active) {
+    this.hud.setGyro(active);
+    this.gyroPill.hidden = !active;
+    if (active) this.notifications.push({ level: 'info', message: 'Vue gyroscopique : tenez l\'appareil confortablement, puis inclinez-le pour faire glisser la ville. « Recentrer » reprend la position actuelle comme repos.', key: 'gyro' });
+  }
+
+  /** Guide du maire : « Montre-moi » ouvre l'outil, le panneau, la couche ou le menu concernés. */
+  #guideAction(a) {
+    if (!this.session) return;
+    this.panelHost.close();
+    if (a.tool) this.toolbar.selectById(a.tool);
+    else if (a.panel) this.openPanel(a.panel, a.tab);
+    else if (a.overlay) this.overlays.set(a.overlay);
+    else if (a.category) this.toolbar.openFlyout(a.category);
   }
 
   openPanel(id, tab) {
@@ -689,6 +767,8 @@ export class GameApp {
     if (!this.session) {
       return;
     }
+    // Vue gyroscopique (v0.9) : l'inclinaison de l'appareil fait glisser la caméra
+    this.gyro.update(dt);
     // Tracés des lignes : pendant le tracé d'une ligne et tant que le panneau des lignes est ouvert (v0.8)
     this.renderer.setShowRoutes(this.tools.tool.kind === 'line' || this.panelHost.openId === 'lines', this.panels.lines.highlight);
     this.renderer.render(dt, { paused: this.clock.paused, speedIndex: this.clock.speedIndex });

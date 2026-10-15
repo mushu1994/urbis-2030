@@ -1252,3 +1252,256 @@ details.factors summary {
     text-align: left;
   }
 }
+
+/* ───────────── v0.9 : conseiller circulation et pollution ───────────── */
+.traffic-level {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-left: 5px solid var(--ok);
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.traffic-level.warn {
+  border-left-color: var(--warn);
+}
+
+.traffic-level.neg {
+  border-left-color: var(--bad);
+}
+
+.traffic-level strong {
+  font-size: 17px;
+}
+
+.advice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.advice-card {
+  padding: 10px 12px;
+  border-left: 5px solid var(--ink-faint);
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.advice-card.impact-fort {
+  border-left-color: var(--bad);
+}
+
+.advice-card.impact-moyen {
+  border-left-color: var(--warn);
+}
+
+.advice-card header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.advice-card .impact {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+.advice-card p {
+  margin: 6px 0;
+  line-height: 1.4;
+}
+
+.advice-card .how {
+  color: var(--ink-dim);
+}
+
+.advice-actions,
+.help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
+/* ───────────── v0.9 : guide du maire ───────────── */
+.guide {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.guide-toc {
+  display: grid;
+  gap: 2px;
+  position: sticky;
+  top: 0;
+}
+
+.guide-chapter {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.guide-chapter:hover {
+  background: var(--panel-hover);
+}
+
+.guide-chapter.active {
+  background: var(--panel-raised);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.guide-chapter .num {
+  font-family: var(--font-num);
+  color: var(--sign);
+}
+
+.guide-chapter .check {
+  color: var(--ok);
+}
+
+.guide-body h3 {
+  margin: 2px 0 6px;
+  font-size: 22px;
+}
+
+.guide-step {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.guide-intro {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.guide-section {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.guide-section h4 {
+  margin: 0 0 6px;
+  color: var(--sign);
+}
+
+.guide-section ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.45;
+}
+
+.guide-section li + li {
+  margin-top: 4px;
+}
+
+.guide-show {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.guide-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dialog.wide {
+  width: min(980px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.guide-dialog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-guide {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 760px) {
+  .guide {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-toc {
+    position: static;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .guide-chapter {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+/* ───────────── v0.9 : vue gyroscopique ───────────── */
+.hud-gyro.active {
+  background: var(--sign);
+  color: var(--sign-ink);
+}
+
+.gyro-pill {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.gyro-pill[hidden] {
+  display: none;
+}
+
+@media (max-width: 640px), (max-height: 520px) and (pointer: coarse) {
+  .gyro-pill {
+    bottom: calc(var(--dock-h, 132px) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gyro-pill span {
+    display: none;
+  }
+}

@@ -66,6 +66,10 @@ export class HUD {
     });
     this.undo = h('button.hud-icon', { title: 'Annuler la dernière action (Ctrl+Z)', 'aria-label': 'Annuler', on: { click: actions.onUndo } }, icon('undo', 17));
     this.mute = h('button.hud-icon.hud-mute', { title: 'Réglages du son (N : couper)', 'aria-label': 'Réglages du son', 'aria-pressed': 'false', on: { click: () => actions.onMute?.() } }, icon('sound', 17));
+    // v0.9 : vue gyroscopique (téléphone et tablette uniquement)
+    this.gyro = actions.gyroSupported
+      ? h('button.hud-icon.hud-gyro', { type: 'button', title: 'Vue gyroscopique : inclinez l\'appareil pour parcourir la ville', 'aria-label': 'Vue gyroscopique', 'aria-pressed': 'false', on: { click: () => actions.onGyro?.() } }, icon('gyro', 17))
+      : null;
     this.fullscreen = h('button.hud-icon.hud-fullscreen', { title: 'Plein écran (F)', 'aria-label': 'Plein écran', 'aria-pressed': 'false', on: { click: actions.onFullscreen } }, icon('expand', 17));
 
     root.append(
@@ -79,8 +83,7 @@ export class HUD {
       h('div.hud-spacer'),
       this.alerts,
       this.undo,
-      this.mute,
-      this.fullscreen
+      ...[this.mute, this.gyro, this.fullscreen].filter(Boolean)
     );
   }
 
@@ -88,6 +91,13 @@ export class HUD {
     this.mute.replaceChildren(icon(muted ? 'mute' : 'sound', 17));
     this.mute.setAttribute('aria-pressed', String(muted));
     this.mute.title = muted ? 'Réglages du son — son coupé (N : rétablir)' : 'Réglages du son (N : couper)';
+  }
+
+  /** État du bouton de vue gyroscopique. */
+  setGyro(active) {
+    if (!this.gyro) return;
+    this.gyro.setAttribute('aria-pressed', String(active));
+    this.gyro.classList.toggle('active', active);
   }
 
   /** Met à jour l'icône du bouton plein écran. */
