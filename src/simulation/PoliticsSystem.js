@@ -2,6 +2,7 @@ import { SIM } from './config.js';
 import { hash2 } from '../util/rng.js';
 import { effectiveTaxes, districtName, centreKey } from './Districts.js';
 import { PARCEL } from '../world/Land.js';
+import { factorWeight, THEME_AXIS, shareOf, defaultAgenda, defaultCouncil } from './CouncilSystem.js';
 
 /**
  * Vie politique (v0.7) : popularité du maire, sondages, campagne, programme chiffré, élections municipales.
@@ -81,7 +82,10 @@ export function defaultPolitics(state, { enabled = true, firstElectionMonths = T
     early: false,
     defeated: false,
     rival: rivalFor(state, 0),
-    memory: { taxes: [], flipflops: [], ignored: [] }
+    memory: { taxes: [], flipflops: [], ignored: [] },
+    // v1.1 : conseil municipal et priorités du mandat
+    council: defaultCouncil(),
+    agenda: defaultAgenda()
   };
 }
 
@@ -230,6 +234,21 @@ export class PoliticsSystem {
     const since = m - p.termStart;
     if (since < 12) add('honeymoon', 'Début de mandat', 5 * (1 - since / 12), 'état de grâce');
     if (p.mandate > 1) add('wear', 'Usure du pouvoir', -Math.min(6, 1.5 * (p.mandate - 1)), `${p.mandate}e mandat`);
+    // v1.1 : équipe municipale (notoriété des adjoints, délégations vacantes, démissions)
+    const team = this.council?.teamFactor(state);
+    if (team) add('team', 'Équipe municipale', clamp(team.value, -8, 4), team.detail);
+    // v1.1 : priorités changeantes (plus de 30 points déplacés sur 12 mois)
+    if (p.agenda && this.council && this.council.movedLastYear(state) > 30) add('agenda', 'Priorités changeantes', -1, `${Math.round(this.council.movedLastYear(state))} points déplacés sur un an`);
+    // v1.1 : les priorités du mandat pèsent sur le jugement des électeurs (1/6 par axe = poids neutre)
+    if (p.agenda) {
+      for (const f of out) {
+        const w = factorWeight(state, f.id);
+        if (Math.abs(w - 1) > 1e-9) {
+          f.value = round1(f.value * w);
+          f.weight = round1(w * 100) / 100;
+        }
+      }
+    }
     return out;
   }
 
@@ -300,6 +319,14 @@ export class PoliticsSystem {
     }
     // Ouverture de la campagne
     if (!p.campaign && p.nextElection - m <= CAMPAIGN_MONTHS) this.#openCampaign(state);
+    // v1.1 : en campagne, un adjoint ambitieux et peu loyal peut monter une liste dissidente
+    if (p.campaign && !p.campaign.dissident && this.council) {
+      const d = this.council.dissident(state);
+      if (d) {
+        p.campaign.dissident = d;
+        this.#notify(state, 'danger', `🗳 ${d.name} quitte la majorité et monte une liste dissidente : environ ${d.points} points de voix en moins pour votre liste.`, { panel: 'politics' });
+      }
+    }
     // Scrutin
     if (m >= p.nextElection) this.#election(state);
     else if (p.campaign && p.nextElection - m === 1) {
@@ -379,6 +406,7 @@ export class PoliticsSystem {
     const p = state.politics;
     pr.status = status;
     pr.settledMonth = monthOf(state);
+    if (status === 'kept') this.council?.onPromiseKept(state, pr.theme);
     p.record[status]++;
     this.#notify(state, status === 'kept' ? 'success' : 'warning', status === 'kept' ? `🏛 Promesse tenue : « ${pr.label} ». La population vous en sait gré.` : `🏛 Promesse rompue : « ${pr.label} ». Votre crédibilité en pâtit.`);
   }
@@ -402,7 +430,8 @@ export class PoliticsSystem {
       offers: this.offers(state),
       chosen: [],
       theme: null,
-      attacks: weak.map((f) => ({ id: f.id, label: f.label, value: f.value }))
+      attacks: weak.map((f) => ({ id: f.id, label: f.label, value: f.value })),
+      dissident: null
     };
     const attack = weak.length ? ` La liste « ${p.rival.list} » (${p.rival.leader}) attaque votre bilan : ${weak.map((f) => f.label.toLowerCase()).join(', ')}.` : ` Face à vous : « ${p.rival.list} », menée par ${p.rival.leader}.`;
     this.#notify(state, 'warning', `🗳 La campagne des municipales est ouverte : scrutin dans ${p.nextElection - monthOf(state)} mois. Composez votre programme (Mairie → Campagne).${attack}`, { panel: 'politics' });
@@ -440,6 +469,29 @@ export class PoliticsSystem {
     return clamp((f?.value ?? 0) * 0.35, -3, 3);
   }
 
+  /**
+   * v1.1 : cohérence du thème avec les priorités du mandat. +1 point si l'axe du thème a été le plus prioritaire
+   * au moins 24 mois ; −1,5 point (« opportunisme ») si sa part est restée sous 10 %.
+   */
+  coherenceBonus(state) {
+    return this.coherenceFor(state, state.politics?.campaign?.theme ?? null);
+  }
+
+  coherenceFor(state, theme) {
+    const p = state.politics;
+    if (!theme || !p?.agenda) return 0;
+    const axis = THEME_AXIS[theme];
+    if (!axis) return 0;
+    if ((p.agenda.topMonths?.[axis] ?? 0) >= 24) return 1;
+    if (shareOf(state, axis) < 0.1) return -1.5;
+    return 0;
+  }
+
+  /** v1.1 : liste dissidente d'un ancien adjoint (points pris à la liste du maire). */
+  dissidentPenalty(state) {
+    return state.politics?.campaign?.dissident?.points ?? 0;
+  }
+
   /** Avantage de la liste adverse : elle attaque les points faibles de la ville. */
   rivalEdge(state) {
     const worst = Math.min(0, ...(state.politics?.factors ?? []).map((f) => f.value));
@@ -450,7 +502,7 @@ export class PoliticsSystem {
   projectedShare(state, { noise = true } = {}) {
     const p = state.politics;
     const swing = noise ? (hash2(state.meta.seed ?? 2030, p.nextElection, 0xe1ec) - 0.5) * 5 : 0;
-    return clamp(50 + (p.approval - 50) * 0.85 + this.programmeBonus(state) + this.themeBonus(state) - this.rivalEdge(state) + swing, 4, 96);
+    return clamp(50 + (p.approval - 50) * 0.85 + this.programmeBonus(state) + this.themeBonus(state) + this.coherenceBonus(state) - this.dissidentPenalty(state) - this.rivalEdge(state) + swing, 4, 96);
   }
 
   // ───────────────────────────── Scrutin ─────────────────────────────
@@ -484,6 +536,8 @@ export class PoliticsSystem {
         approval: round1((p.approval - 50) * 0.85),
         programme: round1(this.programmeBonus(state)),
         theme: round1(this.themeBonus(state)),
+        coherence: round1(this.coherenceBonus(state)),
+        dissident: round1(-this.dissidentPenalty(state)),
         rival: round1(-this.rivalEdge(state))
       },
       districts
@@ -495,6 +549,8 @@ export class PoliticsSystem {
     if (won) {
       p.mandate++;
       p.termStart = m;
+      // v1.1 : nouveau mandat, nouvelle mesure de la cohérence des priorités
+      if (p.agenda) p.agenda.topMonths = {};
       p.nextElection = m + TERM_MONTHS;
       p.promises = programme.map((o) => ({ ...o, status: 'pending', since: m, deadline: m + TERM_MONTHS }));
       p.approval = round1(Math.min(97, p.approval + 4));

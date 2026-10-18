@@ -21,6 +21,7 @@ import { ResourceSystem } from './ResourceSystem.js';
 import { MarketSystem } from './MarketSystem.js';
 import { LineSystem } from './LineSystem.js';
 import { MilestoneSystem } from './Milestones.js';
+import { CouncilSystem } from './CouncilSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -61,6 +62,9 @@ export class Simulation {
     this.economy.lines = this.lines;
     // v1.0 : statut de la ville (paliers, dotations)
     this.milestones = new MilestoneSystem({ economy: this.economy, catalog, bus });
+    // v1.1 : conseil municipal, adjoints et priorités du mandat
+    this.council = new CouncilSystem({ economy: this.economy, catalog, bus });
+    this.politics.council = this.council;
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -142,6 +146,7 @@ export class Simulation {
     this.milestones.daily(state);
     this.weather.daily(state);
     this.crises.daily(state);
+    this.council.daily(state, this.crises);
 
     if (state.time.tick % SIM.DAYS_PER_MONTH === 0) this.#monthEnd(state);
     this.bus?.emit('sim:tick', { tick: state.time.tick });
@@ -152,6 +157,7 @@ export class Simulation {
     this.ai.refreshModifiers(state);
     // Ressources (v0.7) : importations et exportations du mois, avant la clôture des comptes
     this.#time('resources', () => this.resources.monthly(state));
+    this.council.monthly(state);
     const period = this.economy.closeMonth(state);
     // Marché régional (v0.8) : nouveaux cours pour le mois qui commence
     this.market.monthly(state);

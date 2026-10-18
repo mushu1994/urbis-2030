@@ -1084,3 +1084,140 @@ ul.checks small {
     columns: 1;
   }
 }
+
+/* v1.1 : conseil municipal et priorités du mandat */
+.delegations {
+  display: grid;
+  gap: 10px;
+}
+
+.delegation {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  background: var(--panel-raised);
+}
+
+.delegation h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.delegation.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+}
+
+.candidates {
+  display: grid;
+  gap: 6px;
+}
+
+.deputy {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.deputy .avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.deputy-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.deputy-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.deputy-traits .neg {
+  color: var(--bad, #e0553a);
+}
+
+.deputy-traits .warn {
+  color: var(--sign);
+}
+
+.deputy-actions {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  font-size: 12px;
+}
+
+.dots {
+  letter-spacing: 1px;
+  color: var(--sign);
+}
+
+.dots .off {
+  color: var(--line);
+}
+
+.council-request {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.agenda {
+  display: grid;
+  gap: 10px;
+}
+
+.agenda-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) 2fr 48px;
+  gap: 4px 12px;
+  align-items: center;
+}
+
+.agenda-row small {
+  grid-column: 2 / 4;
+  color: var(--ink-faint);
+}
+
+.agenda-row output {
+  font-weight: 700;
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .deputy {
+    grid-template-columns: 36px 1fr;
+  }
+
+  .deputy-actions {
+    grid-column: 1 / 3;
+    justify-items: start;
+  }
+
+  .agenda-row {
+    grid-template-columns: 1fr 48px;
+  }
+
+  .agenda-row input {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+
+  .agenda-row small {
+    grid-column: 1 / 3;
+  }
+}

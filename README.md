@@ -6,6 +6,49 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 1.1 — conseil municipal, adjoints et priorités du mandat
+
+> **Anciennes parties.** Le conseil démarre vide et les priorités restent neutres tant que le joueur n'y touche pas :
+> la popularité est calculée exactement comme avant.
+
+### Conseil municipal (Mairie, touche E → Conseil)
+
+- **Taille du conseil** selon la population, comme pour les communes françaises (15 sièges de 500 à 1 499 habitants,
+  29 de 5 000 à 9 999, 43 de 40 000 à 49 999…).
+- **Six délégations** : urbanisme, logement et emploi ; finances ; mobilité ; sécurité et secours ; transition
+  écologique et réseaux ; solidarités, éducation, santé et culture. Le statut de la ville fixe combien peuvent être
+  confiées : 2 au Village, 3 au Bourg, 4 à la Ville, 5 à la Grande ville, 6 à la Métropole.
+- **Trois candidats par délégation** et par mandat, tirés de façon déterministe : compétence (1 à 5), ambition (plus
+  souvent élevée chez les plus compétents), loyauté, notoriété (−2 à +3) et groupe d'électeurs dont ils sont proches.
+- **Effets** par point de compétence au-dessus de 1, multipliés par la priorité de l'axe : croissance des quartiers
+  et demande de logements (urbanisme) ; charges de structure −2 % et taux d'emprunt −0,1 point (finances) ; entretien de
+  la voirie et des transports −3 %, fréquentation +2 % (mobilité) ; risques d'incendie, d'émeute et de manifestation
+  (sécurité) ; entretien énergie et eau −3 %, pollution des bâtiments −4 % (écologie) ; entretien des services −3 %,
+  satisfaction +0,25 (solidarités). Indemnité : 800 € × (rang du statut + 1) par adjoint et par mois.
+- **Loyauté** : +1 par mois si l'axe a au moins 20 % des priorités, −2 sous 8 %, +6 pour une demande acceptée, −8 pour
+  un refus, +5 pour une promesse tenue de son domaine, +3 pour une inauguration de plus de 50 000 €.
+- **Demandes** (au plus une tous les trois mois, jamais la première année) : enveloppe exceptionnelle (2 à 6 % des
+  recettes du mois), priorité de l'axe à 20 %, adoption d'une politique de son domaine.
+- **Démission** sous 25 de loyauté (3 % par point manquant et par mois) : délégation vacante trois mois, −2 points de
+  popularité pendant un an. **Remaniement** : un par an, −2 points de popularité et −5 de loyauté pour les autres, sauf
+  si l'adjoint remplacé a perdu la confiance.
+- **Délégation des crises** : un adjoint de compétence 3 ou plus peut répondre seul aux crises de son domaine (la
+  réponse active, si elle coûte au plus 5 % de la trésorerie).
+- **Liste dissidente** : pendant la campagne, un adjoint d'ambition 4 ou plus et de loyauté inférieure à 40 quitte la
+  majorité si la popularité est sous 47 % ; sa liste prend 1 + ambition points de voix au maire.
+- Nouveau facteur de popularité **« Équipe municipale »** : notoriété des adjoints (jusqu'à +4), délégations vacantes,
+  démissions récentes.
+
+### Priorités du mandat (Mairie → Priorités)
+
+- **100 points** répartis entre les six axes (environ un sixième chacun au départ).
+- **Efficacité** de l'adjoint de l'axe : × (0,85 + 0,9 × part) ; **poids dans l'opinion** des facteurs rattachés à
+  l'axe : × (0,7 + 1,8 × part). Mettre 40 % sur la mobilité amplifie la popularité gagnée en désengorgeant la ville,
+  et celle perdue si la congestion reste forte.
+- Plus de 30 points déplacés en un an : « Priorités changeantes », −1 point de popularité.
+- **Campagne** : un thème resté l'axe le plus prioritaire au moins 24 mois du mandat rapporte +1 point de voix ; un axe
+  resté sous 10 % coûte 1,5 point (« opportunisme »). Le détail apparaît dans l'estimation et dans les résultats.
+
 ## Nouveautés de la version 1.0 — statut de la ville et rééquilibrage économique
 
 > **Anciennes parties.** Elles gardent l'équilibrage des versions 0.x (pas de charges de structure, voirie à
@@ -460,7 +503,7 @@ coûts que le joueur) puis le simule pendant un an.
 | Suppr | Outil de démolition (menu Démolir et déplacer) |
 | Ctrl+Z | Annuler la dernière action (30 jours de jeu, si rien n'a changé depuis) |
 | Espace, 1, 2, 3 | Pause, vitesse normale (un mois par minute), rapide (×3), très rapide (×9) |
-| B, C, I, T, E | Finances, tableau de bord de la ville, IA et politiques, territoire, mairie et élections |
+| B, C, I, T, E | Finances, tableau de bord de la ville, IA et politiques, territoire, mairie (conseil, priorités, élections) |
 | K, P, G | Lignes de bus et de tramway, conseiller circulation et pollution, guide du maire |
 | Virgule, point-virgule, V | Tourner la carte à gauche, à droite ; vue de dessus |
 | L | Couche de données suivante |
@@ -821,7 +864,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 346 tests Vitest (34 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 361 tests Vitest (35 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -839,7 +882,10 @@ points noirs, part de pollution due au trafic, conseils classés et actions vali
 d'affichage, faces visibles) ; v1.0 : paliers et déblocages (bâtiments, routes, zones, fonctions), plafond de
 niveau, dotation versée une fois et annonce groupée, difficulté et capacité d'emprunt, charges de structure, voirie,
 taux d'épargne, migration v5 → v6 (ancien équilibrage, paliers acquis sans dotation) et bascule progressive.
-`npm run test:e2e` : 16 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+v1.1 : sièges du conseil, candidats déterministes, délégations par statut, effets pondérés par les priorités,
+remaniement, indemnités, demandes, démission, délégation des crises, priorités (somme, perception, revirement,
+cohérence du thème), liste dissidente, sauvegarde.
+`npm run test:e2e` : 17 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -851,7 +897,7 @@ prix fixe, couche des quartiers, sauvegarde ; v0.9 : guide depuis l'accueil et e
 conseiller (politique adoptée, point noir localisé), navigation (quatre orientations, centre conservé, route posée à
 la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, boussole au téléphone) ; v1.0 :
 difficulté et trésorerie de départ, statut affiché, écran « Nouveau statut » et dotation, progression, taux d'épargne,
-profils d'emprunt débloqués.
+profils d'emprunt débloqués ; v1.1 : nomination d'un adjoint et priorités du mandat.
 
 ## Performances mesurées
 

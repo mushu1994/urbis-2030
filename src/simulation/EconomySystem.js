@@ -51,6 +51,8 @@ export const CATEGORY_LABELS = {
   marketFees: 'Résiliations de contrats d\'énergie et d\'eau',
   tramTracks: 'Voies de tramway',
   structure: 'Administration générale et personnel',
+  councilAllowances: 'Indemnités des adjoints',
+  council: 'Enveloppes des délégations',
   grant: 'Dotations de l\'État',
   fleet: 'Flotte des lignes de bus et de tramway'
 };
@@ -570,7 +572,8 @@ export class EconomySystem {
   loanRate(state, type = 'annuity') {
     const outstanding = state.economy.loans.reduce((s, l) => s + l.remaining, 0);
     const { spread } = this.creditRating(state);
-    return Math.round(Math.max(0.012, 0.032 + spread + outstanding / 1e9 + (LOAN_TYPES[type]?.spread ?? 0)) * 10000) / 10000;
+    const council = state.modifiers?.['loan.rate'] ?? 0;
+    return Math.round(Math.max(0.012, 0.032 + spread + council + outstanding / 1e9 + (LOAN_TYPES[type]?.spread ?? 0)) * 10000) / 10000;
   }
 
   /** Montant maximal empruntable maintenant, arrondi à l'euro inférieur (en euros). */

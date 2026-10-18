@@ -1,5 +1,6 @@
 import { SIM } from './config.js';
 import { weatherEffects } from './WeatherSystem.js';
+import { councilEffects } from './CouncilSystem.js';
 
 /**
  * Modificateurs globaux appliqués par les technologies, les politiques et les événements.
@@ -65,7 +66,9 @@ export const DEFAULT_MODIFIERS = Object.freeze({
   'risk.riot': 1,
   'risk.epidemic': 1,
   /** v0.7 : opinion (points de popularité par mois). */
-  'approval.add': 0
+  'approval.add': 0,
+  /** v1.1 : écart de taux des nouveaux emprunts (adjoint aux Finances). */
+  'loan.rate': 0
 });
 
 /** Un bâtiment est-il en état de fonctionner (ni abandonné, ni arrêté par un incident) ? */
@@ -141,6 +144,9 @@ export function computeModifiers(state, catalog) {
     const pol = catalog.policyById.get(id);
     if (pol) applyEffects(mods, pol.effects);
   }
+
+  // v1.1 : adjoints en poste (effets pondérés par la priorité de leur axe)
+  applyEffects(mods, councilEffects(state));
 
   for (const ev of state.events.active) {
     if (ev.effects) applyEffects(mods, ev.effects);

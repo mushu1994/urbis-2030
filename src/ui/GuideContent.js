@@ -277,6 +277,15 @@ export const GUIDE = [
         show: [{ label: 'Mairie et élections', panel: 'politics' }]
       },
       {
+        title: 'Adjoints et priorités',
+        items: [
+          'Six délégations (urbanisme, finances, mobilité, sécurité, écologie, solidarités) : le statut de la ville fixe combien vous pouvez en confier, deux au Village, six à la Métropole. Chaque adjoint a une compétence, une loyauté, une ambition et une notoriété.',
+          'Un adjoint compétent renforce son domaine (charges réduites, croissance, risques en baisse) et peut gérer seul les crises. Il présente parfois une demande : refuser entame sa loyauté. Sous 25, il peut démissionner ; ambitieux et déloyal, il peut monter une liste dissidente pendant la campagne.',
+          'Priorités : 100 points à répartir entre les six axes. Un axe prioritaire renforce son adjoint, mais les électeurs vous jugent davantage sur ce sujet. Changer souvent de priorités coûte un point de popularité ; un thème de campagne cohérent avec vos priorités en rapporte un.'
+        ],
+        show: [{ label: 'Conseil', panel: 'politics', tab: 'council' }, { label: 'Priorités', panel: 'politics', tab: 'agenda' }]
+      },
+      {
         title: 'Campagne et promesses',
         items: [
           'Six mois avant le scrutin, choisissez jusqu\'à trois engagements chiffrés et un thème de campagne. Un thème qui souligne un point faible coûte des voix.',

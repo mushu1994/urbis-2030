@@ -181,6 +181,25 @@ export class GameSession {
         else if (cmd.op === 'remove') r = this.sim.lines.remove(s, cmd);
         else r = this.sim.lines.create(s, cmd);
         break;
+      case 'council': {
+        // v1.1 : conseil municipal (nominations, remaniements, demandes, délégation des crises) et priorités
+        const C = this.sim.council;
+        if (cmd.op === 'appoint') r = C.appoint(s, cmd);
+        else if (cmd.op === 'dismiss') r = C.dismiss(s, cmd);
+        else if (cmd.op === 'agenda') r = C.setAgenda(s, cmd);
+        else if (cmd.op === 'autoCrisis') r = C.setAutoCrisis(s, cmd);
+        else if (cmd.op === 'answer') {
+          r = C.answer(s, cmd, {
+            adoptPolicy: (policyId) => {
+              const res = this.sim.ai.togglePolicy(s, policyId, true);
+              if (res.ok) this.bus.emit('command:done', { cmd: { type: 'policy', policyId, enabled: true }, result: res });
+              return res;
+            }
+          });
+        } else return { ok: false, reasons: ['invalid'], messages: ['Commande du conseil inconnue'] };
+        if (r && !r.ok && !r.messages) r.messages = [r.reason];
+        break;
+      }
       case 'districtTax':
         r = setDistrictTax(s, cmd.key, cmd.sector, cmd.value);
         break;
