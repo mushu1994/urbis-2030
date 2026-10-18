@@ -20,6 +20,7 @@ import { PoliticsSystem } from './PoliticsSystem.js';
 import { ResourceSystem } from './ResourceSystem.js';
 import { MarketSystem } from './MarketSystem.js';
 import { LineSystem } from './LineSystem.js';
+import { MilestoneSystem } from './Milestones.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -58,6 +59,8 @@ export class Simulation {
     this.economy.market = this.market;
     this.lines = new LineSystem({ catalog, economy: this.economy, bus });
     this.economy.lines = this.lines;
+    // v1.0 : statut de la ville (paliers, dotations)
+    this.milestones = new MilestoneSystem({ economy: this.economy, catalog, bus });
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -136,6 +139,7 @@ export class Simulation {
 
     state.time.tick++;
     this.events.daily(state);
+    this.milestones.daily(state);
     this.weather.daily(state);
     this.crises.daily(state);
 

@@ -331,6 +331,12 @@
           "label": "Recouvrement fiscal +3 %"
         },
         {
+          "key": "upkeep.structure",
+          "op": "mul",
+          "value": -0.05,
+          "label": "Charges de structure −5 %"
+        },
+        {
           "key": "upkeep.services",
           "op": "mul",
           "value": -0.05,

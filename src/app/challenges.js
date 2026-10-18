@@ -220,14 +220,14 @@ export const CHALLENGES = [
     size: 96,
     disasters: 'normal',
     pitch: 'Un terrain vierge, quinze ans de mandat. Bâtissez une métropole qui atteint l\'ère « Ville symbiotique » sans perdre la confiance de ses habitants.',
-    goalsText: ['Atteindre l\'ère 3 « Ville symbiotique »', '8 000 habitants', 'Résultat mensuel positif'],
+    goalsText: ['Atteindre l\'ère 3 « Ville symbiotique »', '30 000 habitants', 'Résultat mensuel positif'],
     failText: 'Trésorerie sous −500 000 € pendant 6 mois.',
     empty: true,
     setup() {
       return {
         goals: [
           { id: 'era', metric: 'era', op: '>=', target: 3, label: 'Atteindre l\'ère 3 « Ville symbiotique »' },
-          { id: 'pop', metric: 'population', op: '>=', target: 8000, label: 'Au moins 8 000 habitants' },
+          { id: 'pop', metric: 'population', op: '>=', target: 30000, label: 'Au moins 30 000 habitants' },
           { id: 'net', metric: 'netResult12', op: '>=', target: 0, label: 'Résultat mensuel moyen positif sur 12 mois' }
         ],
         failRules: [{ id: 'faillite', metric: 'treasury', op: '<', target: euro(-500000), months: 6, label: 'Faillite : trésorerie sous −500 000 € pendant 6 mois' }]
@@ -249,7 +249,15 @@ export function setupChallenge(session, id) {
   const s = session.state;
   // La préparation se déroule sans catastrophe ; la fréquence du scénario s'applique ensuite.
   s.options.disasters = 'off';
-  const { goals, failRules } = def.setup(session);
+  // Ville héritée de l'équipe précédente : le statut actuel ne limite pas ce qu'elle a construit
+  s.meta.preparing = true;
+  let setup;
+  try {
+    setup = def.setup(session);
+  } finally {
+    delete s.meta.preparing;
+  }
+  const { goals, failRules } = setup;
   // L'historique de préparation n'a pas à apparaître comme une action annulable du joueur.
   session.history.clear();
   s.options.disasters = def.disasters ?? 'normal';

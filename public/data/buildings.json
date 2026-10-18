@@ -7,9 +7,9 @@
       "name": "Rue",
       "category": "roads",
       "cost": 60.0,
-      "upkeep": 0.6,
+      "upkeep": 1.5,
       "bridgeCost": 975.0,
-      "bridgeUpkeep": 4,
+      "bridgeUpkeep": 10.0,
       "capacity": 650,
       "speedKmh": 30,
       "lanes": 2,
@@ -27,15 +27,15 @@
       "name": "Avenue",
       "category": "roads",
       "cost": 180.0,
-      "upkeep": 1.6,
+      "upkeep": 4.0,
       "bridgeCost": 2400,
-      "bridgeUpkeep": 10,
+      "bridgeUpkeep": 25.0,
       "capacity": 1800,
       "speedKmh": 50,
       "lanes": 4,
       "buildable": true,
       "unlock": {
-        "population": 400
+        "milestone": 1
       },
       "visual": {
         "color": "#4c5057",
@@ -69,15 +69,15 @@
       "name": "Grand boulevard",
       "category": "roads",
       "cost": 330,
-      "upkeep": 2.6,
+      "upkeep": 6.5,
       "bridgeCost": 3800,
-      "bridgeUpkeep": 16,
+      "bridgeUpkeep": 40.0,
       "capacity": 3200,
       "speedKmh": 50,
       "lanes": 6,
       "buildable": true,
       "unlock": {
-        "population": 3000
+        "milestone": 4
       },
       "visual": {
         "color": "#44484f",
@@ -93,16 +93,16 @@
       "name": "Autoroute (seconde sortie)",
       "category": "roads",
       "cost": 900,
-      "upkeep": 6,
+      "upkeep": 15.0,
       "bridgeCost": 6000,
-      "bridgeUpkeep": 30,
+      "bridgeUpkeep": 75.0,
       "capacity": 5000,
       "speedKmh": 110,
       "lanes": 4,
       "buildable": true,
       "exit": true,
       "unlock": {
-        "population": 15000
+        "milestone": 5
       },
       "visual": {
         "color": "#3f434a",
@@ -148,7 +148,10 @@
       "short": "B",
       "cost": 20,
       "color": "#9a7fd8",
-      "description": "Bureaux : emplois qualifiés et forte valeur ajoutée. Ils s'installent là où les habitants sont éduqués et les quartiers attractifs."
+      "description": "Bureaux : emplois qualifiés et forte valeur ajoutée. Ils s'installent là où les habitants sont éduqués et les quartiers attractifs.",
+      "unlock": {
+        "milestone": 1
+      }
     },
     {
       "id": "I",
@@ -175,7 +178,10 @@
       "short": "Fx",
       "cost": 25,
       "color": "#b5703f",
-      "description": "Puits de forage, carrières puis sites d'extraction automatisés : forte production mais pollution et bruit élevés. Uniquement à 2 cases au plus d'un gisement (roche). Répond à la demande industrielle (jauge I)."
+      "description": "Puits de forage, carrières puis sites d'extraction automatisés : forte production mais pollution et bruit élevés. Uniquement à 2 cases au plus d'un gisement (roche). Répond à la demande industrielle (jauge I).",
+      "unlock": {
+        "milestone": 2
+      }
     },
     {
       "id": "IF",
@@ -184,7 +190,10 @@
       "short": "Bo",
       "cost": 12,
       "color": "#6f8f3a",
-      "description": "Scieries, panneaux puis bois lamellé-croisé (ère 2) : des emplois et des matériaux, une pollution modérée. Uniquement à 2 cases au plus d'une forêt. Les forêts repoussent d'elles-mêmes autour des massifs ; l'outil Terrain permet d'en planter. Répond à la demande industrielle (jauge I)."
+      "description": "Scieries, panneaux puis bois lamellé-croisé (ère 2) : des emplois et des matériaux, une pollution modérée. Uniquement à 2 cases au plus d'une forêt. Les forêts repoussent d'elles-mêmes autour des massifs ; l'outil Terrain permet d'en planter. Répond à la demande industrielle (jauge I).",
+      "unlock": {
+        "milestone": 1
+      }
     },
     {
       "id": "CH",
@@ -193,7 +202,10 @@
       "short": "C+",
       "cost": 25,
       "color": "#2f6fb8",
-      "description": "Supermarchés puis centres commerciaux, sur des îlots de 2 × 2 cases : beaucoup d'emplois et de ventes, du bruit et de la circulation. Répond à la demande commerciale (jauge C)."
+      "description": "Supermarchés puis centres commerciaux, sur des îlots de 2 × 2 cases : beaucoup d'emplois et de ventes, du bruit et de la circulation. Répond à la demande commerciale (jauge C).",
+      "unlock": {
+        "milestone": 3
+      }
     }
   ],
   "buildings": [
@@ -1986,7 +1998,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 82500,
+      "cost": 94900,
       "upkeep": 1800,
       "lifeYears": 40,
       "placement": {
@@ -2033,7 +2045,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 45000,
+      "cost": 51700,
       "upkeep": 300,
       "lifeYears": 25,
       "placement": {
@@ -2075,7 +2087,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 13500,
+      "cost": 15500,
       "upkeep": 150,
       "lifeYears": 25,
       "placement": {
@@ -2100,7 +2112,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 200
+        "milestone": 1
       },
       "visual": {
         "height": 56,
@@ -2121,7 +2133,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 21000,
+      "cost": 29400,
       "upkeep": 200,
       "lifeYears": 15,
       "placement": {
@@ -2141,7 +2153,7 @@
         "powerSource": "storage"
       },
       "unlock": {
-        "population": 800
+        "milestone": 2
       },
       "visual": {
         "height": 10,
@@ -2162,7 +2174,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 37.5,
+      "cost": 43.12,
       "upkeep": 0.3,
       "lifeYears": 40,
       "placement": {
@@ -2201,7 +2213,7 @@
         "h": 3
       },
       "rotatable": true,
-      "cost": 180000,
+      "cost": 324000,
       "upkeep": 2500,
       "lifeYears": 20,
       "placement": {
@@ -2232,7 +2244,7 @@
         "category": "hosting"
       },
       "unlock": {
-        "population": 1500
+        "milestone": 3
       },
       "visual": {
         "height": 18,
@@ -2253,7 +2265,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 9000,
+      "cost": 10400,
       "upkeep": 250,
       "lifeYears": 40,
       "placement": {
@@ -2294,7 +2306,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 13500,
+      "cost": 15500,
       "upkeep": 320,
       "lifeYears": 40,
       "placement": {
@@ -2333,7 +2345,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 37500,
+      "cost": 43100,
       "upkeep": 900,
       "lifeYears": 40,
       "placement": {
@@ -2377,7 +2389,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 2200,
+      "cost": 2500,
       "upkeep": 40,
       "lifeYears": 30,
       "placement": {
@@ -2413,7 +2425,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 12000,
+      "cost": 13800,
       "upkeep": 200,
       "lifeYears": 30,
       "placement": {
@@ -2437,7 +2449,10 @@
         "roofColor": "#3f8a3a",
         "detail": "pond"
       },
-      "description": "Pelouses, arbres et bassin : rafraîchit et dépollue le quartier, fait monter la valeur foncière et la satisfaction."
+      "description": "Pelouses, arbres et bassin : rafraîchit et dépollue le quartier, fait monter la valeur foncière et la satisfaction.",
+      "unlock": {
+        "milestone": 1
+      }
     },
     {
       "id": "forest_urban",
@@ -2449,7 +2464,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 21000,
+      "cost": 29400,
       "upkeep": 150,
       "lifeYears": 50,
       "placement": {
@@ -2468,7 +2483,7 @@
         "radius": 8
       },
       "unlock": {
-        "population": 800
+        "milestone": 2
       },
       "visual": {
         "height": 2,
@@ -2489,7 +2504,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 45000,
+      "cost": 51700,
       "upkeep": 500,
       "lifeYears": 60,
       "placement": {
@@ -2538,7 +2553,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 33000,
+      "cost": 46200,
       "upkeep": 1100,
       "lifeYears": 40,
       "placement": {
@@ -2565,7 +2580,7 @@
         }
       },
       "unlock": {
-        "population": 150
+        "milestone": 2
       },
       "visual": {
         "height": 20,
@@ -2586,7 +2601,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 33000,
+      "cost": 46200,
       "upkeep": 1000,
       "lifeYears": 40,
       "placement": {
@@ -2613,7 +2628,7 @@
         }
       },
       "unlock": {
-        "population": 150
+        "milestone": 2
       },
       "visual": {
         "height": 18,
@@ -2634,7 +2649,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 12000,
+      "cost": 13800,
       "upkeep": 400,
       "lifeYears": 40,
       "placement": {
@@ -2660,9 +2675,6 @@
           "capacity": 4000
         }
       },
-      "unlock": {
-        "population": 100
-      },
       "visual": {
         "height": 13,
         "color": "#f1d6cc",
@@ -2682,7 +2694,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 18000,
+      "cost": 20700,
       "upkeep": 600,
       "lifeYears": 40,
       "placement": {
@@ -2727,7 +2739,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 120000,
+      "cost": 216000,
       "upkeep": 3500,
       "lifeYears": 50,
       "placement": {
@@ -2754,7 +2766,7 @@
         }
       },
       "unlock": {
-        "population": 2500
+        "milestone": 3
       },
       "visual": {
         "height": 40,
@@ -2775,7 +2787,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 30000,
+      "cost": 34500,
       "upkeep": 900,
       "lifeYears": 50,
       "placement": {
@@ -2802,7 +2814,7 @@
         }
       },
       "unlock": {
-        "population": 100
+        "milestone": 1
       },
       "visual": {
         "height": 16,
@@ -2823,7 +2835,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 180000,
+      "cost": 414000,
       "upkeep": 4000,
       "lifeYears": 60,
       "placement": {
@@ -2854,7 +2866,7 @@
         "radius": 10
       },
       "unlock": {
-        "population": 4000
+        "milestone": 4
       },
       "visual": {
         "height": 30,
@@ -2875,7 +2887,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 52500,
+      "cost": 73500,
       "upkeep": 600,
       "lifeYears": 30,
       "placement": {
@@ -2910,7 +2922,7 @@
         "label": "Redevances logistiques"
       },
       "unlock": {
-        "population": 300
+        "milestone": 2
       },
       "visual": {
         "height": 16,
@@ -2931,7 +2943,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 105000,
+      "cost": 210000,
       "upkeep": 900,
       "lifeYears": 25,
       "placement": {
@@ -2987,7 +2999,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 12000,
+      "cost": 16800,
       "upkeep": 250,
       "lifeYears": 20,
       "placement": {
@@ -3017,7 +3029,7 @@
         "radius": 2
       },
       "unlock": {
-        "population": 500
+        "milestone": 2
       },
       "visual": {
         "height": 9,
@@ -3038,7 +3050,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 22500,
+      "cost": 45000,
       "upkeep": 400,
       "lifeYears": 12,
       "placement": {
@@ -3089,7 +3101,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 37500,
+      "cost": 75000,
       "upkeep": 700,
       "lifeYears": 10,
       "placement": {
@@ -3141,7 +3153,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 105000,
+      "cost": 189000,
       "upkeep": 700,
       "lifeYears": 60,
       "placement": {
@@ -3167,7 +3179,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 800
+        "milestone": 3
       },
       "visual": {
         "height": 14,
@@ -3188,7 +3200,7 @@
         "h": 4
       },
       "rotatable": false,
-      "cost": 480000,
+      "cost": 1440000,
       "upkeep": 6500,
       "lifeYears": 50,
       "placement": {
@@ -3216,7 +3228,7 @@
         "radius": 8
       },
       "unlock": {
-        "population": 4000
+        "milestone": 5
       },
       "visual": {
         "height": 34,
@@ -3249,7 +3261,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 975000,
+      "cost": 1950000,
       "upkeep": 9000,
       "lifeYears": 60,
       "placement": {
@@ -3297,7 +3309,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 120000,
+      "cost": 216000,
       "upkeep": 1800,
       "lifeYears": 40,
       "placement": {
@@ -3322,7 +3334,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 3000
+        "milestone": 3
       },
       "visual": {
         "height": 12,
@@ -3343,7 +3355,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 300000,
+      "cost": 690000,
       "upkeep": 3600,
       "lifeYears": 50,
       "placement": {
@@ -3370,7 +3382,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 6000
+        "milestone": 4
       },
       "visual": {
         "height": 10,
@@ -3391,7 +3403,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 270000,
+      "cost": 621000,
       "upkeep": 3000,
       "lifeYears": 50,
       "placement": {
@@ -3418,7 +3430,7 @@
         "radius": 5
       },
       "unlock": {
-        "population": 6000
+        "milestone": 4
       },
       "visual": {
         "height": 8,
@@ -3439,7 +3451,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 22500,
+      "cost": 25900,
       "upkeep": 600,
       "lifeYears": 30,
       "placement": {
@@ -3485,7 +3497,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 18000,
+      "cost": 20700,
       "upkeep": 400,
       "lifeYears": 25,
       "placement": {
@@ -3534,7 +3546,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 90000,
+      "cost": 162000,
       "upkeep": 1500,
       "lifeYears": 30,
       "placement": {
@@ -3569,7 +3581,7 @@
         "radius": 8
       },
       "unlock": {
-        "population": 1500
+        "milestone": 3
       },
       "visual": {
         "height": 20,
@@ -3590,7 +3602,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 67500,
+      "cost": 94500,
       "upkeep": 1300,
       "lifeYears": 30,
       "placement": {
@@ -3622,7 +3634,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 400
+        "milestone": 2
       },
       "visual": {
         "height": 16,
@@ -3643,7 +3655,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 82500,
+      "cost": 165000,
       "upkeep": 1100,
       "lifeYears": 30,
       "placement": {
@@ -3698,7 +3710,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 375000,
+      "cost": 750000,
       "upkeep": 4000,
       "lifeYears": 30,
       "placement": {
@@ -3753,7 +3765,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 10500,
+      "cost": 12100,
       "upkeep": 400,
       "lifeYears": 40,
       "placement": {
@@ -3780,7 +3792,7 @@
         }
       },
       "unlock": {
-        "population": 100
+        "milestone": 1
       },
       "visual": {
         "height": 12,
@@ -3801,7 +3813,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 13500,
+      "cost": 15500,
       "upkeep": 350,
       "lifeYears": 50,
       "placement": {
@@ -3850,7 +3862,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 67500,
+      "cost": 94500,
       "upkeep": 1800,
       "lifeYears": 50,
       "placement": {
@@ -3877,7 +3889,7 @@
         }
       },
       "unlock": {
-        "population": 1500
+        "milestone": 2
       },
       "visual": {
         "height": 20,
@@ -3898,7 +3910,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 90000,
+      "cost": 180000,
       "upkeep": 1800,
       "lifeYears": 30,
       "placement": {
@@ -3950,7 +3962,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 210000,
+      "cost": 420000,
       "upkeep": 3500,
       "lifeYears": 40,
       "placement": {
@@ -4002,7 +4014,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 3800,
+      "cost": 4400,
       "upkeep": 50,
       "lifeYears": 40,
       "placement": {
@@ -4038,7 +4050,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 3000,
+      "cost": 3400,
       "upkeep": 40,
       "lifeYears": 20,
       "placement": {
@@ -4074,7 +4086,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 13500,
+      "cost": 15500,
       "upkeep": 250,
       "lifeYears": 30,
       "placement": {
@@ -4099,7 +4111,10 @@
         "roofColor": "#3f8f3a",
         "detail": "field"
       },
-      "description": "Terrain de sport en plein air : verdure et valeur foncière, un peu de bruit les jours de match."
+      "description": "Terrain de sport en plein air : verdure et valeur foncière, un peu de bruit les jours de match.",
+      "unlock": {
+        "milestone": 1
+      }
     },
     {
       "id": "statue",
@@ -4111,7 +4126,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 6000,
+      "cost": 6900,
       "upkeep": 20,
       "lifeYears": 80,
       "placement": {
@@ -4146,7 +4161,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 30000,
+      "cost": 42000,
       "upkeep": 400,
       "lifeYears": 40,
       "placement": {
@@ -4168,7 +4183,7 @@
         "radius": 7
       },
       "unlock": {
-        "population": 1000
+        "milestone": 2
       },
       "visual": {
         "height": 4,
@@ -4194,7 +4209,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 37500,
+      "cost": 67500,
       "upkeep": 200,
       "lifeYears": 80,
       "placement": {
@@ -4216,7 +4231,7 @@
         "radius": 8
       },
       "unlock": {
-        "population": 1000
+        "milestone": 3
       },
       "visual": {
         "height": 18,
@@ -4244,7 +4259,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 75000,
+      "cost": 135000,
       "upkeep": 1200,
       "lifeYears": 60,
       "placement": {
@@ -4269,7 +4284,7 @@
         "radius": 8
       },
       "unlock": {
-        "population": 1500
+        "milestone": 3
       },
       "visual": {
         "height": 22,
@@ -4302,7 +4317,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 105000,
+      "cost": 241500,
       "upkeep": 1800,
       "lifeYears": 50,
       "placement": {
@@ -4328,7 +4343,7 @@
         "radius": 8
       },
       "unlock": {
-        "population": 2500
+        "milestone": 4
       },
       "visual": {
         "height": 2,
@@ -4361,7 +4376,7 @@
         "h": 3
       },
       "rotatable": false,
-      "cost": 225000,
+      "cost": 675000,
       "upkeep": 3000,
       "lifeYears": 50,
       "placement": {
@@ -4387,7 +4402,7 @@
         "radius": 7
       },
       "unlock": {
-        "population": 4000
+        "milestone": 5
       },
       "visual": {
         "height": 18,
@@ -4425,7 +4440,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 27000,
+      "cost": 54000,
       "upkeep": 300,
       "lifeYears": 30,
       "placement": {
@@ -4468,7 +4483,7 @@
         "h": 2
       },
       "rotatable": false,
-      "cost": 90000,
+      "cost": 180000,
       "upkeep": 900,
       "lifeYears": 30,
       "placement": {
@@ -4517,7 +4532,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 900.0,
+      "cost": 1000,
       "upkeep": 20,
       "lifeYears": 20,
       "placement": {
@@ -4537,7 +4552,7 @@
         }
       },
       "unlock": {
-        "population": 150
+        "milestone": 1
       },
       "visual": {
         "height": 6,
@@ -4558,7 +4573,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 27000,
+      "cost": 31000,
       "upkeep": 900,
       "lifeYears": 30,
       "placement": {
@@ -4588,7 +4603,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 150
+        "milestone": 1
       },
       "visual": {
         "height": 12,
@@ -4609,7 +4624,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 67500,
+      "cost": 155200,
       "upkeep": 1100,
       "lifeYears": 60,
       "placement": {
@@ -4639,7 +4654,7 @@
         "radius": 6
       },
       "unlock": {
-        "population": 2000
+        "milestone": 4
       },
       "visual": {
         "height": 8,
@@ -4660,7 +4675,7 @@
         "h": 1
       },
       "rotatable": false,
-      "cost": 4500,
+      "cost": 8100,
       "upkeep": 60,
       "lifeYears": 40,
       "placement": {
@@ -4687,7 +4702,7 @@
         "radius": 5
       },
       "unlock": {
-        "population": 2500
+        "milestone": 3
       },
       "visual": {
         "height": 7,
@@ -4708,7 +4723,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 90000,
+      "cost": 162000,
       "upkeep": 1400,
       "lifeYears": 50,
       "placement": {
@@ -4738,7 +4753,7 @@
         "radius": 3
       },
       "unlock": {
-        "population": 2500
+        "milestone": 3
       },
       "visual": {
         "height": 12,
@@ -4759,7 +4774,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 105000,
+      "cost": 147000,
       "upkeep": 1600,
       "lifeYears": 60,
       "placement": {
@@ -4791,7 +4806,7 @@
         "radius": 6
       },
       "unlock": {
-        "population": 1200
+        "milestone": 2
       },
       "visual": {
         "height": 16,
@@ -4812,7 +4827,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 600000,
+      "cost": 1200000,
       "upkeep": 6000,
       "lifeYears": 40,
       "placement": {
@@ -4863,7 +4878,7 @@
         "h": 2
       },
       "rotatable": true,
-      "cost": 240000,
+      "cost": 552000,
       "upkeep": 3000,
       "lifeYears": 50,
       "placement": {
@@ -4895,7 +4910,7 @@
         "radius": 6
       },
       "unlock": {
-        "population": 2000
+        "milestone": 4
       },
       "visual": {
         "height": 16,
@@ -4923,7 +4938,7 @@
         "h": 4
       },
       "rotatable": false,
-      "cost": 600000,
+      "cost": 1800000,
       "upkeep": 7000,
       "lifeYears": 50,
       "placement": {
@@ -4948,7 +4963,7 @@
         "radius": 12
       },
       "unlock": {
-        "population": 6000
+        "milestone": 5
       },
       "visual": {
         "height": 10,

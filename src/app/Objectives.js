@@ -56,14 +56,14 @@ export const OBJECTIVES = [
   },
   {
     id: 'pop300',
-    title: 'Atteindre 300 habitants',
-    hint: 'Accélérez le temps (touches 2 et 3) et surveillez la demande en haut de l\'écran.',
-    done: (s) => (s.stats.peakPopulation ?? 0) >= 300
+    title: 'Devenir un Village (500 habitants)',
+    hint: 'Accélérez le temps (touches 2 et 3) et surveillez la demande en haut de l\'écran. Le statut Village débloque l\'école et le poste de police, et l\'État verse une dotation.',
+    done: (s) => (s.stats.peakPopulation ?? 0) >= 500
   },
   {
     id: 'services',
     title: 'Ouvrir une école et un poste de police',
-    hint: 'Éducation et culture → École, puis Police et pompiers → Poste de police ou Commissariat. La satisfaction et la valeur foncière augmentent.',
+    hint: 'Éducation et culture → École, puis Police et pompiers → Poste de police (le commissariat arrive au statut Bourg). La satisfaction et la valeur foncière augmentent.',
     done: (s, { catalog }) =>
       count(s, (b) => catalog.building(b.defId).capacity.service?.type === 'education') > 0 &&
       count(s, (b) => catalog.building(b.defId).capacity.service?.type === 'police') > 0
@@ -94,9 +94,9 @@ export const OBJECTIVES = [
   },
   {
     id: 'era2',
-    title: 'Atteindre l\'ère « Ville autonome »',
-    hint: 'Tableau de bord (C) → Progression : 3 000 habitants, 2 technologies, satisfaction et collecte des déchets.',
-    done: (s) => (s.progression?.era ?? 1) >= 2
+    title: 'Devenir un Bourg (2 000 habitants)',
+    hint: 'Tableau de bord (C) → Progression : chaque statut débloque des équipements et rapporte une dotation de l\'État. L\'ère « Ville autonome » viendra à 10 000 habitants.',
+    done: (s) => (s.stats?.peakPopulation ?? 0) >= 2000
   }
 ];
 

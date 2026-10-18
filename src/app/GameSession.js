@@ -8,6 +8,7 @@ import { getTile } from '../world/Tile.js';
 import { toCents } from '../util/money.js';
 import { ruinBuilding } from '../simulation/CrisisSystem.js';
 import { setDistrictTax, renameDistrict } from '../simulation/Districts.js';
+import { rankFor } from '../simulation/Milestones.js';
 
 /**
  * Une partie en cours : état + simulation + services, sans aucune dépendance graphique.
@@ -210,8 +211,13 @@ export class GameSession {
         r = this.sim.crises.trigger(s, cmd.kind, { manual: true });
         break;
       case 'option': {
-        const allowed = { disasters: ['off', 'rare', 'normal', 'frequent'], elections: ['on', 'off'] };
+        const allowed = { disasters: ['off', 'rare', 'normal', 'frequent'], elections: ['on', 'off'], balance: ['v1'] };
         if (!allowed[cmd.key]?.includes(cmd.value)) return { ok: false, reasons: ['invalid'], messages: ['Option inconnue'] };
+        if (cmd.key === 'balance') {
+          // v1.0 : une ancienne partie bascule vers le nouvel équilibrage, progressivement sur 24 mois
+          if (s.options.balance !== 'legacy') return { ok: false, reasons: ['invalid'], messages: ['La partie utilise déjà l\'équilibrage v1.0'] };
+          s.options.balanceSince = Math.floor(s.time.tick / 30);
+        }
         s.options[cmd.key] = cmd.value;
         if (cmd.key === 'elections') this.sim.politics.setEnabled(s, cmd.value === 'on');
         r = { ok: true };
@@ -219,8 +225,17 @@ export class GameSession {
       }
       case 'debug': {
         // Outils de test et de débogage (panneau F3, parcours automatisés) : passent par la même porte que le jeu.
-        if (cmd.op === 'unlock') s.stats.peakPopulation = Math.max(s.stats.peakPopulation ?? 0, Number(cmd.population) || 0);
-        else if (cmd.op === 'treasury') {
+        if (cmd.op === 'unlock') {
+          s.stats.peakPopulation = Math.max(s.stats.peakPopulation ?? 0, Number(cmd.population) || 0);
+          // Outil de test : les paliers correspondants sont acquis sans annonce ni dotation
+          const rank = rankFor(s.stats.peakPopulation);
+          s.milestones ??= { granted: 0, announced: 0 };
+          s.milestones.announced = Math.max(s.milestones.announced, rank);
+          s.milestones.granted = Math.max(s.milestones.granted, rank);
+        } else if (cmd.op === 'peak') {
+          // Outil de test (v1.0) : population maximale atteinte, avec annonce du statut et dotation
+          s.stats.peakPopulation = Math.max(s.stats.peakPopulation ?? 0, Number(cmd.population) || 0);
+        } else if (cmd.op === 'treasury') {
           const cents = toCents(Number(cmd.euros) || 0);
           s.economy.treasury += cents;
           s.economy.opening += cents;

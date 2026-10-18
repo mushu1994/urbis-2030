@@ -143,7 +143,7 @@ function levers() {
         row('Feux prédictifs (IA)', '+15 % de capacité sur toutes les routes', 'Investissement et puissance de calcul'),
         row('Mobilité intégrée (MaaS)', '−5 points de part de la voiture', 'Prérequis technologiques'),
         row('Forêts et parcs le long des axes', 'Verdure, fraîcheur, bruit et pollution ressentis atténués', 'Emprise au sol'),
-        row('Seconde sortie d\'autoroute', 'Deuxième porte vers la région', 'Dès 15 000 habitants, coûteuse'))))
+        row('Seconde sortie d\'autoroute', 'Deuxième porte vers la région', 'Statut Métropole (40 000 habitants), coûteuse'))))
     ,
     h('p.hint', 'Piège classique : les véhicules autonomes élargissent les routes de 20 %, mais créent 18 % de déplacements en plus et des trajets à vide. Sans transports en commun, la congestion revient.')
   ];

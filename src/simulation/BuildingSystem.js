@@ -5,6 +5,7 @@ import { constructionDaysFor, isUnderConstruction } from './Construction.js';
 import { findAccess } from '../world/PlacementSystem.js';
 import { hash2 } from '../util/rng.js';
 import { districtGrowthFactor } from './Districts.js';
+import { MILESTONES, maxZoneLevel, milestoneOf } from './Milestones.js';
 
 /** Tirage pondéré (champ « weight » des données, 10 par défaut) à partir d'un nombre de 0 à 1. */
 function pickWeighted(list, u) {
@@ -82,6 +83,12 @@ export function growthChecks(state, b, def) {
     { key: 'landValue', label: `${SITE_LABELS[zoneKey === 'R' ? 'R' : def.zone] ?? 'Valeur foncière'} ≥ ${def.growth.minLandValue}`, ok: site >= def.growth.minLandValue, detail: `${Math.round(site)}` },
     { key: 'demand', label: 'Demande du secteur', ok: state.demand[zoneKey] > 5, detail: `${Math.round(state.demand[zoneKey])}` }
   ];
+  // v1.0 : le statut de la ville plafonne le niveau des bâtiments de zone
+  const nextLevel = (def.level ?? 1) + 1;
+  if (nextLevel > maxZoneLevel(state)) {
+    const need = MILESTONES.find((m) => m.maxZoneLevel >= nextLevel);
+    checks.push({ key: 'milestone', label: `Niveau ${nextLevel} : statut « ${need?.name ?? '—'} » (${(need?.population ?? 0).toLocaleString('fr-FR')} habitants)`, ok: false, detail: milestoneOf(state).name });
+  }
   if (minSat > 0) {
     checks.push({ key: 'satisfaction', label: `${def.capacity.residents ? 'Satisfaction des habitants' : 'Satisfaction de la ville'} ≥ ${minSat}`, ok: sat >= minSat, detail: `${Math.round(sat)}` });
   }

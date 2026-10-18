@@ -73,7 +73,7 @@ describe('Catalogue des équipements', () => {
   it('les équipements verrouillés indiquent ce qui les débloque', () => {
     const s = newSession();
     expect(s.preview({ type: 'building', defId: 'power_fusion', x: 10, y: 10 }).messages.join()).toMatch(/symbiotique/);
-    expect(s.preview({ type: 'building', defId: 'airport', x: 10, y: 10 }).messages.join()).toMatch(/6\s?000 habitants/);
+    expect(s.preview({ type: 'building', defId: 'airport', x: 10, y: 10 }).messages.join()).toMatch(/Métropole.*40\s?000 habitants/);
   });
 
   it('port et aéroport agissent sur la demande de toute la ville', () => {

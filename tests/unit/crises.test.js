@@ -70,6 +70,8 @@ describe('Catastrophes et crises', () => {
     buildStarterTown(s, { size: 'large' });
     s.run(200);
     s.execute({ type: 'debug', op: 'unlock', population: 5000 });
+    // v1.0 : équipements plus chers, le bourg de départ laisse moins de trésorerie
+    s.execute({ type: 'debug', op: 'treasury', euros: 200000 });
     s.execute({ type: 'research', techId: 'predictive_maintenance' });
     s.execute({ type: 'research', techId: 'ai_waste' });
     const results = {};
@@ -175,7 +177,7 @@ describe('Sauvegardes v5', () => {
     delete v4.scenario;
     delete v4.options;
     const { data, applied } = migrate(v4);
-    expect(applied).toEqual([4]);
+    expect(applied).toEqual([4, 5]);
     expect(data.options.disasters).toBe('off');
     expect(data.crises.active).toEqual([]);
     const back = deserializeState(v4);

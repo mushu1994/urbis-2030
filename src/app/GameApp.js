@@ -23,13 +23,14 @@ import { CityPanel } from '../ui/CityPanel.js';
 import { OverlayManager } from '../ui/OverlayManager.js';
 import { PoliticsPanel, electionDialog } from '../ui/PoliticsPanel.js';
 import { defaultPolitics } from '../simulation/PoliticsSystem.js';
+import { applyDifficulty, MILESTONES } from '../simulation/Milestones.js';
 import { DemandPanel } from '../ui/DemandPanel.js';
 import { Notifications } from '../ui/Notifications.js';
 import { HelpPanel, SavesPanel, SettingsPanel, SoundPanel, StartMenu } from '../ui/MenuPanels.js';
 import { ObjectivesCard } from '../ui/ObjectivesCard.js';
 import { DebugPanel } from '../ui/DebugPanel.js';
-import { formatMoney } from '../util/money.js';
-import { confirmDialog } from '../ui/Dialog.js';
+import { formatMoney, formatNumber } from '../util/money.js';
+import { confirmDialog, contentDialog } from '../ui/Dialog.js';
 import { FullscreenController } from './Fullscreen.js';
 import { h, icon, setChildren } from '../ui/dom.js';
 import { gridToWorld, setView } from '../rendering/IsometricProjection.js';
@@ -390,7 +391,7 @@ export class GameApp {
     el.hidden = !text;
   }
 
-  async newGame({ name, seed, size, mode, disasters = 'normal', elections = 'on', scenarioId, mapParams = null }) {
+  async newGame({ name, seed, size, mode, disasters = 'normal', elections = 'on', difficulty = 'normal', scenarioId, mapParams = null }) {
     this.#busy('Génération du territoire…');
     await new Promise((r) => setTimeout(r, 30));
     const bus = new EventBus();
@@ -402,6 +403,8 @@ export class GameApp {
     }
     const session = GameSession.newGame({ catalog: this.catalog, seed, width: size, height: size, name, bus, mapParams: challenge ? null : mapParams });
     session.state.options.disasters = disasters;
+    // v1.0 : difficulté (trésorerie initiale, dotations, capacité d'emprunt) ; les scénarios gardent leurs règles
+    if (!challenge) applyDifficulty(session.state, difficulty);
     if (challenge) {
       this.#busy(`Préparation du scénario « ${challenge.name} »…`);
       await new Promise((r) => setTimeout(r, 30));
@@ -409,10 +412,12 @@ export class GameApp {
     } else if (mode === 'town') {
       this.#busy('Construction du bourg selon les règles du jeu…');
       await new Promise((r) => setTimeout(r, 30));
+      session.state.meta.preparing = true;
       const town = buildStarterTown(session, { size: size >= 96 ? 'large' : 'small' });
       session.run(120);
       for (const id of ['police', 'fire', 'school', 'clinic']) placeNear(session, id, town.xEnd - 6, town.row - 2);
       session.run(240);
+      delete session.state.meta.preparing;
       session.history.clear();
     }
     // Le mandat du joueur commence maintenant (après la préparation d'un bourg ou d'un scénario)
@@ -427,6 +432,30 @@ export class GameApp {
     } else if (mode !== 'town') {
       this.notifications.push({ level: 'info', message: 'Commencez par tracer une rue depuis l\'accès autoroutier, à l\'ouest. Aide : touche H.' });
     }
+  }
+
+  /** Écran « Nouveau statut » : ce que débloque le palier atteint et la dotation de l'État. */
+  #milestoneDialog({ rank, grant, unlocks }) {
+    const m = MILESTONES[rank];
+    if (!m) return;
+    const items = [
+      ...(unlocks?.features ?? []),
+      ...(unlocks?.zones ?? []).map((z) => `Zone « ${z} »`),
+      ...(unlocks?.roads ?? []),
+      ...(unlocks?.buildings ?? [])
+    ];
+    const prev = MILESTONES[rank - 1];
+    let dlg = null;
+    const box = h('div.milestone-dialog',
+      h('p.small', `${this.session?.state.meta.name ?? 'La ville'} change de statut`),
+      h('h2', `Nouveau statut : ${m.name}`),
+      h('p', `${formatNumber(m.population)} habitants atteints.${grant ? ` L'État verse une dotation de ${formatMoney(grant)}.` : ''}`),
+      m.maxZoneLevel > (prev?.maxZoneLevel ?? 0) ? h('p.small', `Les bâtiments de zone peuvent désormais monter jusqu'au niveau ${m.maxZoneLevel}.`) : null,
+      items.length ? h('div', h('h3', 'Désormais disponible'), h('ul', items.map((t) => h('li', t)))) : null,
+      h('div.dialog-actions', h('button.btn.primary', { type: 'button', on: { click: () => dlg?.close() } }, 'Continuer'),
+        h('button.btn', { type: 'button', on: { click: () => { dlg?.close(); this.openPanel('city', 'progression'); } } }, 'Voir la progression'))
+    );
+    dlg = contentDialog(box);
   }
 
   /** Démarre l'hôte de simulation : Web Worker si possible (et activé), sinon fil principal. */
@@ -482,6 +511,11 @@ export class GameApp {
       if (sfx) this.audio.play(sfx);
     });
     this.bus.on('era:changed', () => this.audio.play('fanfare'));
+    // v1.0 : nouveau statut de la ville (palier de population)
+    this.bus.on('milestone:reached', (ev) => {
+      this.audio.play('fanfare');
+      this.#milestoneDialog(ev);
+    });
     this.bus.on('crisis:started', ({ crisis }) => {
       this.audio.play(crisis.kind === 'fire' || crisis.kind === 'flood' ? 'siren' : 'danger');
       this.crisisPanel.update(this.session, { force: true });

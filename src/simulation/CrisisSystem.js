@@ -152,7 +152,8 @@ export function defaultCrises() {
 }
 
 export function defaultOptions(disasters = 'normal', elections = 'on') {
-  return { disasters, elections };
+  // v1.0 : équilibrage économique (« v1 » pour une nouvelle partie) et difficulté
+  return { disasters, elections, balance: 'v1', difficulty: 'normal' };
 }
 
 const isProne = (g, i) => g.terrain[i] !== TERRAIN.WATER && g.altitude[i] <= 1;

@@ -14,6 +14,8 @@ export const DEFAULT_MODIFIERS = Object.freeze({
   'upkeep.roads': 1,
   'upkeep.utilities': 1,
   'upkeep.services': 1,
+  /** v1.0 : charges de structure (administration générale et personnel). */
+  'upkeep.structure': 1,
   'pollution.traffic': 1,
   'pollution.buildings': 1,
   'noise.traffic': 1,

@@ -84,6 +84,7 @@ export function validateCatalogData(b, t, p, u) {
       if (d.risk && !(d.risk.monthlyChance >= 0 && d.risk.durationDays > 0)) errors.push(`${w} : risque invalide`);
     }
     if (d.unlock?.era && ![1, 2, 3].includes(d.unlock.era)) errors.push(`${w} : ère de déblocage invalide`);
+    if (d.unlock?.milestone !== undefined && !(Number.isInteger(d.unlock.milestone) && d.unlock.milestone >= 1 && d.unlock.milestone <= 6)) errors.push(`${w} : palier de déblocage invalide`);
     if (!d.visual || !isNum(d.visual.height)) errors.push(`${w} : paramètres visuels manquants`);
   }
 

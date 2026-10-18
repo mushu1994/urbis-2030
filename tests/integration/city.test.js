@@ -47,7 +47,7 @@ describe('Ville simulée (intégration)', () => {
   it('la trésorerie se rapproche exactement du journal des transactions', () => {
     const sum = st.economy.ledger.reduce((x, t) => x + t.amount, 0);
     expect(st.economy.ledger.length).toBeLessThan(4000);
-    expect(st.economy.treasury).toBe(40_000_000 + sum);
+    expect(st.economy.treasury).toBe(st.economy.opening + sum);
     for (const p of st.economy.periods) {
       expect(p.cashEnd - p.cashStart).toBe(EconomySystem.summarize(p).cashChange);
     }
@@ -144,7 +144,7 @@ describe('Technologies et logistique', () => {
     const { s, town } = grownTown(8);
     s.run(10);
     const before = structuredClone(s.state.logistics.stats);
-    s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation, 600);
+    s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation, 2000);
     s.state.economy.treasury += 50_000_000;
     expect(placeNear(s, 'warehouse', town.xEnd - 10, town.row + 3).ok).toBe(true);
     for (let k = 0; k < 3; k++) placeNear(s, 'micro_hub', town.xEnd - 4 - k * 6, town.row - 3);

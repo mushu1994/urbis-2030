@@ -1,5 +1,6 @@
 import { PARCEL, WORLD_PARCELS, landOf } from '../world/Land.js';
 import { hash2 } from '../util/rng.js';
+import { featureUnlocked } from './Milestones.js';
 
 /**
  * Quartiers (v0.8) : chaque parcelle de 32 × 32 cases de la commune forme un quartier, avec un nom stable et des
@@ -176,6 +177,11 @@ export function setDistrictTax(state, key, sector, value) {
   if (!landOf(state).owned.includes(key)) return { ok: false, reason: 'Ce quartier n\'appartient pas à la commune' };
   const v = Math.round(Math.max(-TAX_DELTA_MAX, Math.min(TAX_DELTA_MAX, Number(value))) * 2) / 2;
   if (!Number.isFinite(v)) return { ok: false, reason: 'Valeur invalide' };
+  // v1.0 : fiscalité par quartier au statut « Ville » (revenir à 0 reste toujours possible)
+  if (v !== 0) {
+    const f = featureUnlocked(state, 'districtTax');
+    if (!f.ok) return { ok: false, reason: f.reason };
+  }
   const D = districtsOf(state);
   const t = { ...(D.tax[key] ?? {}) };
   if (v === 0) delete t[sector];

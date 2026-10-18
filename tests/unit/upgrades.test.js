@@ -10,7 +10,7 @@ import { checkInvariants } from '../../src/debug/Invariants.js';
 /** Commissariat posé par le joueur (avec son immobilisation) le long d'une rue. */
 function withPolice(opts) {
   const s = flatSession(opts);
-  s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation, 5000);
+  s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation ?? 0, 5000);
   s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y: 15 }, to: { x: 26, y: 15 } });
   const r = s.execute({ type: 'building', defId: 'police', x: 10, y: 13 });
   expect(r.ok).toBe(true);

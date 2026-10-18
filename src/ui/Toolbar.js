@@ -46,7 +46,7 @@ export class Toolbar {
         label: 'Zonage',
         icon: 'zone',
         tools: [
-          ...catalog.zones.map((z) => ({ id: `zone:${z.id}`, kind: 'zone', zoneId: z.id, label: z.name, cost: z.costCents, costUnit: '/case', swatch: z.color })),
+          ...catalog.zones.map((z) => ({ id: `zone:${z.id}`, kind: 'zone', zoneId: z.id, label: z.name, cost: z.costCents, costUnit: '/case', swatch: z.color, unlock: z.unlock })),
           { id: 'zone:none', kind: 'zone', zoneId: null, label: 'Retirer le zonage', cost: 0 }
         ]
       },
@@ -79,8 +79,8 @@ export class Toolbar {
           ...(cat === 'transport'
             ? [
                 // v0.8 : lignes tracées par le joueur
-                { id: 'line:bus', kind: 'line', mode: 'bus', label: 'Tracer une ligne de bus', cost: 0, unlock: { population: 150 }, desc: 'Touchez les arrêts de bus dans l\'ordre du parcours, puis Valider (ou touchez à nouveau le premier arrêt) : la ligne fait la boucle par les routes. Il faut un dépôt de bus sur le même réseau. Les arrêts hors ligne restent desservis par le réseau de base, moins fréquent. Fréquence et flotte : panneau des lignes (K).' },
-                { id: 'line:tram', kind: 'line', mode: 'tram', label: 'Tracer une ligne de tramway', cost: toCents(1400), costUnit: '/case de rails', unlock: { population: 2500 }, desc: 'Touchez les stations de tramway dans l\'ordre, puis Valider : les rails sont posés sur les rues, avenues et boulevards du parcours (1 400 € par case nouvelle). Il faut un dépôt de tramway sur le même réseau routier. Le tramway transporte quatre fois plus qu\'un bus et ne prend pas de place à la circulation.' },
+                { id: 'line:bus', kind: 'line', mode: 'bus', label: 'Tracer une ligne de bus', cost: 0, unlock: { milestone: 2 }, desc: 'Touchez les arrêts de bus dans l\'ordre du parcours, puis Valider (ou touchez à nouveau le premier arrêt) : la ligne fait la boucle par les routes. Il faut un dépôt de bus sur le même réseau. Les arrêts hors ligne restent desservis par le réseau de base, moins fréquent. Fréquence et flotte : panneau des lignes (K).' },
+                { id: 'line:tram', kind: 'line', mode: 'tram', label: 'Tracer une ligne de tramway', cost: toCents(1400), costUnit: '/case de rails', unlock: { milestone: 3 }, desc: 'Touchez les stations de tramway dans l\'ordre, puis Valider : les rails sont posés sur les rues, avenues et boulevards du parcours (1 400 € par case nouvelle). Il faut un dépôt de tramway sur le même réseau routier. Le tramway transporte quatre fois plus qu\'un bus et ne prend pas de place à la circulation.' },
                 { id: 'panel:lines', kind: 'panel', panel: 'lines', label: 'Gérer les lignes (K)', cost: 0, desc: 'Liste des lignes de bus et de tramway : fréquence, flotte, fréquentation, saturation, coûts.' },
                 { id: 'delivery:on', kind: 'deliveryZone', enabled: true, label: 'Zone de desserte drones', cost: 0, unlock: { tech: 'drone_delivery' }, desc: 'Autorise les livraisons par drones sur les cases tracées.' },
                 { id: 'delivery:off', kind: 'deliveryZone', enabled: false, label: 'Retirer la desserte drones', cost: 0, unlock: { tech: 'drone_delivery' } }

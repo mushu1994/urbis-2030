@@ -6,7 +6,7 @@ import { validateCatalogData } from '../../src/data/Validators.js';
 describe('Catalogue', () => {
   it('charge les données par défaut sans erreur et convertit en centimes', () => {
     const c = new Catalog(defaultData.buildings, defaultData.technologies, defaultData.policies);
-    expect(c.building('power_gas').costCents).toBe(8_250_000);
+    expect(c.building('power_gas').costCents).toBe(9_490_000);
     expect(c.road('road_street').code).toBe(1);
     expect(c.firstGrowable(1).id).toBe('res_low_1');
     for (const zone of [1, 2, 3, 4, 5]) expect([...new Set(c.growablesByZone.get(zone).map((d) => d.level))]).toEqual([1, 2, 3, 4, 5]);

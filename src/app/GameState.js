@@ -11,6 +11,7 @@ import { defaultResources } from '../simulation/ResourceSystem.js';
 import { defaultMarket } from '../simulation/MarketSystem.js';
 import { defaultLines } from '../simulation/LineSystem.js';
 import { defaultDistricts } from '../simulation/Districts.js';
+import { defaultMilestones } from '../simulation/Milestones.js';
 
 /**
  * @typedef {Object} Building
@@ -117,6 +118,8 @@ export class GameState {
     this.lines = defaultLines();
     /** Quartiers : noms et fiscalité différenciée (v0.8). */
     this.districts = defaultDistricts();
+    /** Statut de la ville : paliers annoncés et dotations versées (v1.0). */
+    this.milestones = defaultMilestones();
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};

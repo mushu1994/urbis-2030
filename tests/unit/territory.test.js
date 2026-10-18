@@ -11,6 +11,8 @@ import { Grid } from '../../src/world/Grid.js';
 import { TERRAIN } from '../../src/world/Terrain.js';
 
 function grow(s, gx, gy) {
+  // v1.0 : extensions de territoire au statut « Grande ville »
+  s.state.stats.peakPopulation = Math.max(s.state.stats.peakPopulation ?? 0, 15000);
   const r = s.execute({ type: 'buyParcel', gx, gy });
   expect(r.ok).toBe(true);
   const { data, offset } = expandSave(serializeState(s.state), { catalog: s.catalog, box: r.box });

@@ -15,7 +15,7 @@ export const ERAS = [
     name: ERA_NAMES[2],
     description: 'Robots, navettes et services prédictifs : la ville commence à se piloter elle-même.',
     requires: [
-      { key: 'population', label: '3 000 habitants', test: (s) => s.stats.population >= 3000, value: (s) => s.stats.population },
+      { key: 'population', label: '10 000 habitants', test: (s) => s.stats.population >= 10000, value: (s) => s.stats.population },
       { key: 'techs', label: '2 technologies déployées', test: (s) => Object.keys(s.tech.researched).length >= 2, value: (s) => Object.keys(s.tech.researched).length },
       { key: 'satisfaction', label: 'Satisfaction moyenne d\'au moins 55', test: (s) => s.stats.satisfaction >= 55, value: (s) => Math.round(s.stats.satisfaction) },
       { key: 'waste', label: '80 % des déchets collectés', test: (s) => (s.waste.stats?.collectionRate ?? 0) >= 0.8, value: (s) => `${Math.round((s.waste.stats?.collectionRate ?? 0) * 100)} %` }
@@ -26,7 +26,7 @@ export const ERAS = [
     name: ERA_NAMES[3],
     description: 'Une ville sobre et vivante, où technologie et nature se renforcent.',
     requires: [
-      { key: 'population', label: '8 000 habitants', test: (s) => s.stats.population >= 8000, value: (s) => s.stats.population },
+      { key: 'population', label: '30 000 habitants', test: (s) => s.stats.population >= 30000, value: (s) => s.stats.population },
       { key: 'techs', label: '5 technologies déployées', test: (s) => Object.keys(s.tech.researched).length >= 5, value: (s) => Object.keys(s.tech.researched).length },
       { key: 'satisfaction', label: 'Satisfaction moyenne d\'au moins 62', test: (s) => s.stats.satisfaction >= 62, value: (s) => Math.round(s.stats.satisfaction) },
       { key: 'waste', label: '90 % des déchets collectés', test: (s) => (s.waste.stats?.collectionRate ?? 0) >= 0.9, value: (s) => `${Math.round((s.waste.stats?.collectionRate ?? 0) * 100)} %` },

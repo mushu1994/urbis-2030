@@ -44,6 +44,7 @@ export class EventSystem {
       if (m > reached && state.stats.population >= m) {
         state.events.milestone = m;
         const unlocked = this.#unlockedAt(reached, m);
+        // Les bâtiments et fonctions des paliers sont annoncés par le statut de la ville (Milestones.js)
         this.#notify(state, 'success', `${m.toLocaleString('fr-FR')} habitants !${unlocked ? ` Débloqué : ${unlocked}` : ''}`);
       }
     }

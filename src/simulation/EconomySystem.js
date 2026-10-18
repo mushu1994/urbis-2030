@@ -3,6 +3,7 @@ import { emptyAccrual } from '../app/GameState.js';
 import { toCents } from '../util/money.js';
 import { deltaGrid } from './Districts.js';
 import { PARCEL } from '../world/Land.js';
+import { structureCents, roadUpkeepFactor, difficultyOf, featureUnlocked } from './Milestones.js';
 
 /**
  * Catégories comptables (libellés affichés dans les panneaux financiers).
@@ -49,6 +50,8 @@ export const CATEGORY_LABELS = {
   resourcesImport: 'Importations de ressources',
   marketFees: 'Résiliations de contrats d\'énergie et d\'eau',
   tramTracks: 'Voies de tramway',
+  structure: 'Administration générale et personnel',
+  grant: 'Dotations de l\'État',
   fleet: 'Flotte des lignes de bus et de tramway'
 };
 
@@ -105,6 +108,7 @@ export class EconomySystem {
       interest: 0,
       financingIn: 0,
       principal: 0,
+      grants: 0,
       depreciation: 0,
       writeOffs: 0,
       cashStart: state.economy.treasury,
@@ -118,7 +122,7 @@ export class EconomySystem {
 
   /**
    * Enregistre une transaction et met à jour la trésorerie.
-   * @param {{kind:'revenue'|'opex'|'capex'|'interest'|'loan'|'principal', category:string, label:string, amount:number, ref?:any}} t
+   * @param {{kind:'revenue'|'opex'|'capex'|'interest'|'loan'|'principal'|'grant', category:string, label:string, amount:number, ref?:any}} t
    *   amount signé : positif = encaissement, négatif = décaissement.
    */
   post(state, t) {
@@ -156,6 +160,10 @@ export class EconomySystem {
         break;
       case 'principal':
         p.principal -= t.amount;
+        break;
+      case 'grant':
+        // Dotation de l'État (v1.0) : subvention d'investissement, hors épargne brute
+        p.grants = (p.grants ?? 0) + t.amount;
         break;
       default:
         throw new Error(`Type de transaction inconnu : ${t.kind}`);
@@ -396,7 +404,8 @@ export class EconomySystem {
     }
     // Voies ferrées (v0.6)
     for (let i = 0; i < g.size; i++) if (g.rail[i]) roadUpkeep += Math.round((g.bridge[i] && g.terrain[i] === 1 ? 8 : 1.5) * 100);
-    upkeep.roads = roadUpkeep * (mods['upkeep.roads'] ?? 1);
+    // v1.0 : entretien de la voirie ×2,5 dans les données ; une ancienne partie garde l'ancien niveau jusqu'à sa bascule
+    upkeep.roads = roadUpkeep * roadUpkeepFactor(state) * (mods['upkeep.roads'] ?? 1);
 
     // Exploitation des transports en commun : proportionnelle au nombre de voyageurs
     upkeep.transport = (upkeep.transport ?? 0) + Math.round((a.transitOps ?? 0) * 100);
@@ -422,6 +431,10 @@ export class EconomySystem {
       const amount = Math.round(cents);
       if (amount > 0) this.post(state, { kind: 'opex', category, label: `Entretien — ${CATEGORY_LABELS[category]}`, amount: -amount });
     }
+
+    // v1.0 : administration générale et personnel, croissants avec la taille de la ville
+    const structure = structureCents(state);
+    if (structure > 0) this.post(state, { kind: 'opex', category: 'structure', label: CATEGORY_LABELS.structure, amount: -structure });
 
     // Technologies (coûts d'exploitation) et politiques
     let techCost = 0;
@@ -477,7 +490,7 @@ export class EconomySystem {
     const operatingResult = revenues - opex;
     const netResult = operatingResult - p.depreciation - p.writeOffs - p.interest;
     const cashOperating = revenues - opex - p.interest;
-    const cashInvesting = -capex;
+    const cashInvesting = -capex + (p.grants ?? 0);
     const cashFinancing = p.financingIn - p.principal;
     return {
       revenues,
@@ -500,7 +513,7 @@ export class EconomySystem {
     const eco = state.economy;
     const last = eco.periods.slice(-3);
     const avgRevenue = last.length ? last.reduce((s, p) => s + EconomySystem.summarize(p).revenues, 0) / last.length : 0;
-    const max = Math.max(toCents(SIM.MIN_DEBT_CAPACITY_EUROS), avgRevenue * SIM.MAX_DEBT_MONTHS_OF_REVENUE);
+    const max = Math.max(toCents(SIM.MIN_DEBT_CAPACITY_EUROS), avgRevenue * SIM.MAX_DEBT_MONTHS_OF_REVENUE) * difficultyOf(state).debtMult;
     const outstanding = eco.loans.reduce((s, l) => s + l.remaining, 0);
     return Math.max(0, Math.round(max - outstanding));
   }
@@ -575,6 +588,10 @@ export class EconomySystem {
   takeLoan(state, amountCents, months, type = 'annuity') {
     if (!Number.isInteger(amountCents) || amountCents <= 0) return { ok: false, reason: 'Montant invalide' };
     if (!LOAN_TYPES[type]) return { ok: false, reason: 'Profil d\'emprunt inconnu' };
+    if (type !== 'annuity') {
+      const f = featureUnlocked(state, 'loanProfiles');
+      if (!f.ok) return { ok: false, reason: f.reason };
+    }
     if (!Number.isInteger(months) || months < 12 || months > 360) return { ok: false, reason: 'Durée invalide' };
     if (amountCents > this.debtCapacity(state)) return { ok: false, reason: 'Capacité d\'emprunt dépassée' };
     const rateAnnual = this.loanRate(state, type);

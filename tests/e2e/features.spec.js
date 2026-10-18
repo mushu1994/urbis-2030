@@ -116,7 +116,9 @@ test('pont, bus, couches, progression, tutoriel et débogage depuis l\'interface
   // Tableau de bord : progression, déchets, transports
   await page.keyboard.press('c');
   await page.getByRole('tab', { name: 'Progression' }).click();
-  await expect(page.locator('.era-card')).toContainText('Ville connectée');
+  await expect(page.locator('.era-card:not(.milestone-card)')).toContainText('Ville connectée');
+  // v1.0 : statut de la ville en tête de l'onglet Progression
+  await expect(page.locator('.milestone-card')).toContainText('Village');
   await expect(page.getByText('Pour atteindre l\'ère « Ville autonome »')).toBeVisible();
   await page.getByRole('tab', { name: 'Déchets' }).click();
   await expect(page.getByText('Taux de collecte')).toBeVisible();

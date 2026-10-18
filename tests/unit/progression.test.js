@@ -29,7 +29,7 @@ describe('Ères et niveaux d\'habitation', () => {
   it('passe à l\'ère suivante quand toutes les conditions sont remplies, sans jamais revenir en arrière', () => {
     const s = newSession();
     const st = s.state;
-    Object.assign(st.stats, { population: 3200, satisfaction: 60 });
+    Object.assign(st.stats, { population: 10200, satisfaction: 60 });
     st.tech.researched = { ai_waste: 0, predictive_maintenance: 0 };
     st.waste.stats = { collectionRate: 0.9 };
     expect(isUnlocked(st, { era: 2 }).ok).toBe(false);

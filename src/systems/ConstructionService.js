@@ -5,9 +5,10 @@ import { createBuilding, removeBuilding, markNetworksDirty } from './BuildingFac
 import { isOwnedIndex, fullyOwned, landOf, parcelMap, parcelPrice, parcelKey } from '../world/Land.js';
 import { EconomySystem } from '../simulation/EconomySystem.js';
 import { accountForCategory } from '../simulation/EconomySystem.js';
+import { milestoneOf, milestoneLabel, featureUnlocked } from '../simulation/Milestones.js';
 
 /** Voie ferrée (v0.6) : coûts en euros par case, entretien mensuel, déblocage. */
-export const RAIL = { cost: 250, bridgeCost: 2500, upkeep: 1.5, bridgeUpkeep: 8, unlock: { population: 2000 } };
+export const RAIL = { cost: 250, bridgeCost: 2500, upkeep: 1.5, bridgeUpkeep: 8, unlock: { milestone: 2 } };
 
 /** Coût de démolition d'une case de route (centimes). */
 export const ROAD_DEMOLITION_CENTS = 1000;
@@ -34,11 +35,16 @@ export const MOVE_FREE_DAYS = 30;
 export const ERA_NAMES = { 1: 'Ville connectée', 2: 'Ville autonome', 3: 'Ville symbiotique' };
 
 /**
- * Conditions de déblocage (population atteinte, technologie recherchée, ère atteinte).
+ * Conditions de déblocage (statut de la ville, population atteinte, technologie recherchée, ère atteinte).
+ * Pendant la préparation d'un scénario ou du bourg existant (`meta.preparing`), l'ancienne équipe
+ * municipale a pu construire ce que le statut actuel ne permet pas encore : le palier n'est pas exigé.
  * @returns {{ok:boolean, reason?:string}}
  */
 export function isUnlocked(state, unlock) {
   if (!unlock) return { ok: true };
+  if (unlock.milestone && !state.meta?.preparing && milestoneOf(state).rank < unlock.milestone) {
+    return { ok: false, reason: `Débloqué au statut « ${milestoneLabel(unlock.milestone)} »` };
+  }
   if (unlock.population && (state.stats.peakPopulation ?? 0) < unlock.population) {
     return { ok: false, reason: `Débloqué à ${unlock.population.toLocaleString('fr-FR')} habitants` };
   }
@@ -671,6 +677,8 @@ export class ConstructionService {
     if (!cell) return fail('Hors du territoire possible (256 × 256 cases au plus)');
     if (cell.status === 'owned') return fail('Parcelle déjà achetée');
     if (cell.status !== 'available') return fail('Achetez d\'abord une parcelle voisine');
+    const feature = featureUnlocked(state, 'territory');
+    if (!feature.ok) return fail(feature.reason);
     if ((state.crises?.active ?? []).length) return fail('Impossible pendant une crise');
     if (!this.economy.canAfford(state, cost)) return { ok: false, cost, reasons: ['budget'], messages: [REASONS.budget] };
     const box = landOf(state).box;

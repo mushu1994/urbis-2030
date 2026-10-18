@@ -3,7 +3,7 @@
  * Chaque entrée transforme une sauvegarde de la version N vers N+1. Les migrations sont appliquées
  * en chaîne jusqu'à la version courante, sur une copie : l'enregistrement d'origine n'est jamais modifié.
  */
-export const CURRENT_FORMAT_VERSION = 5;
+export const CURRENT_FORMAT_VERSION = 6;
 
 /** @type {Record<number, (data:any) => any>} */
 export const MIGRATIONS = {
@@ -77,6 +77,23 @@ export const MIGRATIONS = {
     d.scenario ??= null;
     d.options ??= { disasters: 'off' };
     d.formatVersion = 5;
+    return d;
+  },
+
+  /**
+   * v5 → v6 (v1.0) : statut de la ville et équilibrage. Une ancienne partie garde l'équilibrage d'origine
+   * (« legacy » : pas de charges de structure, voirie à l'ancien tarif, pas de dotation) jusqu'à ce que le
+   * joueur bascule dans les paramètres ; les paliers déjà atteints sont considérés comme annoncés et dotés.
+   */
+  5: (d) => {
+    d.options ??= {};
+    d.options.balance ??= 'legacy';
+    d.options.difficulty ??= 'normal';
+    const peak = d.stats?.peakPopulation ?? 0;
+    let rank = 0;
+    for (const [r, pop] of [[1, 500], [2, 2000], [3, 5000], [4, 15000], [5, 40000], [6, 80000]]) if (peak >= pop) rank = r;
+    d.milestones ??= { granted: rank, announced: rank };
+    d.formatVersion = 6;
     return d;
   }
 };

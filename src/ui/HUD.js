@@ -5,6 +5,7 @@ import { SPEEDS } from '../simulation/SimulationClock.js';
 import { EconomySystem } from '../simulation/EconomySystem.js';
 import { WEATHER, SEASONS } from '../simulation/WeatherSystem.js';
 import { CRISIS_TYPES } from '../simulation/CrisisSystem.js';
+import { milestoneOf } from '../simulation/Milestones.js';
 
 const DEMANDS = [
   ['R', 'Résidentiel', 'var(--zone-r)'],
@@ -24,7 +25,10 @@ export class HUD {
    */
   constructor(root, actions) {
     this.actions = actions;
-    this.cityName = h('button.hud-city', { on: { click: actions.onMenu }, title: 'Menu (M)' }, icon('menu', 16), h('span'));
+    // v1.0 : nom de la ville et statut (palier de population)
+    this.cityLabel = h('b');
+    this.tierLabel = h('small.hud-tier');
+    this.cityName = h('button.hud-city', { on: { click: actions.onMenu }, title: 'Menu (M)' }, icon('menu', 16), h('span.hud-city-text', this.cityLabel, this.tierLabel));
     this.date = h('div.hud-date');
     this.weather = h('button.hud-weather', { type: 'button', title: 'Météo — ouvrir les risques et la météo', on: { click: () => actions.onWeather?.() } });
     this.speedBtns = SPEEDS.map((s, i) =>
@@ -100,7 +104,9 @@ export class HUD {
 
   /** @param {import('../app/GameState.js').GameState} state */
   update(state, { speedIndex, canUndo }) {
-    this.cityName.lastChild.textContent = state.meta.name;
+    if (this.cityLabel.textContent !== state.meta.name) this.cityLabel.textContent = state.meta.name;
+    const tier = milestoneOf(state).name;
+    if (this.tierLabel.textContent !== tier) this.tierLabel.textContent = tier;
     this.date.textContent = formatDate(state.time.tick);
     const wx = state.weather;
     if (wx) {

@@ -3,6 +3,7 @@ import { formatMoney, formatNumber } from '../util/money.js';
 import { confirmDialog, textDialog, pasteDialog } from './Dialog.js';
 import { CHALLENGES } from '../app/challenges.js';
 import { DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
+import { DIFFICULTIES, balancePhase } from '../simulation/Milestones.js';
 import { openGuideDialog } from './GuidePanel.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -201,6 +202,7 @@ export class SettingsPanel {
             h('option', { value: 'on', selected: session.state.options?.elections !== 'off' }, 'Activées'),
             h('option', { value: 'off', selected: session.state.options?.elections === 'off' }, 'Désactivées')))
         : null,
+      session ? this.#balanceSetting(session, rerender) : null,
       toggle('pauseOnCrisis', 'Mettre en pause quand une crise exige une décision', true),
       h('h3', 'Effets visuels'),
       toggle('dayNight', 'Cycle jour et nuit (fenêtres et lampadaires allumés)', true),
@@ -225,6 +227,25 @@ export class SettingsPanel {
         this.onDebug ? h('button.btn', { on: { click: () => this.onDebug() } }, 'Outils de débogage (F3)') : null
       )
     );
+  }
+
+  /** v1.0 : difficulté de la partie et équilibrage économique (bascule d'une ancienne partie). */
+  #balanceSetting(session, rerender) {
+    const o = session.state.options ?? {};
+    const diff = (DIFFICULTIES[o.difficulty] ?? DIFFICULTIES.normal).label;
+    if (o.balance === 'legacy') {
+      return h('div.balance-setting',
+        h('span', `Équilibrage économique : celui des versions 0.x (partie créée avant la v1.0). Difficulté : ${diff}.`),
+        h('p.hint', 'La v1.0 ajoute des charges de structure qui croissent avec la taille de la ville, augmente l\'entretien de la voirie et verse une dotation de l\'État à chaque nouveau statut. La bascule est progressive : 1/24 de plus chaque mois pendant deux ans. Elle est définitive.'),
+        h('button.btn', { type: 'button', on: { click: async () => {
+          if (!(await confirmDialog('Passer cette partie à l\'équilibrage v1.0 ? Les nouvelles charges arrivent progressivement sur 24 mois. Ce choix est définitif.', { confirmLabel: 'Passer à la v1.0' }))) return;
+          this.execute({ type: 'option', key: 'balance', value: 'v1' });
+          rerender?.();
+        } } }, 'Passer à l\'équilibrage v1.0'));
+    }
+    const phase = balancePhase(session.state);
+    return h('div.balance-setting',
+      h('span', `Équilibrage économique v1.0${phase < 1 ? ` : bascule en cours, ${Math.round(phase * 100)} % appliqués` : ''}. Difficulté : ${diff}.`));
   }
 }
 
@@ -294,6 +315,8 @@ export class StartMenu {
       h('option', { value: 'town' }, 'Bourg existant (déjà construit selon les règles du jeu)'));
     const disasters = h('select', { 'aria-label': 'Catastrophes' },
       Object.entries(DISASTER_LEVEL_LABELS).map(([v, l]) => h('option', { value: v, selected: v === 'normal' }, l)));
+    const difficulty = h('select', { 'aria-label': 'Difficulté' },
+      Object.entries(DIFFICULTIES).map(([v, d]) => h('option', { value: v, selected: v === 'normal' }, `${d.label} (${formatNumber(d.treasury)} € au départ)`)));
     const elections = h('select', { 'aria-label': 'Élections municipales' },
       h('option', { value: 'on', selected: true }, 'Activées (mandat de 6 ans)'),
       h('option', { value: 'off' }, 'Désactivées (partie libre)'));
@@ -335,12 +358,13 @@ export class StartMenu {
       const p = Object.fromEntries(Object.entries(mapInputs).map(([k, el]) => [k, Number(el.value)]));
       return Object.values(p).every((v) => v === 50) ? null : p;
     };
-    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, elections: elections.value, mapParams: mapParams() }); } } },
+    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, elections: elections.value, difficulty: difficulty.value, mapParams: mapParams() }); } } },
       h('h2', 'Nouvelle partie'),
       h('label', 'Nom de la ville', name),
       h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
       h('label', 'Départ', mode),
       h('div.row2', h('label', 'Catastrophes', disasters), h('label', 'Élections', elections)),
+      h('label', 'Difficulté', difficulty),
       mapEditor,
       h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville')
     );

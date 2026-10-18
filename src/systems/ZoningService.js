@@ -78,6 +78,8 @@ export class ZoningService {
       eligible = [...set].sort((a, z) => a - z);
     }
     const reasons = [];
+    const unlock = zone ? isUnlocked(state, zone.unlock) : { ok: true };
+    if (!unlock.ok) reasons.push('locked');
     const special = code === ZONE_EXTRACT ? 'noDeposit' : code === ZONE_FOREST ? 'noForest' : null;
     if (!eligible.length) reasons.push(zone ? (special && all.some((i) => canZoneTile(state, i) && g.zone[i] !== code) ? special : 'noZone') : 'nothing');
     let cost = zone ? eligible.length * zone.costCents : 0;
@@ -95,7 +97,7 @@ export class ZoningService {
       rocks,
       residents: buildings.reduce((n, b) => n + (b.residents ?? 0), 0),
       reasons,
-      messages: reasons.map((r) => REASONS[r])
+      messages: reasons.map((r) => (r === 'locked' ? unlock.reason : REASONS[r]))
     };
   }
 

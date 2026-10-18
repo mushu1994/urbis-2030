@@ -85,7 +85,7 @@ describe('Construction et zonage', () => {
     const s = newSession();
     const pv = s.preview({ type: 'building', defId: 'hospital', x: 10, y: 10 });
     expect(pv.reasons).toContain('locked');
-    expect(pv.messages.join()).toMatch(/2 500 habitants|2 500 habitants|2 500/);
+    expect(pv.messages.join()).toMatch(/statut « Ville \(5\s000 habitants\) »/);
   });
 
   it('annule une construction : cases restaurées et dépense contre-passée', () => {
@@ -113,7 +113,7 @@ describe('Construction et zonage', () => {
     expect(d.ok).toBe(true);
     expect(s.state.buildings.has(id)).toBe(false);
     for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) expect(s.state.grid.building[s.state.grid.idx(x + 2 + dx, y + 1 + dy)]).toBe(0);
-    expect(s.state.economy.current.writeOffs).toBe(4_500_000);
+    expect(s.state.economy.current.writeOffs).toBe(5_170_000);
   });
 
   it('zone uniquement les cases éligibles et facture à la case', () => {

@@ -207,7 +207,7 @@ function adviceFor(k, state, v, free, connected) {
     if ((s.satisfaction ?? 50) < 45) out.push('Satisfaction basse : services publics, parcs, moins de pollution et de bruit.');
   }
   if (k === 'C' && (s.salesRatio ?? 0) < 0.9) out.push('Les commerces manquent de clients : la demande reviendra avec plus d\'habitants.');
-  if (k === 'O' && s.population <= 900) out.push('Les entreprises de bureaux s\'installent au-delà de 900 habitants.');
+  if (k === 'O' && s.population <= 900) out.push('Les entreprises de bureaux s\'installent au-delà de 900 habitants (zone bureaux débloquée au statut Village, 500 habitants).');
   if (k === 'O' && v > 0) out.push('Écoles et lycées qualifient les actifs dont les bureaux ont besoin.');
   if (k === 'I' && (s.goodsSoldRatio ?? 1) < 0.95) out.push('Une partie de la production ne trouve pas preneur : développez le commerce, la logistique ou un port.');
   return out;

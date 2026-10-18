@@ -6,6 +6,7 @@ import { WEATHER, SEASONS, weatherEffectLabels } from '../simulation/WeatherSyst
 import { CRISIS_TYPES, CRISIS_KINDS, DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
 import { confirmDialog } from './Dialog.js';
 import { formatMoney } from '../util/money.js';
+import { MILESTONES, milestoneOf, difficultyOf } from '../simulation/Milestones.js';
 
 const pct = (v) => `${Math.round((v || 0) * 100)} %`;
 const row = (label, value, cls = '') => h('div.kv', h('span', label), h('strong', { class: cls }, value));
@@ -215,7 +216,27 @@ export class CityPanel {
       const d = session.catalog.buildingFor(b);
       if (d.kind === 'growable') levels[d.level] = (levels[d.level] ?? 0) + 1;
     }
+    // v1.0 : statut de la ville (paliers de population)
+    const ms = milestoneOf(s);
+    const next = MILESTONES[ms.rank + 1] ?? null;
+    const peak = s.stats.peakPopulation ?? 0;
+    const unlocks = next ? session.sim.milestones.unlocksOf(next.rank) : null;
+    const list = unlocks ? [...unlocks.features, ...unlocks.zones.map((z) => `zone « ${z} »`), ...unlocks.roads, ...unlocks.buildings] : [];
+    const grant = next && (s.options?.balance ?? 'v1') !== 'legacy' ? Math.round(next.grant * difficultyOf(s).grantMult) : 0;
     return [
+      h('div.era-card.milestone-card',
+        h('span.small', `Statut de la ville · palier ${ms.rank} sur 6`),
+        h('strong', ms.name),
+        h('p.small', `Bâtiments de zone jusqu'au niveau ${ms.maxZoneLevel} · ${ms.delegations} délégation${ms.delegations > 1 ? 's' : ''} d'adjoints. Un statut est acquis sur la population maximale atteinte : il n'est jamais perdu.`),
+        h('div.era-steps.milestone-steps', MILESTONES.map((m) => h('span.era-step', { class: m.rank <= ms.rank ? 'done' : '', title: `${m.population.toLocaleString('fr-FR')} habitants` }, `${m.name}`)))
+      ),
+      next
+        ? h('section', h('h3', `Prochain statut : ${next.name} (${formatNumber(next.population)} habitants)`),
+          meter(peak / next.population, { label: `${formatNumber(peak)} / ${formatNumber(next.population)} habitants` }),
+          h('p.small', `Population maximale atteinte : ${formatNumber(peak)} sur ${formatNumber(next.population)} habitants.`),
+          grant ? h('p.small', `Dotation de l'État au passage : ${formatMoney(grant * 100)}.`) : null,
+          list.length ? h('p.small', `Débloque : ${list.join(', ')}.`) : null)
+        : h('p.hint', 'La ville a atteint le statut le plus élevé.'),
       h('div.era-card',
         h('span.small', `Ère ${ev.era} sur 3`),
         h('strong', ev.current.name),
@@ -229,7 +250,7 @@ export class CityPanel {
       h('section', h('h3', 'Bâtiments par niveau'),
         h('table.fin.compact', h('thead', h('tr', [1, 2, 3, 4, 5].map((n) => h('th.num', `Niveau ${n}`)))),
           h('tbody', h('tr', [1, 2, 3, 4, 5].map((n) => h('td.num', formatNumber(levels[n] ?? 0))))))),
-      h('p.hint', 'Les niveaux 4 et 5 demandent une ère avancée, des services publics, la collecte des déchets, une desserte en transports en commun et une satisfaction élevée. Sélectionnez un bâtiment pour voir ses conditions.')
+      h('p.hint', 'Le statut de la ville plafonne le niveau des bâtiments : niveau 3 au statut Bourg, 4 au statut Ville, 5 au statut Grande ville. Les niveaux 4 et 5 demandent aussi une ère avancée, des services publics, la collecte des déchets, une desserte en transports en commun et une satisfaction élevée. Sélectionnez un bâtiment pour voir ses conditions.')
     ];
   }
 

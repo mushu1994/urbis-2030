@@ -25,7 +25,8 @@ export const SIM = Object.freeze({
     trafficNodeBudget: 60000
   },
 
-  START_TREASURY_EUROS: 400000,
+  /** Trésorerie de départ en difficulté normale (v1.0 ; voir DIFFICULTIES dans Milestones.js). */
+  START_TREASURY_EUROS: 380000,
   START_TAXES: { R: 9, C: 9, O: 9, I: 9, property: 1.2 },
   START_TARIFFS: { water: 1.2, power: 0.9, transit: 1.2 },
 

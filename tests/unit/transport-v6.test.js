@@ -56,7 +56,7 @@ describe('Transports v0.6', () => {
   it('autoroute de sortie : atteindre le bord ouvre un second accès régional', () => {
     const s = flatSession();
     const g = s.state.grid;
-    s.state.stats.peakPopulation = 20000;
+    s.state.stats.peakPopulation = 40000;
     s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y: 15 }, to: { x: 20, y: 15 } });
     expect(s.state.entries).toHaveLength(1);
     expect(s.execute({ type: 'road', roadId: 'road_motorway', from: { x: 20, y: 15 }, to: { x: 29, y: 15 } }).ok).toBe(true);

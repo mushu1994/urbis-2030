@@ -6,6 +6,56 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 1.0 — statut de la ville et rééquilibrage économique
+
+> **Anciennes parties.** Elles gardent l'équilibrage des versions 0.x (pas de charges de structure, voirie à
+> l'ancien tarif, pas de dotation). Paramètres → Partie → « Passer à l'équilibrage v1.0 » : bascule progressive sur
+> 24 mois, définitive. Les statuts déjà atteints sont acquis ; les nouveaux prix des équipements et les déblocages par
+> statut s'appliquent à toutes les parties (ce qui est construit reste en place).
+
+### Statut de la ville (tableau de bord → Progression ; nom du statut sous celui de la ville)
+
+| Statut | Habitants | Niveau max des immeubles | Débloque notamment | Dotation de l'État |
+| --- | --- | --- | --- | --- |
+| Hameau | 0 | 2 | rue, zones R, C, I et agricole, centrale à gaz et solaire, eau, épuration, déchets, mairie, dispensaire, bibliothèque, poste de pompiers | — |
+| Village | 500 | 2 | école, poste de police, éolienne, bus, avenue, zone bureaux, industrie forestière, parc, terrain de sport | 60 000 € |
+| Bourg | 2 000 | 3 | commissariat, caserne, lycée, centre de tri, batteries, gare et voie ferrée, logistique, extraction, marina ; lignes de bus tracées ; emprunts in fine et à amortissement constant | 150 000 € |
+| Ville | 5 000 | 4 (avec l'ère 2) | hôpital, centre de données, incinérateur, barrage, dessalement, tramway, grandes surfaces, musée ; fiscalité par quartier | 300 000 € |
+| Grande ville | 15 000 | 5 (avec l'ère 3) | boulevard, métro, université, usine d'eau potable, station d'épuration métropolitaine, zoo, port ; extensions de territoire, contrats à prix fixe | 700 000 € |
+| Métropole | 40 000 | 5 | centrale nucléaire, stade, aéroport, autoroute de seconde sortie | 1 500 000 € |
+| Capitale régionale | 80 000 | 5 | (grands événements, v1.2) | 3 000 000 € |
+
+- Un statut est acquis sur la **population maximale atteinte** : il n'est jamais perdu. Au passage, écran « Nouveau
+  statut » (ce qui est débloqué, la dotation) et dotation versée une fois, comptée en flux d'investissement.
+- Les outils, fiches, panneaux (emprunts, quartiers, contrats, territoire) indiquent le statut requis.
+- **Ères** : la ville autonome demande désormais 10 000 habitants (3 000 avant), la ville symbiotique 30 000
+  (8 000 avant). Le défi « 2045 : ville symbiotique » vise 30 000 habitants.
+- Les villes des scénarios et le bourg existant ont été bâtis par l'équipe précédente : leur statut ne limite pas ce
+  qu'ils contiennent.
+
+### Rééquilibrage économique (mesuré avec `npm run balance`)
+
+- **Administration générale et personnel** : nouvelle ligne de charges, nulle sous 4 000 habitants, qui monte à 9 € par
+  habitant et par mois à partir de 40 000 (1 € à 5 000, 4,4 € à 15 000). Le copilote budgétaire (−5 %) et le
+  télétravail encouragé (−2 %) la réduisent.
+- **Voirie** : entretien multiplié par 2,5 (rue 1,50 € par case et par mois).
+- **Équipements publics plus chers** selon leur statut de déblocage : ×1,15 (Hameau, Village), ×1,4 (Bourg),
+  ×1,8 (Ville), ×2,3 (Grande ville), ×3 (Métropole), ×2 pour ceux débloqués par une ère ou une technologie. Exemples :
+  hôpital 216 000 €, université 414 000 €, centrale nucléaire 1,44 M€, aéroport 1,8 M€.
+- **Difficulté** (nouvelle partie) : Facile 550 000 € et dotations ×1,5 ; Normal 380 000 € ; Difficile 300 000 €,
+  dotations ×0,5 et capacité d'emprunt −30 %.
+- **Taux d'épargne brute** (épargne brute / recettes, 3 derniers mois) dans Finances → Synthèse, repère 15 à 30 %.
+
+Effet sur la ville planifiée de `scripts/balance.mjs` (96 × 96, graine 2030, réseaux et services suffisants) :
+
+| | Années 1–2 | Années 3–9 | Années 11–15 | Épargne cumulée à 10 ans | à 15 ans |
+| --- | --- | --- | --- | --- | --- |
+| v0.9 | 14–18 % | 39–63 % | 61–63 % | 30,0 M€ | 68,4 M€ |
+| v1.0 | 10–11 % | 27–32 % | 19–20 % | 15,3 M€ | 26,0 M€ |
+
+En v0.9, un hôpital coûtait 1,6 mois d'épargne au moment de son déblocage et une centrale nucléaire 0,7 mois ; en v1.0,
+environ 4 et 7 mois.
+
 ## Nouveautés de la version 0.9 — conseiller circulation, guide du maire, navigation
 
 ### Conseiller « Circulation et pollution » (touche P, ou tableau de bord → Mobilité)
@@ -358,6 +408,7 @@ npm run build:single # build autonome en un seul fichier HTML dans dist-single/
 npm test             # tests unitaires et d'intégration (Vitest)
 npm run test:e2e     # parcours utilisateur (Playwright ; `npx playwright install chromium` au préalable)
 npm run bench        # mesures de performance de la simulation (64×64 et 128×128)
+npm run balance      # équilibrage : épargne brute année par année d'une ville planifiée (≈ 1 min 30)
 ```
 
 Node 20 ou plus récent. `PW_CHROMIUM=/chemin/vers/chromium npm run test:e2e` utilise un Chromium déjà installé.
@@ -496,7 +547,7 @@ règles, mêmes coûts) ; les cibles sont calculées sur la situation réellemen
 | Riverbourg sous les eaux | ★★★ | 4 ans | Crues fréquentes : plan de prévention adopté, +40 % d'habitants, satisfaction ≥ 55 |
 | Nova-Lys embouteillée | ★★ | 5 ans | Temps de trajet −20 %, voyageurs en transports en commun, +25 % d'habitants |
 | Saint-Aubin, ville fantôme | ★★★ | 6 ans | Satisfaction ≥ 55, au plus 2 bâtiments abandonnés, +30 % d'habitants |
-| Défi 2045 : ville symbiotique | ★★★★ | 15 ans | Terrain vierge : ère 3, 8 000 habitants, résultat positif |
+| Défi 2045 : ville symbiotique | ★★★★ | 15 ans | Terrain vierge : ère 3, 30 000 habitants, résultat positif |
 
 La carte du scénario (en haut à gauche) suit chaque objectif, l'échéance et les règles d'échec ; un bilan s'affiche
 à la fin, et la ville peut continuer en partie libre.
@@ -557,8 +608,8 @@ baisse de la valeur foncière et de la satisfaction, alerte. Onglet **Déchets**
 | Ère | Conditions de passage (vérifiées chaque mois, jamais perdues) |
 | --- | --- |
 | 1. Ville connectée | Départ |
-| 2. Ville autonome | 3 000 habitants, 2 technologies, satisfaction ≥ 55, 80 % des déchets collectés |
-| 3. Ville symbiotique | 8 000 habitants, 5 technologies, satisfaction ≥ 62, 90 % de collecte, 30 % de la population desservie par les transports |
+| 2. Ville autonome | 10 000 habitants, 2 technologies, satisfaction ≥ 55, 80 % des déchets collectés |
+| 3. Ville symbiotique | 30 000 habitants, 5 technologies, satisfaction ≥ 62, 90 % de collecte, 30 % de la population desservie par les transports |
 
 Les zones montent désormais jusqu'au **niveau 5**. Chaque palier exige une valeur foncière et une **satisfaction minimales**
 et des besoins couverts (électricité, eau, déchets, éducation, santé, transports, ère) : l'inspecteur affiche la liste
@@ -744,10 +795,11 @@ y compris après sauvegarde et rechargement (testé).
 
 ### Sauvegardes
 
-IndexedDB, format versionné (`formatVersion` = 5) avec migrations explicites (`SaveMigration.js` : v1 → v2 ;
+IndexedDB, format versionné (`formatVersion` = 6) avec migrations explicites (`SaveMigration.js` : v1 → v2 ;
 v2 → v3 ajoute ponts, transports, déchets et progression ; v3 → v4 ajoute améliorations et échanges régionaux, tous
 désactivés, pour que l'équilibre d'une ancienne partie ne change pas ; v4 → v5 ajoute météo, crises, scénario et
-options de partie, catastrophes désactivées pour une ancienne partie).
+options de partie, catastrophes désactivées pour une ancienne partie ; v5 → v6 ajoute le statut de la ville et
+l'option d'équilibrage, « legacy » pour une ancienne partie).
 Somme de contrôle, validation structurelle avant intégration, relecture après écriture. La sauvegarde automatique
 alterne entre deux emplacements : un état invalide ou une écriture ratée n'écrase jamais la dernière sauvegarde valide.
 Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est enregistré.
@@ -769,7 +821,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 330 tests Vitest (33 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 346 tests Vitest (34 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -784,8 +836,10 @@ fiscalité par quartier (recettes, satisfaction, implantation), profils d'emprun
 régional (saisons, événements, déterminisme, contrats), sauvegarde des lignes et anciennes parties ; v0.9 :
 points noirs, part de pollution due au trafic, conseils classés et actions valides, chapitres du guide et cibles de
 « Montre-moi », projection dans les quatre orientations et en vue de dessus (pointage inversible, ordre
-d'affichage, faces visibles).
-`npm run test:e2e` : 15 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+d'affichage, faces visibles) ; v1.0 : paliers et déblocages (bâtiments, routes, zones, fonctions), plafond de
+niveau, dotation versée une fois et annonce groupée, difficulté et capacité d'emprunt, charges de structure, voirie,
+taux d'épargne, migration v5 → v6 (ancien équilibrage, paliers acquis sans dotation) et bascule progressive.
+`npm run test:e2e` : 16 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -795,7 +849,9 @@ mémoire ; iPhone (gestes, pose validée par bouton, mode immersif) ; v0.8 : lig
 ligne de tramway, panneau des lignes (flotte), écart de taux d'un quartier, emprunt in fine et échéancier, contrat à
 prix fixe, couche des quartiers, sauvegarde ; v0.9 : guide depuis l'accueil et en partie (« Montre-moi »),
 conseiller (politique adoptée, point noir localisé), navigation (quatre orientations, centre conservé, route posée à
-la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, boussole au téléphone).
+la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, boussole au téléphone) ; v1.0 :
+difficulté et trésorerie de départ, statut affiché, écran « Nouveau statut » et dotation, progression, taux d'épargne,
+profils d'emprunt débloqués.
 
 ## Performances mesurées
 

@@ -54,6 +54,19 @@ function eastLimit(g, row, fromX) {
  */
 export function buildStarterTown(session, { size = 'small' } = {}) {
   const s = session.state;
+  // Le bourg a été bâti par l'équipe précédente : le statut actuel de la ville ne limite pas ce qu'elle a construit
+  const wasPreparing = s.meta.preparing;
+  s.meta.preparing = true;
+  try {
+    return buildTown(session, size);
+  } finally {
+    if (wasPreparing) s.meta.preparing = true;
+    else delete s.meta.preparing;
+  }
+}
+
+function buildTown(session, size) {
+  const s = session.state;
   const g = s.grid;
   const entry = s.entries[0];
   const row = g.yOf(entry);

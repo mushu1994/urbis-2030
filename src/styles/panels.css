@@ -1050,3 +1050,37 @@ ul.checks small {
 .trade-toggle {
   font-size: 13px;
 }
+
+/* v1.0 : équilibrage économique de la partie (Paramètres) */
+.balance-setting {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  margin: 4px 0 10px;
+}
+
+.balance-setting .hint {
+  margin: 0;
+}
+
+/* v1.0 : écran « Nouveau statut » */
+.milestone-dialog h2 {
+  margin: 2px 0 8px;
+}
+
+.milestone-dialog ul {
+  columns: 2;
+  column-gap: 28px;
+  margin: 6px 0 12px;
+  padding-left: 18px;
+}
+
+.milestone-dialog li {
+  break-inside: avoid;
+}
+
+@media (max-width: 600px) {
+  .milestone-dialog ul {
+    columns: 1;
+  }
+}

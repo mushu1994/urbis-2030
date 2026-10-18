@@ -63,8 +63,8 @@ export const GUIDE = [
       {
         title: 'Les types de routes',
         items: [
-          'Rue : 650 véhicules par jour, la moins chère. Avenue (dès 400 habitants) : 1 800. Grand boulevard (dès 3 000) : 3 200, avec terre-plein planté.',
-          'Autoroute de seconde sortie (dès 15 000 habitants) : tracée jusqu\'au bord de la carte, elle ouvre une nouvelle porte vers la région.',
+          'Rue : 650 véhicules par jour, la moins chère. Avenue (statut Village, 500 habitants) : 1 800. Grand boulevard (statut Grande ville, 15 000) : 3 200, avec terre-plein planté.',
+          'Autoroute de seconde sortie (statut Métropole, 40 000 habitants) : tracée jusqu\'au bord de la carte, elle ouvre une nouvelle porte vers la région.',
           'Retracer une route existante avec un type plus large la remplace : c\'est ainsi qu\'on élargit un axe saturé.'
         ]
       },
@@ -93,6 +93,15 @@ export const GUIDE = [
           'Tracer une zone par-dessus une autre la remplace (sur-zonage) ; « Retirer le zonage » libère les cases. Les bâtiments touchés sont démolis après confirmation.'
         ],
         show: [{ label: 'Outil Zone résidentielle', tool: 'zone:R_LOW' }]
+      },
+      {
+        title: 'Le statut de la ville',
+        items: [
+          'Sept statuts : Hameau, Village (500 habitants), Bourg (2 000), Ville (5 000), Grande ville (15 000), Métropole (40 000), Capitale régionale (80 000). Un statut est acquis sur la population maximale atteinte : il n\'est jamais perdu.',
+          'Chaque statut débloque des équipements (l\'école au Village, l\'hôpital à la Ville, le métro et l\'université à la Grande ville, la centrale nucléaire et l\'aéroport à la Métropole), des zones et des fonctions (lignes de bus, fiscalité par quartier, extensions de territoire…).',
+          'Il plafonne aussi le niveau des immeubles : niveau 2 au départ, 3 au Bourg, 4 à la Ville, 5 à la Grande ville. Au premier passage, l\'État verse une dotation pour financer les nouveaux équipements.'
+        ],
+        show: [{ label: 'Progression', panel: 'city', tab: 'progression' }]
       },
       {
         title: 'La demande (jauges R C B I)',
@@ -213,7 +222,7 @@ export const GUIDE = [
         items: [
           'Un dépôt de bus et des arrêts suffisent pour un réseau automatique. Pour mieux faire, tracez des lignes : touchez les arrêts dans l\'ordre puis Valider.',
           'Le nombre de véhicules d\'une ligne fixe la fréquence (un passage toutes les 6 minutes = desserte optimale) et la capacité. Panneau des lignes : touche K.',
-          'Le tramway (dès 2 500 habitants) roule sur des rails posés sur la chaussée et transporte quatre fois plus qu\'un bus.'
+          'Le tramway (statut Ville, 5 000 habitants) roule sur des rails posés sur la chaussée et transporte quatre fois plus qu\'un bus.'
         ],
         show: [{ label: 'Tracer une ligne de bus', tool: 'line:bus' }, { label: 'Panneau des lignes', panel: 'lines' }]
       },
@@ -309,8 +318,8 @@ export const GUIDE = [
       {
         title: 'Les ères',
         items: [
-          'Ère 2 « Ville autonome » : 3 000 habitants, 2 technologies, satisfaction ≥ 55, 80 % des déchets collectés.',
-          'Ère 3 « Ville symbiotique » : 8 000 habitants, 5 technologies, satisfaction ≥ 62, 90 % de collecte, 30 % des habitants desservis par les transports.',
+          'Ère 2 « Ville autonome » : 10 000 habitants, 2 technologies, satisfaction ≥ 55, 80 % des déchets collectés.',
+          'Ère 3 « Ville symbiotique » : 30 000 habitants, 5 technologies, satisfaction ≥ 62, 90 % de collecte, 30 % des habitants desservis par les transports.',
           'Chaque ère débloque des bâtiments et des niveaux d\'habitation futuristes.'
         ],
         show: [{ label: 'Progression', panel: 'city', tab: 'progression' }]

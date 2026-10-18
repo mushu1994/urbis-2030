@@ -1,5 +1,6 @@
 import { SIM } from './config.js';
 import { toCents } from '../util/money.js';
+import { featureUnlocked } from './Milestones.js';
 
 /**
  * Lignes de bus et de tramway tracées par le joueur (v0.8).
@@ -216,12 +217,15 @@ export class LineSystem {
   }
 
   preview(state, cmd) {
+    // v1.0 : lignes de bus au statut « Bourg », de tramway au statut « Ville »
+    const f = featureUnlocked(state, cmd.mode === 'tram' ? 'tramLines' : 'busLines');
+    if (!f.ok) return { ok: false, cost: 0, reasons: ['locked'], messages: [f.reason] };
     return previewLine(state, this.catalog, cmd);
   }
 
   /** Crée une ligne : paie la pose des rails (tramway), pose les rails, enregistre la ligne. */
   create(state, cmd) {
-    const pv = previewLine(state, this.catalog, cmd);
+    const pv = this.preview(state, cmd);
     if (!pv.ok) return { ok: false, messages: pv.messages };
     const M = LINE_MODES[cmd.mode];
     const L = linesOf(state);

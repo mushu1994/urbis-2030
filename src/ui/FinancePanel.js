@@ -8,6 +8,7 @@ import { districtList, TAX_DELTA_MAX, SECTORS, effectiveTaxes } from '../simulat
 import { WORLD_PARCELS, landOf } from '../world/Land.js';
 import { confirmDialog } from './Dialog.js';
 import { MONTH_NAMES, SIM } from '../simulation/config.js';
+import { savingsRate, featureUnlocked } from '../simulation/Milestones.js';
 
 const monthLabel = (mi) => `${MONTH_NAMES[mi % 12]} ${String(SIM.START_YEAR + Math.floor(mi / 12)).slice(2)}`;
 const money = (c, cls) => h('td.num', { class: cls ?? (c < 0 ? 'neg' : '') }, formatMoney(c));
@@ -23,6 +24,20 @@ const TAX_LABELS = {
  * Tableau de bord financier : synthèse, compte de résultat, trésorerie, fiscalité, emprunts, journal.
  * Le résultat comptable (avec amortissements) est présenté séparément des flux de trésorerie.
  */
+/**
+ * Taux d'épargne brute (v1.0) sur les 3 derniers mois : épargne brute / recettes. Repère vert entre 15 et 30 %,
+ * comme pour l'analyse financière d'une commune.
+ */
+function savingsKpi(s) {
+  const last = s.economy.periods.slice(-3).map((p) => EconomySystem.summarize(p));
+  const rev = last.reduce((x, p) => x + p.revenues, 0);
+  const rate = rev > 0 ? savingsRate({ revenues: rev, operatingResult: last.reduce((x, p) => x + p.operatingResult, 0) }) : null;
+  const cls = rate === null ? '' : rate < 0.05 ? 'neg' : rate >= 0.15 && rate <= 0.3 ? 'pos' : '';
+  const note = rate === null ? 'après 1 mois clos' : rate < 0.05 ? 'trop faible : peu de marge pour investir' : rate > 0.3 ? 'confortable' : rate >= 0.15 ? 'repère : 15 à 30 %' : 'un peu juste (repère : 15 à 30 %)';
+  return h('div.kpi', { title: 'Épargne brute (recettes − charges de fonctionnement) rapportée aux recettes, sur les 3 derniers mois' },
+    h('span', 'Taux d\'épargne brute'), h('strong', { class: cls }, rate === null ? '—' : `${Math.round(rate * 100)} %`), h('small', note));
+}
+
 export class FinancePanel {
   constructor({ execute, notify }) {
     this.id = 'finance';
@@ -84,6 +99,7 @@ export class FinancePanel {
         kpi('Recettes du dernier mois', last ? formatMoney(last.revenues) : '—'),
         kpi('Charges de fonctionnement', last ? formatMoney(last.opex) : '—'),
         kpi('Résultat opérationnel', last ? formatMoney(last.operatingResult) : '—', 'recettes − charges', last && last.operatingResult < 0 ? 'neg' : 'pos'),
+        savingsKpi(s),
         kpi('Résultat net', last ? formatMoney(last.netResult) : '—', 'après amortissements et intérêts', last && last.netResult < 0 ? 'neg' : ''),
         kpi('Investissements du mois en cours', formatMoney(cur?.capex ?? 0)),
         kpi('Dette', formatMoney(debt), `note ${session.sim.economy.creditRating(s).grade} · capacité restante ${formatMoney(session.sim.economy.debtCapacity(s), { compact: true })}`)
@@ -146,6 +162,7 @@ export class FinancePanel {
           line('Flux opérationnel', sums.map((x) => x.cashOperating), 'strong'),
           h('tr.section', h('td', { colSpan: all.length + 1 }, 'Investissements')),
           capexCats.map((c) => line(CATEGORY_LABELS[c] ?? c, all.map((p) => -(p.capex[c] ?? 0)))),
+          all.some((p) => p.grants) ? line('Dotations de l\'État (nouveau statut)', all.map((p) => p.grants ?? 0)) : null,
           line('Flux d\'investissement', sums.map((x) => x.cashInvesting), 'strong'),
           line('Emprunts souscrits', all.map((p) => p.financingIn)),
           line('Remboursements de capital', all.map((p) => -p.principal)),
@@ -264,6 +281,8 @@ export class FinancePanel {
           }, `Résilier (${formatMoney(penalty, { compact: true })})`));
       }
       const offer = contractOffer(s, good, side);
+      const lock = featureUnlocked(s, 'fixedContracts');
+      if (!lock.ok) return h('div.contract-box', h('small', lock.reason));
       return h('div.contract-box',
         h('div.kv', h('span', `Contrat ${what} sur ${CONTRACT_MONTHS} mois`), h('strong', `${eur(offer)} / u.`)),
         h('small', side === 'buy' ? 'Prix fixe, prime de 5 % : protège des flambées (vague de froid, sécheresse).' : 'Prix fixe, décote de 5 % : protège des chutes de prix (surproduction).'),
@@ -357,7 +376,10 @@ export class FinancePanel {
       on: { click: () => { amount.value = String(maxEuros); updatePreview(); } }
     }, 'Max');
     const months = h('select', { 'aria-label': 'Durée' }, [24, 60, 120, 240].map((m) => h('option', { value: m, selected: m === 120 }, `${m / 12} ans`)));
-    const type = h('select', { 'aria-label': 'Profil de remboursement' }, Object.entries(LOAN_TYPES).map(([id, t]) => h('option', { value: id }, t.label)));
+    // v1.0 : les profils in fine et à amortissement constant arrivent au statut « Bourg »
+    const profiles = featureUnlocked(s, 'loanProfiles');
+    const type = h('select', { 'aria-label': 'Profil de remboursement', title: profiles.ok ? '' : profiles.reason },
+      Object.entries(LOAN_TYPES).map(([id, t]) => h('option', { value: id, disabled: !profiles.ok && id !== 'annuity' }, profiles.ok || id === 'annuity' ? t.label : `${t.label} (statut Bourg)`)));
     const preview = h('p.hint');
     const rateOut = h('strong');
     const updatePreview = () => {
@@ -504,7 +526,9 @@ export class FinancePanel {
       })),
       h('p.hint', 'Un quartier moins taxé attire les constructions de ce secteur (jusqu\'à +35 % à −5 points) et ses habitants sont plus satisfaits ; un quartier plus taxé rapporte davantage mais se développe moins vite. La demande et la popularité suivent le taux moyen effectivement payé.')
     ) : h('p.empty', 'Aucun quartier.');
+    const lock = featureUnlocked(s, 'districtTax');
     return [
+      lock.ok ? null : h('p.hint.neg', `${lock.reason}. Les écarts déjà fixés peuvent être remis à zéro.`),
       h('p.hint', `Chaque parcelle de 32 × 32 cases de la commune forme un quartier (${list.length} quartier${list.length > 1 ? 's' : ''}). Choisissez un quartier pour ajuster ses taux par rapport à ceux de la commune (de −${TAX_DELTA_MAX} à +${TAX_DELTA_MAX} points). La couche « Fiscalité par quartier » montre les écarts sur la carte.`),
       h('div.district-map', { style: { gridTemplateColumns: `repeat(${Math.min(WORLD_PARCELS, nx)}, minmax(0, 72px))` } }, cells),
       editor,

@@ -1,5 +1,6 @@
 import { SIM } from './config.js';
 import { hash2 } from '../util/rng.js';
+import { featureUnlocked } from './Milestones.js';
 
 /**
  * Marché régional de l'électricité, de l'eau et du traitement des déchets (v0.8).
@@ -227,6 +228,8 @@ export class MarketSystem {
       return { ok: true, penalty };
     }
     if (M.contracts[key]) return { ok: false, reason: 'Un contrat est déjà en cours' };
+    const f = featureUnlocked(state, 'fixedContracts');
+    if (!f.ok) return { ok: false, reason: f.reason };
     const price = contractOffer(state, good, side);
     M.contracts[key] = { price, since: month, until: month + CONTRACT_MONTHS, gainCents: 0, units: 0 };
     return { ok: true, price };

@@ -2,6 +2,7 @@ import { h } from './dom.js';
 import { formatMoney } from '../util/money.js';
 import { parcelMap, parcelPrice, landOf, PARCEL, WORLD_PARCELS, PARCEL_MONTHS_OF_CASH } from '../world/Land.js';
 import { EconomySystem } from '../simulation/EconomySystem.js';
+import { featureUnlocked } from '../simulation/Milestones.js';
 
 /**
  * Territoire (v0.6) : carte des 8 × 8 parcelles du monde possible. Les parcelles voisines du territoire
@@ -21,6 +22,8 @@ export class TerritoryPanel {
     const cells = parcelMap(s);
     const afford = s.economy.treasury >= price;
     const crisis = (s.crises?.active ?? []).length > 0;
+    // v1.0 : extensions de territoire au statut « Grande ville »
+    const lock = featureUnlocked(s, 'territory');
     const owned = cells.filter((c) => c.status === 'owned').length;
     const grid = h('div.territory-grid', { style: { gridTemplateColumns: `repeat(${WORLD_PARCELS}, 1fr)` }, role: 'grid', 'aria-label': 'Parcelles du territoire' },
       cells.map((c) => {
@@ -31,7 +34,7 @@ export class TerritoryPanel {
           class: `${c.status}${inBox ? ' inbox' : ''}`,
           title: label,
           'aria-label': label,
-          disabled: c.status !== 'available' || !afford || crisis,
+          disabled: c.status !== 'available' || !afford || crisis || !lock.ok,
           dataset: { gx: String(c.gx), gy: String(c.gy) },
           on: { click: () => this.onBuy(c.gx, c.gy, price) }
         }, c.status === 'available' ? '+' : '');
@@ -44,7 +47,9 @@ export class TerritoryPanel {
         h('div.kpi', h('span', 'Déjà investi'), h('strong', formatMoney(land.spent ?? 0)), h('small', `${land.purchases} extension${land.purchases > 1 ? 's' : ''}`))
       ),
       grid,
-      h('p.hint', crisis
+      h('p.hint', !lock.ok
+        ? `${lock.reason}.`
+        : crisis
         ? 'Les acquisitions sont suspendues pendant une crise.'
         : 'Les parcelles marquées « + » touchent le territoire actuel. Le prix vaut environ une heure de jeu d\'épargne (60 mois de variation moyenne de la trésorerie), avec un plancher de 1,5 M€, et augmente de 30 % à chaque achat. Le terrain d\'une nouvelle parcelle prolonge le relief existant ; l\'accès autoroutier est prolongé jusqu\'au nouveau bord si besoin.'),
       h('div.territory-legend', h('span.parcel.owned'), 'Commune', h('span.parcel.available'), 'Achetable', h('span.parcel.locked'), 'Hors d\'atteinte')
