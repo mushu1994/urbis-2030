@@ -21,7 +21,7 @@ import { FinancePanel } from '../ui/FinancePanel.js';
 import { TechPanel } from '../ui/TechPanel.js';
 import { CityPanel } from '../ui/CityPanel.js';
 import { OverlayManager } from '../ui/OverlayManager.js';
-import { PoliticsPanel, electionDialog } from '../ui/PoliticsPanel.js';
+import { PoliticsPanel, electionDialog, secondRoundDialog } from '../ui/PoliticsPanel.js';
 import { defaultPolitics } from '../simulation/PoliticsSystem.js';
 import { applyDifficulty, MILESTONES } from '../simulation/Milestones.js';
 import { DemandPanel } from '../ui/DemandPanel.js';
@@ -533,7 +533,21 @@ export class GameApp {
       }
     });
     this.bus.on('crisis:ended', () => this.crisisPanel.update(this.session, { force: true }));
+    // v1.3 : soirée du premier tour, négociation des fusions (sans réponse, le second tour a lieu une semaine après)
+    this.bus.on('politics:secondRound', ({ secondRound }) => {
+      this.setSpeed(0);
+      this.closeRoundOne?.();
+      this.closeRoundOne = secondRoundDialog(secondRound, {
+        onChoose: (mergeWith) => {
+          this.closeRoundOne = null;
+          const r = this.execute({ type: 'politics', op: 'secondRound', mergeWith });
+          if (!r?.ok) this.notifications.push({ level: 'warning', message: r?.messages?.[0] ?? r?.reason ?? 'Fusion impossible' });
+        }
+      });
+    });
     this.bus.on('politics:election', ({ result }) => {
+      this.closeRoundOne?.();
+      this.closeRoundOne = null;
       this.audio.play(result.won ? 'fanfare' : 'fail');
       this.setSpeed(0);
       electionDialog(result, {

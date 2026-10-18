@@ -6,6 +6,36 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 1.3 — électorat par groupes et scrutin à deux tours
+
+### Huit groupes d'électeurs (Mairie → Opinion)
+- Familles, retraités, jeunes actifs, classes populaires, cadres, commerçants et entrepreneurs, écologistes,
+  automobilistes. Leur poids découle des ménages de la ville (âge, revenus, qualification, cadre de vie, part de la voiture) et des emplois commerciaux ; leur participation
+  de base va de 35 % (jeunes actifs) à 72 % (retraités) et suit leur humeur.
+- Chaque politique, chaque axe prioritaire et chaque innovation technologique plaît à certains groupes et en irrite
+  d'autres (zone à faibles émissions : écologistes +, automobilistes −). La moyenne pondérée des groupes reste égale à la
+  popularité générale : le jeu ne devient pas plus dur, il devient plus lisible.
+- La liste dissidente d'un adjoint « proche des … » (v1.1) mord davantage sur son groupe.
+
+### Scrutin municipal à deux tours
+- Premier tour : votre liste, l'adversaire principal et, selon la situation, une liste écologiste (pollution), une liste
+  citoyenne (popularité basse) ou la liste dissidente d'un adjoint. Plus de 50 % des voix et 25 % des inscrits : élu dès
+  le premier tour.
+- Entre-deux-tours (une semaine, jeu en pause sur une fenêtre de choix) : les listes à 10 % se maintiennent, celles à
+  5 % peuvent fusionner. Une fusion reporte 80 % de leurs voix contre un engagement imposé sur leur thème et une
+  délégation pour leur tête de liste. Elle accepte si vous êtes en tête ou si son thème pèse au moins 20 % de vos
+  priorités. L'adversaire fusionne avec la liste restante la plus forte. Sans décision, le second tour a lieu sans
+  alliance.
+- Sièges : barème légal du conseil municipal, moitié des sièges à la liste en tête (prime majoritaire), reste à la plus
+  forte moyenne entre les listes à 5 %. La carte de résultat détaille les deux tours, la fusion et les sièges.
+
+### Majorité au conseil et carrière
+- Avec moins de 55 % des sièges, le conseil vote les hausses d'impôt de plus de 2 points et les mesures impopulaires :
+  le résultat dépend de la majorité, de la loyauté des adjoints et d'un aléa déterministe ; un rejet annule la mesure.
+- Capitale régionale (80 000 habitants) et deux réélections : vous pouvez briguer la présidence de la métropole
+  (onglet Mandat), +1 point de popularité par mois.
+- Le guide du maire comprend deux nouvelles sections (électorat, scrutin à deux tours).
+
 ## Nouveautés de la version 1.2 — polémiques, journal local et événements populaires
 
 ### Presse et polémiques (Mairie → Presse et polémiques)
@@ -906,7 +936,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 374 tests Vitest (36 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 384 tests Vitest (37 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -931,7 +961,11 @@ v1.2 : catalogue des polémiques, déclenchement après la première année, mon
 annulation, gel des investissements, suspension d'une technologie), affaire, rythme trimestriel, journal ; événements
 (statut, lieu, frais, fréquentation, satisfaction locale, vie locale, rendements décroissants, orage et repli
 couvert, année électorale et clientélisme, billetterie, sauvegarde).
-`npm run test:e2e` : 18 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+v1.3 : huit groupes d'électeurs (tailles, participation, moyenne égale à la popularité), clivage d'une politique,
+premier tour (listes écologiste et citoyenne), élection dès le premier tour, fusion et report de 80 %, alliance de
+l'adversaire, prime majoritaire et plus forte moyenne, second tour une semaine après, délégation du partenaire,
+vote du conseil sur une hausse d'impôt, présidence de la métropole.
+`npm run test:e2e` : 19 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -944,7 +978,8 @@ conseiller (politique adoptée, point noir localisé), navigation (quatre orient
 la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, boussole au téléphone) ; v1.0 :
 difficulté et trésorerie de départ, statut affiché, écran « Nouveau statut » et dotation, progression, taux d'épargne,
 profils d'emprunt débloqués ; v1.1 : nomination d'un adjoint et priorités du mandat ;
-v1.2 : polémique née d'une hausse d'impôt et réponse, journal, fête de quartier organisée depuis l'inspecteur.
+v1.2 : polémique née d'une hausse d'impôt et réponse, journal, fête de quartier organisée depuis l'inspecteur ;
+v1.3 : opinion par groupe, premier tour, fusion d'entre-deux-tours et résultat du second tour avec les sièges.
 
 ## Performances mesurées
 

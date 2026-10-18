@@ -5,6 +5,8 @@ import { PARCEL } from '../world/Land.js';
 import { factorWeight, THEME_AXIS, shareOf, defaultAgenda, defaultCouncil } from './CouncilSystem.js';
 import { controversyEdge } from './ControversySystem.js';
 import { localLifeFactor, clientelismEdge } from './CivicEventSystem.js';
+import { rankFor } from './Milestones.js';
+import { firstRound, secondRound, decidedInFirstRound, mergeCandidates, mergeAccepted, allocateSeats, THEME_GROUPS } from './ElectorateSystem.js';
 
 /**
  * Vie politique (v0.7) : popularité du maire, sondages, campagne, programme chiffré, élections municipales.
@@ -244,6 +246,7 @@ export class PoliticsSystem {
     const local = localLifeFactor(state);
     if (local) add('local', 'Vie locale', local, 'fêtes et événements des six derniers mois');
     if (state.civicEvents?.legacy) add('legacy', 'Héritage du grand événement', state.civicEvents.legacy.approval, 'jusqu\'à deux ans après');
+    if (p.career?.president !== undefined) add('career', 'Présidence de la métropole', 1, 'rayonnement régional');
     // v1.1 : priorités changeantes (plus de 30 points déplacés sur 12 mois)
     if (p.agenda && this.council && this.council.movedLastYear(state) > 30) add('agenda', 'Priorités changeantes', -1, `${Math.round(this.council.movedLastYear(state))} points déplacés sur un an`);
     // v1.1 : les priorités du mandat pèsent sur le jugement des électeurs (1/6 par axe = poids neutre)
@@ -335,7 +338,7 @@ export class PoliticsSystem {
       }
     }
     // Scrutin
-    if (m >= p.nextElection) this.#election(state);
+    if (m >= p.nextElection && !p.secondRound) this.#election(state);
     else if (p.campaign && p.nextElection - m === 1) {
       this.#notify(state, 'warning', `🗳 Élections municipales le mois prochain. Dernier sondage : ${Math.round(entry.vote ?? poll)} % d'intentions de vote pour votre liste.`);
     }
@@ -520,24 +523,111 @@ export class PoliticsSystem {
     const m = monthOf(state);
     // Fin du mandat : les engagements en cours sont évalués
     this.#trackPromises(state, true);
-    const share = round1(this.projectedShare(state));
-    const turnout = round1(clamp(46 + Math.abs(p.approval - 50) * 0.35 + (p.early ? 6 : 0) + (hash2(state.meta.seed ?? 2030, m, 0x7a11) - 0.5) * 6, 30, 82));
-    const districts = this.districtResults(state, share);
-    const won = share >= 50;
     const c = p.campaign;
-    const programme = c ? c.chosen.map((id) => c.offers.find((o) => o.id === id)).filter(Boolean) : [];
+    const dissident = this.dissidentPenalty(state);
+    // v1.3 : premier tour par groupes d'électeurs ; la formule de la v0.7 donne le score moyen du maire
+    const base = this.projectedShare(state) + dissident;
+    const r1 = firstRound(state, { base, programme: this.programmeBonus(state), themeGroups: THEME_GROUPS[c?.theme] ?? [], dissidentPoints: dissident });
+    if (!r1.registered) {
+      // Ville sans habitants : scrutin à liste unique (formule historique)
+      return this.#finalize(state, { r1: null, r2: null, winner: base - dissident >= 50 ? 'mayor' : 'rival', share: round1(base - dissident), turnout: 50 });
+    }
+    const decided = decidedInFirstRound(r1);
+    if (decided) {
+      const mine = r1.lists.find((l) => l.id === 'mayor');
+      return this.#finalize(state, { r1, r2: null, winner: decided, share: mine.share, turnout: r1.turnout });
+    }
+    // Entre-deux-tours : une semaine pour négocier une fusion (sinon, second tour sans alliance)
+    const candidates = mergeCandidates(r1).map((l) => ({ id: l.id, label: l.label, leader: l.leader, share: l.share, accepts: mergeAccepted(state, r1, l.id) }));
+    p.secondRound = { month: m, deadline: state.time.tick + 7, r1, candidates };
+    const mine = r1.lists.find((l) => l.id === 'mayor');
+    this.#notify(state, 'warning', `🗳 Premier tour : votre liste obtient ${String(mine.share).replace('.', ',')} %. Second tour dans une semaine : négociez une fusion (Mairie → Élections).`, { panel: 'politics' });
+    this.bus?.emit('politics:secondRound', { secondRound: structuredClone(p.secondRound) });
+  }
+
+  /**
+   * v1.3 : carrière. Au statut Capitale régionale, après deux mandats, le maire peut briguer la présidence de la
+   * métropole : un rayonnement (+1 point de popularité) et une ligne au bilan de la partie.
+   */
+  presidencyEligible(state) {
+    const p = state.politics;
+    if (!p || p.career?.president !== undefined) return { ok: false, reason: 'Déjà président(e) de la métropole' };
+    if (rankFor(state.stats?.peakPopulation ?? 0) < 6) return { ok: false, reason: 'Il faut le statut « Capitale régionale » (80 000 habitants)' };
+    if ((p.mandate ?? 1) < 3) return { ok: false, reason: 'Il faut avoir été réélu(e) deux fois' };
+    if (p.defeated) return { ok: false, reason: 'Le maire a été battu' };
+    return { ok: true };
+  }
+
+  runForPresidency(state) {
+    const ok = this.presidencyEligible(state);
+    if (!ok.ok) return ok;
+    const p = state.politics;
+    p.career = { president: monthOf(state) };
+    this.#notify(state, 'success', `🏛 Vous êtes élu(e) à la présidence de la métropole : ${state.meta?.name ?? 'votre ville'} rayonne sur toute la région.`, { panel: 'politics' });
+    return { ok: true };
+  }
+
+  /** v1.3 : fin de l'entre-deux-tours (choix du maire ou délai écoulé). */
+  resolveSecondRound(state, { mergeWith = null } = {}) {
+    const p = state.politics;
+    const sr = p?.secondRound;
+    if (!sr) return { ok: false, reason: 'Pas de second tour en cours' };
+    let concession = null;
+    if (mergeWith) {
+      const cand = sr.candidates.find((x) => x.id === mergeWith);
+      if (!cand) return { ok: false, reason: 'Liste inconnue' };
+      if (!mergeAccepted(state, sr.r1, mergeWith)) return { ok: false, reason: `« ${cand.label} » refuse la fusion` };
+      concession = this.#concession(state, cand);
+    }
+    const r2 = secondRound(state, sr.r1, { mergeWith, seed: (state.meta.seed ?? 2030) * 31 + sr.month });
+    const mine = r2.lists.find((l) => l.id === 'mayor');
+    p.secondRound = null;
+    this.#finalize(state, { r1: sr.r1, r2, winner: r2.winner, share: mine?.share ?? 0, turnout: r2.turnout, mergeWith, concession });
+    return { ok: true, winner: r2.winner };
+  }
+
+  /** Concessions d'une fusion : un engagement imposé (thème de la liste) et une délégation pour sa tête de liste. */
+  #concession(state, cand) {
+    const p = state.politics;
+    const theme = cand.id === 'green' ? 'environment' : cand.id === 'citizen' ? 'housing' : null;
+    const offer = theme ? p.campaign?.offers?.find((o) => o.theme === theme && o.level === 'modest') : null;
+    return { listId: cand.id, leader: cand.leader, promise: offer ? offer.id : null };
+  }
+
+  /** Vérification quotidienne : le second tour a lieu une semaine après le premier. */
+  daily(state) {
+    const sr = state.politics?.secondRound;
+    if (sr && state.time.tick >= sr.deadline) this.resolveSecondRound(state, {});
+  }
+
+  #finalize(state, { r1, r2, winner, share, turnout, mergeWith = null, concession = null }) {
+    const p = state.politics;
+    const m = monthOf(state);
+    const won = winner === 'mayor';
+    const decisive = r2?.lists ?? r1?.lists ?? null;
+    const others = (decisive ?? []).filter((l) => l.id !== 'mayor').sort((a, b) => b.share - a.share);
+    const rivalShare = round1(others[0]?.share ?? 100 - share);
+    const districts = this.districtResults(state, share);
+    const c = p.campaign;
+    let programme = c ? c.chosen.map((id) => c.offers.find((o) => o.id === id)).filter(Boolean) : [];
+    if (won && concession?.promise) {
+      const imposed = c?.offers?.find((o) => o.id === concession.promise);
+      if (imposed && !programme.some((o) => o.theme === imposed.theme)) programme = [...programme, { ...imposed, imposed: true }];
+    }
+    const seats = decisive ? allocateSeats(state.stats.population, [...decisive].sort((a, b) => b.share - a.share)) : null;
+    const winnerList = decisive?.find((l) => l.id === winner);
     const result = {
       m,
       tick: state.time.tick,
       mandate: p.mandate,
       share,
-      rivalShare: round1(100 - share),
-      rival: { ...p.rival },
-      turnout,
+      rivalShare,
+      rival: won ? { ...p.rival } : { leader: winnerList?.leader ?? p.rival.leader, list: winnerList?.label ?? p.rival.list },
+      turnout: round1(turnout),
       won,
       early: p.early,
       approval: p.approval,
-      programme: programme.map((o) => o.label),
+      programme: programme.map((o) => (o.imposed ? `${o.label} (imposé par la fusion)` : o.label)),
       kept: p.promises.filter((x) => x.status === 'kept').length,
       broken: p.promises.filter((x) => x.status === 'broken').length,
       breakdown: {
@@ -548,6 +638,12 @@ export class PoliticsSystem {
         dissident: round1(-this.dissidentPenalty(state)),
         rival: round1(-this.rivalEdge(state))
       },
+      // v1.3 : tours, groupes, fusions et sièges
+      rounds: [r1 ? { lists: r1.lists.map(({ votes, ...l }) => l), turnout: r1.turnout } : null, r2 ? { lists: r2.lists.map(({ votes, ...l }) => l), turnout: r2.turnout } : null].filter(Boolean),
+      groups: r1?.byGroup ?? [],
+      merged: r2?.merged ?? null,
+      mergeWith,
+      seats: seats ? { total: seats.total, byList: seats.seats, majority: round1(seats.majority * 100) } : null,
       districts
     };
     p.elections.push(result);
@@ -557,15 +653,19 @@ export class PoliticsSystem {
     if (won) {
       p.mandate++;
       p.termStart = m;
+      p.nextElection = m + TERM_MONTHS;
+      p.majority = seats ? { seats: seats.seats.mayor, total: seats.total, share: seats.majority } : null;
       // v1.1 : nouveau mandat, nouvelle mesure de la cohérence des priorités
       if (p.agenda) p.agenda.topMonths = {};
-      p.nextElection = m + TERM_MONTHS;
       p.promises = programme.map((o) => ({ ...o, status: 'pending', since: m, deadline: m + TERM_MONTHS }));
       p.approval = round1(Math.min(97, p.approval + 4));
-      this.#notify(state, 'success', `🗳 Réélu(e) avec ${String(share).replace('.', ',')} % des voix (participation ${Math.round(turnout)} %). Début de votre ${p.mandate}e mandat.`, { panel: 'politics' });
+      // Fusion : la tête de liste partenaire entre au conseil avec une délégation
+      if (concession?.leader && this.council) this.council.welcomePartner(state, concession);
+      this.#notify(state, 'success', `🗳 Réélu(e) avec ${String(share).replace('.', ',')} % des voix (participation ${Math.round(turnout)} %)${r2 ? ' au second tour' : ' dès le premier tour'}. Début de votre ${p.mandate}e mandat.`, { panel: 'politics' });
     } else {
       p.defeated = true;
-      this.#notify(state, 'danger', `🗳 Défaite aux municipales : ${String(share).replace('.', ',')} % des voix face à « ${p.rival.list} » (${String(result.rivalShare).replace('.', ',')} %).`, { panel: 'politics' });
+      p.majority = null;
+      this.#notify(state, 'danger', `🗳 Défaite aux municipales : ${String(share).replace('.', ',')} % des voix face à « ${result.rival.list} » (${String(rivalShare).replace('.', ',')} %).`, { panel: 'politics' });
     }
     this.bus?.emit('politics:election', { result: structuredClone(result) });
   }

@@ -153,6 +153,7 @@ export class Simulation {
     this.weather.daily(state);
     this.crises.daily(state);
     this.council.daily(state, this.crises);
+    this.politics.daily(state);
 
     if (state.time.tick % SIM.DAYS_PER_MONTH === 0) this.#monthEnd(state);
     this.bus?.emit('sim:tick', { tick: state.time.tick });

@@ -310,6 +310,25 @@ export const GUIDE = [
           'Après l\'élection, les engagements deviennent des promesses suivies : tenues, elles rapportent de la popularité et de la crédibilité ; rompues, elles en coûtent.',
           'Sous 45 % de popularité, des manifestations éclatent ; ignorées, elles peuvent tourner à l\'émeute.'
         ]
+      },
+      {
+        title: 'Électorat par groupes',
+        items: [
+          'Huit groupes votent : familles, retraités, jeunes actifs, classes populaires, cadres, commerçants, écologistes, automobilistes. Leur poids vient des ménages de la ville ; leur participation varie (les retraités votent le plus, les jeunes actifs le moins).',
+          'Chaque politique, chaque priorité et chaque innovation plaît à certains groupes et en irrite d\'autres : une zone à faibles émissions séduit les écologistes et fâche les automobilistes. La moyenne reste votre popularité générale.',
+          'L\'onglet Opinion détaille chaque groupe ; la campagne affiche une projection par groupe du résultat.'
+        ],
+        show: [{ label: 'Opinion', panel: 'politics', tab: 'opinion' }]
+      },
+      {
+        title: 'Scrutin à deux tours',
+        items: [
+          'Au premier tour, votre liste affronte l\'adversaire principal et, selon la situation, une liste écologiste (pollution), une liste citoyenne (mécontentement) ou une liste dissidente. Plus de 50 % des voix (et 25 % des inscrits) : élu dès le premier tour.',
+          'Sinon, entre-deux-tours d\'une semaine : les listes à 10 % se maintiennent, celles à 5 % peuvent fusionner. Une fusion reporte 80 % de leurs voix contre un engagement imposé sur leur thème et une délégation pour leur tête de liste. Elle accepte si vous êtes en tête, ou si son thème pèse au moins 20 % de vos priorités. L\'adversaire fusionne avec la liste restante la plus forte.',
+          'Sièges : la moitié revient à la liste en tête (prime majoritaire), le reste à la plus forte moyenne. Avec moins de 55 % des sièges, le conseil vote les hausses d\'impôt de plus de 2 points et les mesures impopulaires : il peut les rejeter.',
+          'Capitale régionale et deux fois réélu(e) : briguez la présidence de la métropole (onglet Mandat), +1 point de popularité par mois.'
+        ],
+        show: [{ label: 'Élections', panel: 'politics', tab: 'results' }]
       }
     ]
   },

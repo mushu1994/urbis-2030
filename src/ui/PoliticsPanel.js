@@ -7,6 +7,7 @@ import { DELEGATIONS, DEPUTY_EFFECTS, AXES, CRISIS_AXIS, councilOf, agendaOf, sl
 import { milestoneOf, milestoneLabel } from '../simulation/Milestones.js';
 import { CONTROVERSIES, controversiesOf, controversyPenalty } from '../simulation/ControversySystem.js';
 import { EVENT_TYPES, EVENT_KINDS, civicOf, venuesFor, eventCost } from '../simulation/CivicEventSystem.js';
+import { groupOpinions, firstRound, decidedInFirstRound, THEME_GROUPS } from '../simulation/ElectorateSystem.js';
 
 /** Délégations dont l'adjoint peut gérer seul certaines crises. */
 const CRISIS_DELEGATIONS = [...new Set(Object.values(CRISIS_AXIS))];
@@ -68,7 +69,7 @@ export class PoliticsPanel {
     if (tab === 'press') return this.#press(session, rerender);
     if (tab === 'events') return this.#events(session, rerender);
     if (tab === 'campaign') return this.#campaign(session, rerender);
-    if (tab === 'results') return this.#results(session);
+    if (tab === 'results') return this.#results(session, rerender);
     return this.#opinion(session);
   }
 
@@ -122,6 +123,7 @@ export class PoliticsPanel {
           ))))
         : h('p.hint', 'Les premiers indicateurs arrivent à la fin du mois.'),
       weak.length ? h('div', h('h4', 'Pour regagner l\'opinion'), h('ul.demand-advice', weak.map((f) => h('li', h('strong', `${f.label} : `), TIPS[f.id])))) : null,
+      this.#groupsTable(s),
       h('p.hint', 'La popularité part de 50 et additionne ces facteurs ; elle évolue de 30 % de l\'écart chaque mois. Une popularité élevée attire de nouveaux habitants ; sous 18 % pendant 9 mois, la majorité municipale éclate et des élections anticipées sont convoquées.')
     ];
   }
@@ -386,6 +388,7 @@ export class PoliticsPanel {
         h('dt', 'Promesses rompues'), h('dd', String(p.record.broken)),
         h('dt', 'Crédibilité'), h('dd', `${Math.round(cred * 100)} %`)),
       h('p.hint', `Une promesse « à atteindre » est tenue dès que l'objectif est atteint (+2,5 points de popularité) ; une promesse « à maintenir » est rompue au premier écart (−4 points). La crédibilité pondère les voix que rapportera votre prochain programme.`),
+      this.#career(session, rerender),
       h('div.politics-toggle',
         h('span', p.enabled ? 'Élections municipales activées' : 'Élections municipales désactivées : la popularité est suivie sans scrutin.'),
         h('button.btn.small', {
@@ -461,7 +464,8 @@ export class PoliticsPanel {
       h('div.vote-estimate', { class: est >= 50 ? 'pos' : 'neg' },
         h('strong', `Intentions de vote estimées : ${pc(est)}`),
         h('small', `popularité ${pts(base)} · programme ${pts(points)} · thème ${pts(themePts)}${coherence ? ` · cohérence avec vos priorités ${pts(coherence)}` : ''}${dissident ? ` · liste dissidente (${c.dissident.name}) ${pts(-dissident)}` : ''} · adversaire ${pts(-rival)} · aléa ±2,5`),
-        h('div.vote-bar', h('span', { style: { width: `${est}%` } }), h('i', { style: { left: '50%' } }))),
+        h('div.vote-bar', h('span', { style: { width: `${est}%` } }), h('i', { style: { left: '50%' } })),
+        this.#projection(s, est, points, d.theme)),
       h('h3', `Programme : ${d.chosen.length} / ${MAX_PROMISES} engagements`),
       h('p.hint', `Un engagement par thème. Crédibilité actuelle : ${Math.round(cred * 100)} % (promesses tenues ${p.record.kept}, rompues ${p.record.broken}). Échéance : fin du prochain mandat.`),
       h('div.offers', [...byTheme].map(([theme, list]) => h('fieldset.offer-group',
@@ -496,11 +500,48 @@ export class PoliticsPanel {
     ];
   }
 
-  #results(session) {
+  #results(session, rerender) {
     const p = session.state.politics;
     const list = [...(p.elections ?? [])].reverse();
-    if (!list.length) return [this.#header(session), h('p.hint', 'Aucune élection pour l\'instant.')];
-    return [this.#header(session), ...list.map((e, k) => electionCard(e, { detailed: k === 0 }))];
+    const sr = p.secondRound ? secondRoundBox(p.secondRound, { onChoose: (mergeWith) => { const r = this.execute({ type: 'politics', op: 'secondRound', mergeWith }); if (!r?.ok) this.notify?.('warning', r?.messages?.[0] ?? r?.reason ?? 'Impossible'); rerender?.(); } }) : null;
+    const maj = p.majority ? h('p.hint', `Majorité municipale : ${p.majority.seats} sièges sur ${p.majority.total} (${Math.round(p.majority.share * 100)} %).${p.majority.share < 0.55 ? ' Majorité étroite : les hausses d\'impôt de plus de 2 points et les politiques impopulaires passent devant le conseil, qui peut les rejeter.' : ''}`) : null;
+    if (!list.length) return [this.#header(session), sr, h('p.hint', 'Aucune élection pour l\'instant.')];
+    return [this.#header(session), sr, maj, ...list.map((e, k) => electionCard(e, { detailed: k === 0 }))];
+  }
+
+  /** v1.3 : carrière (présidence de la métropole). */
+  #career(session, rerender) {
+    const s = session.state;
+    const p = s.politics;
+    if (p.career?.president !== undefined) return h('p.hint', `Président(e) de la métropole depuis ${monthLong(p.career.president)}.`);
+    const ok = session.sim.politics.presidencyEligible(s);
+    return h('div.politics-toggle',
+      h('span', ok.ok ? 'Votre ville est une capitale régionale : vous pouvez briguer la présidence de la métropole.' : `Présidence de la métropole : ${ok.reason.toLowerCase()}.`),
+      h('button.btn.small', { type: 'button', disabled: !ok.ok, on: { click: () => { const r = this.execute({ type: 'politics', op: 'presidency' }); if (!r?.ok) this.notify?.('warning', r?.reason ?? 'Impossible'); rerender?.(); } } }, 'Se porter candidat(e)'));
+  }
+
+  /** v1.3 : projection du premier tour (listes en présence) à partir de l'estimation. */
+  #projection(s, est, points, theme) {
+    const r1 = firstRound(s, { base: est + (s.politics.campaign?.dissident?.points ?? 0), programme: points, themeGroups: THEME_GROUPS[theme] ?? [], dissidentPoints: s.politics.campaign?.dissident?.points ?? 0 });
+    if (!r1.registered) return null;
+    const decided = decidedInFirstRound(r1);
+    return h('small', `Premier tour estimé : ${r1.lists.map((l) => `${l.id === 'mayor' ? 'votre liste' : `« ${l.label} »`} ${pc(l.share)}`).join(' · ')} · participation ${Math.round(r1.turnout)} %. ${decided === 'mayor' ? 'Élu(e) dès le premier tour.' : decided ? 'L\'adversaire l\'emporterait dès le premier tour.' : 'Second tour probable.'}`);
+  }
+
+  /** v1.3 : opinion de chaque groupe d'électeurs (taille, popularité, participation attendue). */
+  #groupsTable(s) {
+    const groups = groupOpinions(s);
+    if (!groups.length) return null;
+    return h('section',
+      h('h3', 'Opinion par groupe d\'électeurs'),
+      h('table.fin.compact',
+        h('thead', h('tr', h('th', 'Groupe'), h('th.num', 'Part'), h('th.num', 'Popularité'), h('th.num', 'Participation'))),
+        h('tbody', groups.sort((a, b) => b.share - a.share).map((g) => h('tr',
+          h('td', g.label, g.detail.length ? h('small', ` (${g.detail.join(', ')})`) : null),
+          h('td.num', `${Math.round(g.share * 100)} %`),
+          h('td.num', { class: g.approval >= 55 ? 'pos' : g.approval < 45 ? 'neg' : '' }, `${Math.round(g.approval)} %`),
+          h('td.num', `${Math.round(g.turnout)} %`))))),
+      h('p.hint', 'Les groupes se recoupent (une retraitée peut être aussi automobiliste). Chacun juge la ville sur ses priorités : emploi pour les classes populaires, impôts pour les commerçants, pollution pour les écologistes… Les politiques et les technologies autonomes les divisent. La participation baisse chez les plus déçus.'));
   }
 }
 
@@ -511,6 +552,9 @@ export function electionCard(e, { detailed = true } = {}) {
     h('header', h('strong', `${monthLong(e.m)} — ${e.won ? 'Victoire' : 'Défaite'}${e.early ? ' (élections anticipées)' : ''}`), h('small', `participation ${Math.round(e.turnout)} %`)),
     h('div.vote-bar.result', h('span', { style: { width: `${e.share}%` } }), h('i', { style: { left: '50%' } })),
     h('div.vote-lists', h('span.mine', `Votre liste : ${pc(e.share)}`), h('span.rival', `« ${e.rival.list} » (${e.rival.leader}) : ${pc(e.rivalShare)}`)),
+    detailed && e.rounds?.length ? h('div.rounds', e.rounds.map((r, k) => h('p', h('small', h('strong', `${k === 0 ? '1er tour' : '2d tour'} (participation ${Math.round(r.turnout)} %) : `), r.lists.map((l) => `${l.id === 'mayor' ? 'votre liste' : l.label} ${pc(l.share)}`).join(' · '))))) : null,
+    detailed && e.mergeWith ? h('p', h('small', `Fusion d'entre-deux-tours avec « ${e.rounds?.[0]?.lists.find((l) => l.id === e.mergeWith)?.label ?? e.mergeWith} ».`)) : null,
+    detailed && e.seats ? h('p', h('small', `Conseil municipal : ${e.seats.total} sièges — ${Object.entries(e.seats.byList).filter(([, n]) => n > 0).map(([id, n]) => `${id === 'mayor' ? 'votre liste' : e.rounds?.[0]?.lists.find((l) => l.id === id)?.label ?? id} ${n}`).join(', ')} (prime majoritaire : la moitié des sièges à la liste en tête).`)) : null,
     detailed ? h('p', h('small', `Popularité ${Math.round(e.approval)} % (${pts(b.approval ?? 0)}) · programme ${pts(b.programme ?? 0)} · thème ${pts(b.theme ?? 0)}${b.coherence ? ` · cohérence ${pts(b.coherence)}` : ''}${b.dissident ? ` · liste dissidente ${pts(b.dissident)}` : ''} · adversaire ${pts(b.rival ?? 0)} · bilan du mandat : ${e.kept} promesse(s) tenue(s), ${e.broken} rompue(s)`)) : null,
     detailed && e.programme?.length ? h('p', h('small', `Programme : ${e.programme.join(' · ')}`)) : null,
     detailed && e.districts?.length
@@ -524,6 +568,33 @@ export function electionCard(e, { detailed = true } = {}) {
           h('td', d.share >= 50 ? 'Votre liste' : e.rival.list)))))
       : null
   );
+}
+
+/**
+ * v1.3 : entre-deux-tours. Résultats du premier tour, propositions de fusion (acceptée ou refusée) et second tour.
+ */
+export function secondRoundBox(sr, { onChoose }) {
+  const r1 = sr.r1;
+  const mine = r1.lists.find((l) => l.id === 'mayor');
+  return h('section.card.second-round',
+    h('h3', 'Entre-deux-tours'),
+    h('p', `Premier tour (participation ${Math.round(r1.turnout)} %) : ${r1.lists.map((l) => `${l.id === 'mayor' ? 'votre liste' : `« ${l.label} »`} ${pc(l.share)}`).join(' · ')}.`),
+    h('p', h('small', 'Les listes à 10 % ou plus se maintiennent ; celles à 5 % ou plus peuvent fusionner. Une fusion reporte 80 % de leurs voix, contre un engagement imposé de leur thème et une délégation pour leur tête de liste. L\'adversaire fusionnera avec la liste restante la plus forte. Sans décision, le second tour a lieu sans alliance.')),
+    h('div.dialog-actions',
+      sr.candidates.map((c) => h('button.btn', { type: 'button', class: c.accepts ? 'primary' : '', disabled: !c.accepts, title: c.accepts ? '' : 'Cette liste refuse : vous n\'êtes pas en tête et vos priorités ne rejoignent pas les siennes', on: { click: () => onChoose(c.id) } },
+        c.accepts ? `Fusionner avec « ${c.label} » (${pc(c.share)})` : `« ${c.label} » refuse la fusion`)),
+      h('button.btn', { type: 'button', on: { click: () => onChoose(null) } }, mine.share >= 50 ? 'Second tour sans alliance' : 'Aller au second tour sans alliance')));
+}
+
+/** Dialogue d'entre-deux-tours (soirée du premier tour). */
+export function secondRoundDialog(sr, { onChoose }) {
+  const backdrop = h('div.dialog-backdrop.second-round-backdrop', { role: 'presentation' });
+  const box = h('div.dialog.scenario-end.round-one', { role: 'dialog', 'aria-modal': 'true' },
+    h('h3', 'Premier tour des municipales'),
+    secondRoundBox(sr, { onChoose: (id) => { backdrop.remove(); onChoose(id); } }));
+  backdrop.append(box);
+  document.body.append(backdrop);
+  return () => backdrop.remove();
 }
 
 /** Soirée électorale : résultats, puis suite de la partie (en cas de défaite : continuer sans élections ou menu). */

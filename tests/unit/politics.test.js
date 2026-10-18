@@ -188,6 +188,8 @@ describe('Vie politique (v0.7)', () => {
       const ev = [];
       s.bus.on('politics:election', (e) => ev.push(e.result));
       runToMonth(s, 8);
+      // v1.3 : un éventuel second tour a lieu une semaine plus tard
+      s.run(8);
       results.push(ev[0]);
     }
     expect(results[0].share).toBe(results[1].share);

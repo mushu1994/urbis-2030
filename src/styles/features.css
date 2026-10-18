@@ -1565,3 +1565,22 @@ details.factors summary {
     display: none;
   }
 }
+
+/* v1.3 : entre-deux-tours et résultats par tour */
+.second-round {
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid var(--sign);
+}
+
+.second-round h3 {
+  margin: 0;
+}
+
+.round-one {
+  max-width: 640px;
+}
+
+.rounds p {
+  margin: 2px 0;
+}

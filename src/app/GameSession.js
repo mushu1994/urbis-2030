@@ -9,6 +9,14 @@ import { toCents } from '../util/money.js';
 import { ruinBuilding } from '../simulation/CrisisSystem.js';
 import { setDistrictTax, renameDistrict } from '../simulation/Districts.js';
 import { rankFor } from '../simulation/Milestones.js';
+import { councilVote, POLICY_GROUP_EFFECTS } from '../simulation/ElectorateSystem.js';
+
+/** Politique clivante : effet négatif sur l'opinion, ou qui fâche fortement un groupe d'électeurs. */
+function unpopularPolicy(pol) {
+  if (!pol) return false;
+  if ((pol.effects ?? []).some((e) => (e.key === 'approval.add' || e.key === 'satisfaction.all') && e.value < 0)) return true;
+  return Object.values(POLICY_GROUP_EFFECTS[pol.id] ?? {}).some((v) => v <= -3);
+}
 
 /**
  * Une partie en cours : état + simulation + services, sans aucune dépendance graphique.
@@ -145,6 +153,11 @@ export class GameSession {
         break;
       case 'policy': {
         const adopted = s.policies.active[cmd.policyId];
+        // v1.3 : une politique impopulaire passe devant le conseil quand la majorité est étroite
+        if (cmd.enabled && adopted === undefined && unpopularPolicy(this.catalog.policyById.get(cmd.policyId))) {
+          const vote = councilVote(s, 2);
+          if (!vote.ok) return { ok: false, reasons: ['council'], messages: ['Le conseil municipal rejette la délibération : votre majorité est trop étroite'], reason: 'Le conseil municipal rejette la délibération' };
+        }
         r = this.sim.ai.togglePolicy(s, cmd.policyId, cmd.enabled);
         if (r.ok && !cmd.enabled && adopted !== undefined) this.sim.politics.onPolicyRepeal(s, adopted);
         break;
@@ -154,11 +167,18 @@ export class GameSession {
         if (cmd.op === 'programme') r = this.sim.politics.setProgramme(s, cmd);
         else if (cmd.op === 'continue') r = this.sim.politics.continueAfterDefeat(s);
         else if (cmd.op === 'enable') r = this.sim.politics.setEnabled(s, cmd.enabled);
+        else if (cmd.op === 'presidency') r = this.sim.politics.runForPresidency(s);
+        else if (cmd.op === 'secondRound') r = this.sim.politics.resolveSecondRound(s, { mergeWith: cmd.mergeWith ?? null });
         else return { ok: false, reasons: ['invalid'], messages: ['Commande politique inconnue'] };
         break;
       case 'tax': {
         const v = Math.max(0, Math.min(cmd.key === 'property' ? 5 : 25, Number(cmd.value)));
         if (!Number.isFinite(v) || !(cmd.key in s.economy.taxes)) return { ok: false, reasons: ['invalid'] };
+        // v1.3 : une hausse de plus de 2 points passe devant le conseil quand la majorité est étroite
+        if (v - s.economy.taxes[cmd.key] > 2) {
+          const vote = councilVote(s, 1);
+          if (!vote.ok) return { ok: false, reasons: ['council'], messages: ['Le conseil municipal rejette la hausse : votre majorité est trop étroite'] };
+        }
         s.economy.taxes[cmd.key] = Math.round(v * 10) / 10;
         r = { ok: true };
         break;

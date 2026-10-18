@@ -434,6 +434,28 @@ export class CouncilSystem {
     c.resignations = c.resignations.filter((t) => state.time.tick - t < 360);
   }
 
+  /**
+   * v1.3 : après une fusion d'entre-deux-tours, la tête de liste partenaire reçoit une délégation (celle de son
+   * thème si possible ; à défaut, elle remplace l'adjoint le moins loyal, sans pénalité).
+   */
+  welcomePartner(state, { listId, leader }) {
+    const c = councilOf(state);
+    const want = listId === 'green' ? 'ecology' : listId === 'citizen' ? 'social' : null;
+    const free = AXES.filter((a) => !c.members.some((m) => m.delegation === a));
+    let delegation = want && free.includes(want) ? want : free[0] ?? null;
+    if (c.members.length >= slotsOf(state) || !delegation) {
+      if (!c.members.length) return null;
+      const weakest = [...c.members].sort((a, b) => a.loyalty - b.loyalty)[0];
+      delegation = weakest.delegation;
+      c.members = c.members.filter((m) => m !== weakest);
+    }
+    const member = { id: `d${c.nextId++}`, sourceId: `partner-${listId}-${state.time.tick}`, name: leader, delegation, competence: 2, ambition: 4, loyalty: 35, notoriety: 1, leaning: listId === 'green' ? 'Écologistes' : 'Classes populaires', since: monthOf(state), partner: listId };
+    c.members.push(member);
+    state.dirty.modifiers = true;
+    this.#notify(state, 'info', `🏛 Accord de fusion : ${leader} reçoit la délégation « ${DELEGATION_BY_ID[delegation].short} ».`);
+    return member;
+  }
+
   /** Effets ponctuels : promesses tenues (loyauté de l'adjoint de l'axe), inaugurations du domaine. */
   onPromiseKept(state, theme) {
     const axis = THEME_AXIS[theme];
