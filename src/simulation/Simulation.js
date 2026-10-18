@@ -22,6 +22,8 @@ import { MarketSystem } from './MarketSystem.js';
 import { LineSystem } from './LineSystem.js';
 import { MilestoneSystem } from './Milestones.js';
 import { CouncilSystem } from './CouncilSystem.js';
+import { ControversySystem } from './ControversySystem.js';
+import { CivicEventSystem } from './CivicEventSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -65,6 +67,10 @@ export class Simulation {
     // v1.1 : conseil municipal, adjoints et priorités du mandat
     this.council = new CouncilSystem({ economy: this.economy, catalog, bus });
     this.politics.council = this.council;
+    // v1.2 : polémiques et journal local, événements populaires
+    this.controversies = new ControversySystem({ economy: this.economy, catalog, bus });
+    this.civic = new CivicEventSystem({ economy: this.economy, catalog, bus });
+    this.politics.controversies = this.controversies;
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }
@@ -158,6 +164,7 @@ export class Simulation {
     // Ressources (v0.7) : importations et exportations du mois, avant la clôture des comptes
     this.#time('resources', () => this.resources.monthly(state));
     this.council.monthly(state);
+    this.civic.monthly(state);
     const period = this.economy.closeMonth(state);
     // Marché régional (v0.8) : nouveaux cours pour le mois qui commence
     this.market.monthly(state);
@@ -176,7 +183,10 @@ export class Simulation {
       pollution: s.avgPollution,
       arrivals: s.arrivals,
       departures: s.departures,
-      demand: { ...state.demand }
+      demand: { ...state.demand },
+      // v1.2 : loyer moyen et part des ménages modestes (polémique « Flambée des loyers »)
+      rent: s.avgRent ?? 0,
+      low: s.population > 0 ? (s.households?.low ?? 0) / s.population : 0
     });
     if (state.history.length > 240) state.history.shift();
     state.history.at(-1).waste = state.waste.stats?.collectionRate ?? null;
@@ -188,6 +198,8 @@ export class Simulation {
     this.events.monthly(state);
     this.scenario.monthly(state);
     this.#time('politics', () => this.politics.monthly(state));
+    this.controversies.monthly(state);
+    this.controversies.frontPage(state);
     state.dirty.modifiers = true;
     this.bus?.emit('sim:month', { period, summary: sum });
   }

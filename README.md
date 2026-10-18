@@ -6,6 +6,48 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 1.2 — polémiques, journal local et événements populaires
+
+### Presse et polémiques (Mairie → Presse et polémiques)
+
+- **Douze polémiques** nées de situations réelles : incinérateur ou décharge récents près de 200 habitants, hausse
+  d'un impôt de 1,5 point ou plus en un mois, accident d'un véhicule autonome ou d'un drone, données de l'IA
+  municipale sans cybersécurité, chantier de tramway, école à plus de 120 % de sa capacité, conflit d'intérêts d'un
+  adjoint, flambée des loyers, fumées d'usine, dépense de prestige avec des finances fragiles, nuits agitées, tours
+  contre pavillons. Au plus une nouvelle par trimestre, deux à la fois, aucune la première année ni pendant une crise,
+  la même pas avant trois ans.
+- **Intensité** de 1 à 10 : −0,4 point de popularité par point. Sans réponse, elle enfle cinq mois puis retombe (le
+  silence compte comme une crise ignorée). **Assumer** : −1 par mois ; **concerter** : −3 par mois (coût, effet
+  propre : filtres, étalement de la hausse, audit, classes provisoires, mise aux normes…) ; **reculer** : la polémique
+  est close aussitôt (suspension de l'installation, annulation de la hausse, gel des investissements…), mais c'est un
+  revirement. Un adjoint du domaine de compétence 4 ou plus accélère la décrue ; reculer le désavoue (−10 de loyauté).
+- **Affaire** à 10 d'intensité : −6 points de popularité, et l'adversaire s'en sert en campagne (+1,5 point
+  d'avantage par affaire du mandat, plus les polémiques encore ouvertes).
+- **Le Courrier de la ville** : une par mois (élection, affaire, polémique, crise, nouveau statut, fête, inauguration,
+  record de population, sondage). Son ton suit les **relations avec la presse** (0 à 100) : concerter les améliore,
+  assumer une polémique virulente les dégrade ; au-dessus de 65, +0,5 point de popularité, sous 35, −0,5.
+
+### Événements populaires (Mairie → Événements, ou « Organiser un événement » dans l'inspecteur d'un lieu)
+
+| Événement | Lieu | Statut | Coût (Hameau) | Effet |
+| --- | --- | --- | --- | --- |
+| Fête de quartier | petit parc, place, aire de jeux, parc | Hameau | 3 000 € | satisfaction +4 sur 10 cases |
+| Marché de producteurs | place, parc | Village | 2 000 € | satisfaction +2, commerce +3 |
+| Tournoi sportif | terrain de sport | Village | 5 000 € | satisfaction +3 sur 12 cases |
+| Fête de la musique (juin) | parc | Bourg | 15 000 € | satisfaction +3 sur 16 cases, nocturne |
+| Marché de Noël (décembre) | place, parc | Bourg | 20 000 € | commerce +15 |
+| Festival d'été | parc, marina | Ville | 60 000 € | satisfaction +4, recettes 30 000 à 60 000 € |
+| Match ou concert | stade | Métropole | 120 000 € | recettes 80 000 à 160 000 €, trafic +30 % trois jours |
+| Grand événement régional | stade (et aéroport ou gare) | Capitale régionale | 3 M€ sur 12 mois | 1,5 M€ de recettes, +3 de popularité et demande résidentielle +5 pendant deux ans ; fiasco : −5 et une affaire |
+
+- Coûts multipliés par (1 + 0,15 × rang du statut). Un événement à la fois, un tous les quatre mois par lieu ;
+  annulation possible (moitié remboursée).
+- **Effet** = base × fréquentation (habitants autour, transports en commun) × météo (pluie ×0,6, chaleur ×0,85,
+  orage : annulation et moitié des frais perdue, sauf **repli couvert** à +30 %) × 0,6 par édition du même type dans
+  l'année × 0,5 en année électorale × adjoint aux Solidarités. Sans police, un incident peut gâcher la fête.
+- **Vie locale** : facteur de popularité (jusqu'à +4) des réussites des six derniers mois. En campagne, trois
+  événements dans l'année électorale font dénoncer le **clientélisme** (+0,5 point pour l'adversaire).
+
 ## Nouveautés de la version 1.1 — conseil municipal, adjoints et priorités du mandat
 
 > **Anciennes parties.** Le conseil démarre vide et les priorités restent neutres tant que le joueur n'y touche pas :
@@ -94,7 +136,7 @@ Effet sur la ville planifiée de `scripts/balance.mjs` (96 × 96, graine 2030, r
 | | Années 1–2 | Années 3–9 | Années 11–15 | Épargne cumulée à 10 ans | à 15 ans |
 | --- | --- | --- | --- | --- | --- |
 | v0.9 | 14–18 % | 39–63 % | 61–63 % | 30,0 M€ | 68,4 M€ |
-| v1.0 | 10–11 % | 27–32 % | 19–20 % | 15,3 M€ | 26,0 M€ |
+| v1.0 | 16–22 % | 28–35 % | 20–21 % | 15,3 M€ | 26,5 M€ |
 
 En v0.9, un hôpital coûtait 1,6 mois d'épargne au moment de son déblocage et une centrale nucléaire 0,7 mois ; en v1.0,
 environ 4 et 7 mois.
@@ -864,7 +906,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 361 tests Vitest (35 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 374 tests Vitest (36 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -885,7 +927,11 @@ taux d'épargne, migration v5 → v6 (ancien équilibrage, paliers acquis sans d
 v1.1 : sièges du conseil, candidats déterministes, délégations par statut, effets pondérés par les priorités,
 remaniement, indemnités, demandes, démission, délégation des crises, priorités (somme, perception, revirement,
 cohérence du thème), liste dissidente, sauvegarde.
-`npm run test:e2e` : 17 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+v1.2 : catalogue des polémiques, déclenchement après la première année, montée et décrue, réponses (étalement,
+annulation, gel des investissements, suspension d'une technologie), affaire, rythme trimestriel, journal ; événements
+(statut, lieu, frais, fréquentation, satisfaction locale, vie locale, rendements décroissants, orage et repli
+couvert, année électorale et clientélisme, billetterie, sauvegarde).
+`npm run test:e2e` : 18 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -897,7 +943,8 @@ prix fixe, couche des quartiers, sauvegarde ; v0.9 : guide depuis l'accueil et e
 conseiller (politique adoptée, point noir localisé), navigation (quatre orientations, centre conservé, route posée à
 la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, boussole au téléphone) ; v1.0 :
 difficulté et trésorerie de départ, statut affiché, écran « Nouveau statut » et dotation, progression, taux d'épargne,
-profils d'emprunt débloqués ; v1.1 : nomination d'un adjoint et priorités du mandat.
+profils d'emprunt débloqués ; v1.1 : nomination d'un adjoint et priorités du mandat ;
+v1.2 : polémique née d'une hausse d'impôt et réponse, journal, fête de quartier organisée depuis l'inspecteur.
 
 ## Performances mesurées
 

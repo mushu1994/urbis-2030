@@ -286,6 +286,24 @@ export const GUIDE = [
         show: [{ label: 'Conseil', panel: 'politics', tab: 'council' }, { label: 'Priorités', panel: 'politics', tab: 'agenda' }]
       },
       {
+        title: 'Polémiques et journal local',
+        items: [
+          'Une polémique naît d\'une situation réelle : installation de déchets près des logements, hausse d\'impôt brutale, accident d\'un véhicule autonome, chantier de tramway, classes surchargées, flambée des loyers, fumées d\'usine… Au plus une par trimestre, jamais la première année.',
+          'Son intensité (1 à 10) coûte 0,4 point de popularité par point. Assumer la fait retomber lentement, concerter vite (coût), reculer la clôt mais compte comme un revirement. Ignorée, elle enfle cinq mois ; à 10, c\'est une affaire : −6 points, et l\'adversaire s\'en souviendra en campagne.',
+          'Le Courrier de la ville paraît chaque mois. Son ton dépend de vos relations avec la presse, que la concertation améliore.'
+        ],
+        show: [{ label: 'Presse et polémiques', panel: 'politics', tab: 'press' }]
+      },
+      {
+        title: 'Fêtes et événements',
+        items: [
+          'Depuis un parc, une place, un terrain de sport, une marina ou un stade (bouton « Organiser un événement » de l\'inspecteur) : fête de quartier, marché, tournoi, fête de la musique en juin, marché de Noël en décembre, festival, match ou concert, grand événement pour une capitale régionale.',
+          'L\'effet dépend des habitants autour, des transports, de la météo (un orage annule, sauf repli couvert) et de la police (incidents). Répéter le même événement rapporte de moins en moins ; en année électorale, l\'effet est divisé par deux et l\'adversaire dénonce le clientélisme.',
+          'Les réussites nourrissent la « Vie locale » : jusqu\'à +4 points de popularité pendant six mois.'
+        ],
+        show: [{ label: 'Événements', panel: 'politics', tab: 'events' }]
+      },
+      {
         title: 'Campagne et promesses',
         items: [
           'Six mois avant le scrutin, choisissez jusqu\'à trois engagements chiffrés et un thème de campagne. Un thème qui souligne un point faible coûte des voix.',

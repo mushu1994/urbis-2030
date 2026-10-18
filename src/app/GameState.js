@@ -12,6 +12,8 @@ import { defaultMarket } from '../simulation/MarketSystem.js';
 import { defaultLines } from '../simulation/LineSystem.js';
 import { defaultDistricts } from '../simulation/Districts.js';
 import { defaultMilestones } from '../simulation/Milestones.js';
+import { defaultControversies } from '../simulation/ControversySystem.js';
+import { defaultCivicEvents } from '../simulation/CivicEventSystem.js';
 
 /**
  * @typedef {Object} Building
@@ -120,6 +122,9 @@ export class GameState {
     this.districts = defaultDistricts();
     /** Statut de la ville : paliers annoncés et dotations versées (v1.0). */
     this.milestones = defaultMilestones();
+    /** Polémiques municipales, relations presse et journal local ; événements populaires (v1.2). */
+    this.controversies = defaultControversies();
+    this.civicEvents = defaultCivicEvents();
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};

@@ -10,6 +10,7 @@ import { isUnlocked } from '../systems/ConstructionService.js';
 import { formatUpgradeEffect, isGoodEffect } from '../data/Upgrades.js';
 import { LINE_MODES } from '../simulation/LineSystem.js';
 import { repairCostCents } from '../simulation/CrisisSystem.js';
+import { EVENT_TYPES, EVENT_KINDS } from '../simulation/CivicEventSystem.js';
 
 const RUIN_CAUSES = { fire: 'incendie', flood: 'inondation', riot: 'émeute' };
 
@@ -300,8 +301,11 @@ export class InspectorPanel {
       ));
     }
     const demolishCost = session.construction.demolitionCost(b);
+    // v1.2 : un parc, une place, un terrain de sport, une marina ou un stade accueillent des événements
+    const venue = EVENT_KINDS.some((k) => EVENT_TYPES[k].venues.includes(b.defId));
     blocks.push(h('div.insp-actions',
       h('button.btn', { on: { click: () => this.actions.onFocus(b.x, b.y) } }, icon('focus', 15), 'Centrer'),
+      venue ? h('button.btn', { on: { click: () => this.actions.onEvent?.(b) } }, 'Organiser un événement') : null,
       h('button.btn.danger', { on: { click: () => this.actions.onDemolish(b) } }, icon('demolish', 15), `Démolir (${formatMoney(demolishCost)})`)
     ));
     return blocks;

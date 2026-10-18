@@ -115,6 +115,11 @@ export class GameApp {
         this.inspector.update(this.session, { force: true });
       },
       onFocus: (x, y) => this.focus(x, y),
+      // v1.2 : organiser un événement depuis le lieu (Mairie → Événements, lieu présélectionné)
+      onEvent: (b) => {
+        this.panels.politics.venue = b.id;
+        this.openPanel('politics', 'events');
+      },
       onClose: () => this.select(null)
     });
     this.panelHost = new PanelHost(this.$('#panel-host'));
@@ -141,7 +146,7 @@ export class GameApp {
         onDebug: () => this.togglePanel('debug')
       }),
       demand: new DemandPanel({ execute, notify }),
-      politics: new PoliticsPanel({ execute, notify }),
+      politics: new PoliticsPanel({ execute, notify, onTool: (id) => { this.panelHost.close(); this.toolbar.selectById(id); } }),
       territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price) }),
       lines: new LinesPanel({
         execute,

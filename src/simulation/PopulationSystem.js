@@ -1,6 +1,7 @@
 import { SIM } from './config.js';
 import { emptyStats } from '../app/GameState.js';
 import { localTax, effectiveTaxes } from './Districts.js';
+import { localEventBonus } from './CivicEventSystem.js';
 
 const BRACKETS = ['low', 'mid', 'high'];
 
@@ -58,6 +59,9 @@ export class PopulationSystem {
     f.garbage = -Math.min(12, (b.garbage ?? 0) * 12);
     f.transit = Math.max(g.transitBus[i], g.transitMetro[i], g.transitRail[i], g.transitTram?.[i] ?? 0) * 3;
     f.policies = (mods['satisfaction.all'] ?? 0) + (mods[`satisfaction.${cls}`] ?? 0);
+    // v1.2 : fêtes et événements populaires à proximité (un mois)
+    const ev = localEventBonus(state, b.x, b.y);
+    if (ev) f.events = ev;
     // Sinistre en cours (inondation, incendie) : habitants évacués ou relogés
     if (b.disasterUntil > state.time.tick) f.disaster = -30;
     let total = 0;

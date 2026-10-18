@@ -101,9 +101,12 @@ function buildTown(session, size) {
   // Déchets : centre de collecte au cœur du bourg, décharge à l'écart
   placeNear(session, 'waste_depot', midX, row + 3);
   placeNear(session, 'landfill', startX + 6, yMin + 1);
-  placeNear(session, 'police', midX, row - 3);
-  placeNear(session, 'fire', midX + 4, row + 3);
-  placeNear(session, 'school', midX + 2, row - 7);
+  // Police, pompiers et école viennent une fois les premiers habitants installés (comme avant la v1.0)
+  if ((s.stats.peakPopulation ?? 0) >= 150) {
+    placeNear(session, 'police', midX, row - 3);
+    placeNear(session, 'fire', midX + 4, row + 3);
+    placeNear(session, 'school', midX + 2, row - 7);
+  }
   placeNear(session, 'clinic', midX - 2, row + 4);
   placeNear(session, 'park', midX + 6, row - 4);
   return { row, xEnd };

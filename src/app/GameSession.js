@@ -79,6 +79,8 @@ export class GameSession {
         return this.construction.previewRail(s, cmd);
       case 'line':
         return this.sim.lines.preview(s, cmd);
+      case 'civicEvent':
+        return this.sim.civic.preview(s, { type: cmd.eventType, buildingId: cmd.buildingId, cover: !!cmd.cover });
       default:
         return { ok: false, reasons: ['unknown'], messages: [`Commande inconnue : ${cmd.type}`] };
     }
@@ -200,6 +202,16 @@ export class GameSession {
         if (r && !r.ok && !r.messages) r.messages = [r.reason];
         break;
       }
+      case 'controversy':
+        // v1.2 : réponse du maire à une polémique
+        r = this.sim.controversies.respond(s, cmd, { adoptPolicy: (policyId) => (s.policies.active[policyId] !== undefined ? { ok: true } : this.sim.ai.togglePolicy(s, policyId, true)) });
+        if (r && !r.ok) r.messages = [r.reason];
+        break;
+      case 'civicEvent':
+        // v1.2 : organiser ou annuler un événement populaire
+        r = cmd.op === 'cancel' ? this.sim.civic.cancel(s) : this.sim.civic.plan(s, { type: cmd.eventType, buildingId: cmd.buildingId, cover: !!cmd.cover });
+        if (r && !r.ok) r.messages = [r.reason];
+        break;
       case 'districtTax':
         r = setDistrictTax(s, cmd.key, cmd.sector, cmd.value);
         break;

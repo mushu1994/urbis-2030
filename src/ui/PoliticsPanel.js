@@ -4,7 +4,9 @@ import { formatNumber } from '../util/money.js';
 import { MONTH_NAMES, SIM } from '../simulation/config.js';
 import { THEMES, MAX_PROMISES, METRICS, CAMPAIGN_MONTHS } from '../simulation/PoliticsSystem.js';
 import { DELEGATIONS, DEPUTY_EFFECTS, AXES, CRISIS_AXIS, councilOf, agendaOf, slotsOf, candidatesFor, councilSeats, allowanceEuros, efficiency } from '../simulation/CouncilSystem.js';
-import { milestoneOf } from '../simulation/Milestones.js';
+import { milestoneOf, milestoneLabel } from '../simulation/Milestones.js';
+import { CONTROVERSIES, controversiesOf, controversyPenalty } from '../simulation/ControversySystem.js';
+import { EVENT_TYPES, EVENT_KINDS, civicOf, venuesFor, eventCost } from '../simulation/CivicEventSystem.js';
 
 /** Délégations dont l'adjoint peut gérer seul certaines crises. */
 const CRISIS_DELEGATIONS = [...new Set(Object.values(CRISIS_AXIS))];
@@ -37,7 +39,8 @@ const TIPS = {
  * thème) et résultats des élections par quartier.
  */
 export class PoliticsPanel {
-  constructor({ execute, notify }) {
+  constructor({ execute, notify, onTool }) {
+    this.onTool = onTool;
     this.id = 'politics';
     this.title = 'Mairie et élections';
     this.execute = execute;
@@ -46,6 +49,8 @@ export class PoliticsPanel {
       { id: 'opinion', label: 'Opinion' },
       { id: 'council', label: 'Conseil' },
       { id: 'agenda', label: 'Priorités' },
+      { id: 'press', label: 'Presse et polémiques' },
+      { id: 'events', label: 'Événements' },
       { id: 'mandate', label: 'Mandat et promesses' },
       { id: 'campaign', label: 'Campagne' },
       { id: 'results', label: 'Élections' }
@@ -60,6 +65,8 @@ export class PoliticsPanel {
     if (tab === 'mandate') return this.#mandate(session, rerender);
     if (tab === 'council') return this.#council(session, rerender);
     if (tab === 'agenda') return this.#agenda(session, rerender);
+    if (tab === 'press') return this.#press(session, rerender);
+    if (tab === 'events') return this.#events(session, rerender);
     if (tab === 'campaign') return this.#campaign(session, rerender);
     if (tab === 'results') return this.#results(session);
     return this.#opinion(session);
@@ -191,6 +198,111 @@ export class PoliticsPanel {
     const council = councilOf(session.state);
     return h('div.candidates', list.filter((c) => !council.members.some((x) => x.sourceId === c.id)).map((c) => person(c,
       h('div.deputy-actions', h('button.btn.small.primary', { type: 'button', on: { click: () => { this.pick = null; run({ op: 'appoint', delegation, candidateId: c.id }, `${c.name} reçoit la délégation`); } } }, replacing ? 'Nommer à sa place' : 'Nommer')))));
+  }
+
+  // ───────────────────────────── v1.2 : presse et polémiques ─────────────────────────────
+
+  #press(session, rerender) {
+    const s = session.state;
+    const C = controversiesOf(s);
+    const m = Math.floor(s.time.tick / SIM.DAYS_PER_MONTH);
+    const front = C.front.at(-1);
+    const run = (cmd, ok) => {
+      const r = this.execute(cmd);
+      if (!r?.ok) this.notify?.('warning', r?.messages?.[0] ?? r?.reason ?? 'Action impossible');
+      else if (ok) this.notify?.('success', ok);
+      rerender?.();
+    };
+    const card = (c) => {
+      const def = CONTROVERSIES[c.kind];
+      const responses = Object.entries(def.responses).filter(([id]) => !(c.response === 'assume' && id === 'assume'));
+      return h('article.card.controversy', { class: c.intensity >= 7 ? 'hot' : '' },
+        h('header', h('h4', c.title), h('span.badge', { class: c.intensity >= 7 ? 'bad' : '' }, `Intensité ${c.intensity}/10`)),
+        h('p', c.summary),
+        meter(c.intensity / 10, { color: c.intensity >= 7 ? 'var(--bad, #e0553a)' : 'var(--sign)', label: `${c.intensity}/10` }),
+        h('p', h('small', c.response
+          ? `Réponse : ${def.responses[c.response]?.label.toLowerCase()}${c.supported ? ' — la polémique continue de monter' : ' — elle retombe peu à peu'}.`
+          : `Sans réponse depuis ${m - c.since} mois : +1 par mois pendant cinq mois, puis elle retombe, mais votre silence est retenu. À 10, elle devient une affaire (−6 de popularité, reprise par l'adversaire en campagne).`)),
+        c.response && c.response !== 'assume' ? null : h('div.dialog-actions', responses.map(([id, r]) => {
+          const euros = r.euros ?? 0;
+          const afford = !euros || s.economy.treasury >= euros * 100;
+          return h('button.btn.small', { type: 'button', class: id === 'consult' ? 'primary' : '', disabled: !afford, title: r.detail, on: { click: () => run({ type: 'controversy', id: c.id, response: id }, `${r.label} : décision prise`) } },
+            `${r.label}${euros ? ` (${formatNumber(euros)} €)` : ''}`);
+        }), def.tool ? h('button.btn.small', { type: 'button', on: { click: () => this.onTool?.(def.tool) } }, 'Montre-moi') : null),
+        h('small.hint', Object.values(def.responses).map((r) => `${r.label} : ${r.detail}`).join(' · ')));
+    };
+    const press = Math.round(C.press);
+    return [
+      this.#header(session),
+      front
+        ? h('section.newspaper', { class: front.tone },
+          h('header', h('span', `Le Courrier de ${s.meta.name}`), h('small', monthLong(front.m - 1))),
+          h('h3', front.title),
+          front.briefs.length ? h('ul', front.briefs.map((b) => h('li', b))) : null)
+        : h('p.hint', 'Le premier numéro du Courrier paraîtra à la fin du mois.'),
+      h('div.kpis',
+        h('div.kpi', h('span', 'Relations avec la presse'), h('strong', { class: press > 65 ? 'pos' : press < 35 ? 'neg' : '' }, `${press} / 100`), h('small', press > 65 ? 'bonnes : +0,5 point de popularité' : press < 35 ? 'tendues : −0,5 point de popularité' : 'neutres')),
+        h('div.kpi', h('span', 'Polémiques en cours'), h('strong', String(C.active.length)), h('small', C.active.length ? `${pts(controversyPenalty(s))} points de popularité` : 'aucune')),
+        h('div.kpi', h('span', 'Affaires du mandat'), h('strong', { class: C.affairs.length ? 'neg' : '' }, String(C.affairs.filter((a) => a.tick >= (s.politics.termStart ?? 0) * SIM.DAYS_PER_MONTH).length)), h('small', 'reprises par l\'adversaire en campagne'))),
+      (C.freezeUntil ?? -1) > s.time.tick ? h('p.hint.neg', `Investissements gelés jusqu'en ${monthLong(Math.floor(C.freezeUntil / SIM.DAYS_PER_MONTH))} : aucun équipement de plus de 50 000 €.`) : null,
+      C.active.length ? h('div.cards', C.active.map(card)) : h('p.hint', 'Aucune polémique en cours. Elles naissent de situations réelles : installation de déchets près des logements, hausse d\'impôt brutale, accident d\'un véhicule autonome, chantier de tramway, classes surchargées, flambée des loyers, fumées d\'usine…'),
+      C.history.length ? h('section', h('h3', 'Polémiques passées'), h('ul.demand-advice', [...C.history].reverse().slice(0, 8).map((x) => h('li', `${monthLong(x.since)} — ${x.title} : ${x.outcome === 'affair' ? 'affaire' : x.outcome === 'retreat' ? 'recul du maire' : 'retombée'}`)))) : null,
+      C.front.length > 1 ? h('details', h('summary', 'Anciens numéros du Courrier'), h('ul', [...C.front].reverse().slice(1).map((f) => h('li', `${monthLong(f.m - 1)} : ${f.title}`)))) : null,
+      h('p.hint', 'Assumer fait retomber une polémique d\'un point par mois, concerter de trois (coût), reculer la clôt aussitôt mais compte comme un revirement. Un adjoint de compétence 4 ou plus du domaine accélère la décrue. Concerter améliore les relations avec la presse ; assumer une polémique virulente les dégrade.')
+    ];
+  }
+
+  // ───────────────────────────── v1.2 : événements populaires ─────────────────────────────
+
+  #events(session, rerender) {
+    const s = session.state;
+    const C = civicOf(s);
+    const m = Math.floor(s.time.tick / SIM.DAYS_PER_MONTH);
+    const rank = milestoneOf(s).rank;
+    const cat = session.catalog;
+    const run = (cmd, ok) => {
+      const r = this.execute(cmd);
+      if (!r?.ok) this.notify?.('warning', r?.messages?.[0] ?? r?.reason ?? 'Action impossible');
+      else if (ok) this.notify?.('success', ok);
+      rerender?.();
+    };
+    const planned = C.planned;
+    const rows = EVENT_KINDS.map((k) => {
+      const T = EVENT_TYPES[k];
+      const venues = venuesFor(s, k);
+      const locked = rank < T.milestone;
+      const sel = h('select', { 'aria-label': `Lieu : ${T.label}`, disabled: locked || !venues.length },
+        venues.map((b) => h('option', { value: b.id, selected: this.venue === b.id }, `${cat.building(b.defId).name} (${b.x}, ${b.y})`)));
+      const cover = h('input', { type: 'checkbox', disabled: locked || !venues.length });
+      const when = T.prepMonths ? `dans ${T.prepMonths} mois` : T.month === 5 ? 'en juin' : T.month === 11 ? 'en décembre' : 'à la fin du mois';
+      const effect = [`satisfaction +${T.sat} sur ${T.radius >= 999 ? 'toute la ville' : `${T.radius} cases`}`, T.demandC ? `commerce +${T.demandC}` : null, T.revenue ? `recettes ${formatNumber(T.revenue[0])} à ${formatNumber(T.revenue[1])} €` : null, T.night ? 'nocturne' : null].filter(Boolean).join(', ');
+      return h('article.card.event-type', { class: locked ? 'locked' : '' },
+        h('header', h('h4', T.label), h('strong', `${formatNumber(eventCost(s, k))} €`)),
+        h('p', h('small', locked ? `Statut « ${milestoneLabel(T.milestone)} » requis.` : `${effect}. Lieu : ${T.venues.map((v) => cat.building(v).name.toLowerCase()).join(', ')}. A lieu ${when}.`)),
+        locked ? null : venues.length
+          ? h('div.event-plan', sel,
+            T.prepMonths ? null : h('label.check', cover, 'Repli couvert (+30 %, insensible à la pluie et à l\'orage)'),
+            h('button.btn.small.primary', { type: 'button', disabled: !!planned, on: { click: () => run({ type: 'civicEvent', op: 'plan', eventType: k, buildingId: Number(sel.value), cover: cover.checked }, `${T.label} : préparation lancée`) } }, 'Organiser'))
+          : h('small.hint', 'Aucun lieu adapté dans la ville.'));
+    });
+    const history = [...C.history].reverse().slice(0, 8);
+    const electoral = s.politics?.enabled && !s.politics.defeated && s.politics.nextElection - m <= 12;
+    return [
+      this.#header(session),
+      planned
+        ? h('section.card.event-planned',
+          h('h3', `En préparation : ${EVENT_TYPES[planned.type].label}`),
+          h('p', h('small', `${cat.building(s.buildings.get(planned.buildingId)?.defId ?? 'park')?.name ?? 'Lieu'} · a lieu fin ${monthLong(planned.month - 1)}${planned.cover ? ' · repli couvert' : ''}`)),
+          h('button.btn.small', { type: 'button', on: { click: () => run({ type: 'civicEvent', op: 'cancel' }, 'Événement annulé : la moitié des frais est remboursée') } }, 'Annuler (moitié remboursée)'))
+        : null,
+      electoral ? h('p.hint.neg', 'Année électorale : l\'effet des événements est réduit de moitié, et à partir de trois l\'adversaire dénonce le clientélisme.') : null,
+      h('div.cards.event-types', rows),
+      history.length ? h('section', h('h3', 'Derniers événements'), h('table.fin.compact',
+        h('thead', h('tr', h('th', 'Mois'), h('th', 'Événement'), h('th.num', 'Visiteurs'), h('th', 'Bilan'))),
+        h('tbody', history.map((e) => h('tr', h('td', monthLong(e.month - 1)), h('td', e.label), h('td.num', formatNumber(e.visitors)),
+          h('td', { class: e.cancelled || e.incident ? 'neg' : 'pos' }, e.cancelled ? 'annulé' : e.incident ? 'incidents' : `réussi (${pts(e.points)})`)))))) : null,
+      h('p.hint', 'La fréquentation dépend des habitants autour du lieu et des transports en commun. La pluie la réduit, un orage annule l\'événement (moitié des frais perdue) sauf repli couvert. Sans police à proximité, un incident peut gâcher la fête. Le même événement répété dans l\'année rapporte de moins en moins (×0,6 par édition). Les réussites alimentent la « Vie locale » (jusqu\'à +4 points de popularité pendant six mois).')
+    ];
   }
 
   // ───────────────────────────── v1.1 : priorités du mandat ─────────────────────────────

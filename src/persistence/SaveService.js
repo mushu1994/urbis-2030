@@ -14,6 +14,8 @@ import { defaultMarket } from '../simulation/MarketSystem.js';
 import { defaultLines } from '../simulation/LineSystem.js';
 import { defaultDistricts } from '../simulation/Districts.js';
 import { defaultMilestones } from '../simulation/Milestones.js';
+import { defaultControversies } from '../simulation/ControversySystem.js';
+import { defaultCivicEvents } from '../simulation/CivicEventSystem.js';
 
 export const TRAFFIC_ARRAYS = { acc: Float32Array, cost: Float64Array, jobW: Float64Array, shopW: Float64Array };
 
@@ -60,6 +62,8 @@ export function serializeState(state) {
     lines: structuredClone(state.lines ?? null),
     districts: structuredClone(state.districts ?? null),
     milestones: structuredClone(state.milestones ?? null),
+    controversies: structuredClone(state.controversies ?? null),
+    civicEvents: structuredClone(state.civicEvents ?? null),
     modifiers: { ...mods, disabledModes: { ...(disabledModes ?? {}) }, compute: compute ? { ...compute } : undefined },
     dirty: { ...state.dirty }
   };
@@ -120,6 +124,8 @@ export function deserializeState(raw) {
   s.lines = data.lines ?? defaultLines();
   s.districts = data.districts ?? defaultDistricts();
   s.milestones = data.milestones ?? defaultMilestones();
+  s.controversies = data.controversies ?? defaultControversies();
+  s.civicEvents = data.civicEvents ?? defaultCivicEvents();
   if (data.politics) s.politics = data.politics;
   else {
     // Partie d'avant la v0.7 : la vie politique démarre, premier scrutin dans 3 ans

@@ -53,6 +53,8 @@ export const CATEGORY_LABELS = {
   structure: 'Administration générale et personnel',
   councilAllowances: 'Indemnités des adjoints',
   council: 'Enveloppes des délégations',
+  controversies: 'Gestion des polémiques',
+  events: 'Fêtes et événements',
   grant: 'Dotations de l\'État',
   fleet: 'Flotte des lignes de bus et de tramway'
 };

@@ -3,6 +3,8 @@ import { hash2 } from '../util/rng.js';
 import { effectiveTaxes, districtName, centreKey } from './Districts.js';
 import { PARCEL } from '../world/Land.js';
 import { factorWeight, THEME_AXIS, shareOf, defaultAgenda, defaultCouncil } from './CouncilSystem.js';
+import { controversyEdge } from './ControversySystem.js';
+import { localLifeFactor, clientelismEdge } from './CivicEventSystem.js';
 
 /**
  * Vie politique (v0.7) : popularité du maire, sondages, campagne, programme chiffré, élections municipales.
@@ -237,6 +239,11 @@ export class PoliticsSystem {
     // v1.1 : équipe municipale (notoriété des adjoints, délégations vacantes, démissions)
     const team = this.council?.teamFactor(state);
     if (team) add('team', 'Équipe municipale', clamp(team.value, -8, 4), team.detail);
+    // v1.2 : polémiques, relations presse, vie locale, héritage d'un grand événement
+    for (const f of this.controversies?.factors(state) ?? []) add(f.id, f.label, f.value, f.detail);
+    const local = localLifeFactor(state);
+    if (local) add('local', 'Vie locale', local, 'fêtes et événements des six derniers mois');
+    if (state.civicEvents?.legacy) add('legacy', 'Héritage du grand événement', state.civicEvents.legacy.approval, 'jusqu\'à deux ans après');
     // v1.1 : priorités changeantes (plus de 30 points déplacés sur 12 mois)
     if (p.agenda && this.council && this.council.movedLastYear(state) > 30) add('agenda', 'Priorités changeantes', -1, `${Math.round(this.council.movedLastYear(state))} points déplacés sur un an`);
     // v1.1 : les priorités du mandat pèsent sur le jugement des électeurs (1/6 par axe = poids neutre)
@@ -495,7 +502,8 @@ export class PoliticsSystem {
   /** Avantage de la liste adverse : elle attaque les points faibles de la ville. */
   rivalEdge(state) {
     const worst = Math.min(0, ...(state.politics?.factors ?? []).map((f) => f.value));
-    return Math.min(3, -worst * 0.2);
+    // v1.2 : l'adversaire exploite aussi les polémiques et affaires du mandat, et dénonce le clientélisme
+    return Math.min(3, -worst * 0.2) + (state.politics?.campaign ? controversyEdge(state) + clientelismEdge(state) : 0);
   }
 
   /** Score projeté de la liste du maire au scrutin (%). */

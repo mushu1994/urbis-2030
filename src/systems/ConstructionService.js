@@ -6,6 +6,7 @@ import { isOwnedIndex, fullyOwned, landOf, parcelMap, parcelPrice, parcelKey } f
 import { EconomySystem } from '../simulation/EconomySystem.js';
 import { accountForCategory } from '../simulation/EconomySystem.js';
 import { milestoneOf, milestoneLabel, featureUnlocked } from '../simulation/Milestones.js';
+import { investmentFrozen } from '../simulation/ControversySystem.js';
 
 /** Voie ferrée (v0.6) : coûts en euros par case, entretien mensuel, déblocage. */
 export const RAIL = { cost: 250, bridgeCost: 2500, upkeep: 1.5, bridgeUpkeep: 8, unlock: { milestone: 2 } };
@@ -248,6 +249,8 @@ export class ConstructionService {
     const reasons = [...check.reasons];
     const unlock = isUnlocked(state, def.unlock);
     if (!unlock.ok) reasons.push('locked');
+    // v1.2 : gel des investissements décidé pendant une polémique (« Dépense de prestige »)
+    if (investmentFrozen(state, def)) reasons.push('frozen');
     const works = siteWorksCents(check);
     const cost = def.costCents + works;
     if (reasons.length === 0 && !this.economy.canAfford(state, cost)) reasons.push('budget');
@@ -261,7 +264,7 @@ export class ConstructionService {
       w: check.w,
       h: check.h,
       reasons,
-      messages: reasons.map((r) => (r === 'locked' ? unlock.reason : REASONS[r]))
+      messages: reasons.map((r) => (r === 'locked' ? unlock.reason : r === 'frozen' ? 'Investissements gelés (polémique) : aucun équipement de plus de 50 000 € pour le moment' : REASONS[r]))
     };
   }
 

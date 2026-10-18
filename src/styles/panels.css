@@ -1221,3 +1221,62 @@ ul.checks small {
     grid-column: 1 / 3;
   }
 }
+
+/* v1.2 : presse, polémiques et événements */
+.newspaper {
+  display: grid;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: var(--radius-s);
+  background: #f3ecdc;
+  color: #2a2620;
+  font-family: Georgia, 'Times New Roman', serif;
+  border-top: 4px double #2a2620;
+}
+
+.newspaper header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(42, 38, 32, 0.4);
+  padding-bottom: 4px;
+}
+
+.newspaper h3 {
+  margin: 2px 0;
+  font-size: 22px;
+  line-height: 1.15;
+  color: #1b1814;
+}
+
+.newspaper ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+}
+
+.newspaper.cold h3 {
+  color: #8a2a1a;
+}
+
+.controversy.hot {
+  border-left: 3px solid var(--bad, #e0553a);
+}
+
+.event-type.locked {
+  opacity: 0.6;
+}
+
+.event-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.event-plan select {
+  min-width: 0;
+  max-width: 100%;
+}
