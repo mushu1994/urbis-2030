@@ -85,9 +85,11 @@ export class EnvironmentSystem {
       const cx = b.x + (b.w - 1) / 2;
       const cy = b.y + (b.h - 1) / 2;
       let load = 1;
+      // v1.4 : technologies d'éducation (efficacité et capacité des établissements)
+      const boost = svc.type === 'education' ? state.modifiers?.['education.mult'] ?? 1 : 1;
       if (svc.capacity) {
         const base = this.catalog.building(b.defId).capacity.service;
-        const cap = svc.capacity * (svc.strength / (base.strength || 1));
+        const cap = svc.capacity * (svc.strength / (base.strength || 1)) * boost;
         const r2 = svc.radius * svc.radius;
         let served = 0;
         for (const h of homes) {
@@ -98,7 +100,7 @@ export class EnvironmentSystem {
         b.serviceLoad = Math.round((served / cap) * 100) / 100;
         load = served > cap ? Math.max(0.35, cap / served) : 1;
       }
-      EnvironmentSystem.splat(g, g[COVER_LAYER[svc.type]], cx, cy, svc.strength * staffing * power * 1.4 * load, svc.radius);
+      EnvironmentSystem.splat(g, g[COVER_LAYER[svc.type]], cx, cy, svc.strength * boost * staffing * power * 1.4 * load, svc.radius);
     }
     for (const layer of Object.values(COVER_LAYER)) {
       const f = g[layer];

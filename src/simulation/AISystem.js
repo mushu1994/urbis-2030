@@ -40,6 +40,11 @@ export class AISystem {
     if (tech.unlock.tech && !state.tech.researched[tech.unlock.tech]) {
       reasons.push(`Nécessite « ${this.catalog.techById.get(tech.unlock.tech).name} »`);
     }
+    // v1.4 : technologies de milieu et de fin de partie (ère, statut de la ville)
+    if (tech.unlock.era || tech.unlock.milestone) {
+      const u = isUnlocked(state, { era: tech.unlock.era, milestone: tech.unlock.milestone });
+      if (!u.ok) reasons.push(u.reason);
+    }
     if (!reasons.length && !this.economy.canAfford(state, tech.costCents)) reasons.push('Budget insuffisant');
     return { ok: reasons.length === 0, reasons };
   }
@@ -117,6 +122,28 @@ export class AISystem {
           const roads = p?.opex?.roads ?? 0;
           const m = state.modifiers['upkeep.roads'] ?? 1;
           k.push({ label: 'Économie mensuelle (voirie)', value: `${Math.round(((roads / Math.max(0.01, m)) * (1 - m)) / 100).toLocaleString('fr-FR')} €` });
+        }
+        if (kpi === 'power') {
+          const pw = state.utilities.power ?? {};
+          k.push({ label: 'Production disponible', value: `${Math.round(pw.capacity ?? 0).toLocaleString('fr-FR')} u.` });
+          k.push({ label: 'Consommation', value: `${Math.round(pw.demand ?? 0).toLocaleString('fr-FR')} u.` });
+        }
+        if (kpi === 'water') {
+          const w = state.utilities.water ?? {};
+          k.push({ label: 'Production d\'eau', value: `${Math.round(w.capacity ?? 0).toLocaleString('fr-FR')} m³/j` });
+          k.push({ label: 'Eaux usées traitées', value: `${Math.round((1 - (w.untreatedShare ?? 0)) * 100)} %` });
+        }
+        if (kpi === 'education') {
+          // Part des habitants bien desservis par l'éducation (couverture d'au moins 40 % sur leur logement)
+          const g = state.grid;
+          let all = 0;
+          let served = 0;
+          for (const b of state.buildings.values()) {
+            if (!(b.residents > 0)) continue;
+            all += b.residents;
+            if (g.coverEducation[g.idx(b.x, b.y)] >= 0.4) served += b.residents;
+          }
+          k.push({ label: 'Habitants bien desservis (éducation)', value: `${all ? Math.round((served / all) * 100) : 0} %` });
         }
         if (kpi === 'waste') {
           const ws = state.waste.stats ?? {};

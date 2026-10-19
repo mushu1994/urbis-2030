@@ -105,7 +105,7 @@ describe('Sauvegardes', () => {
     v1.economy.treasury = v2.economy.treasury / 100;
     delete v1.world.layers.deliveryZone;
     const { data, applied } = migrate(v1);
-    expect(applied).toEqual([1, 2, 3, 4, 5]);
+    expect(applied).toEqual([1, 2, 3, 4, 5, 6]);
     expect(data.formatVersion).toBe(CURRENT_FORMAT_VERSION);
     expect(data.economy.treasury).toBe(v2.economy.treasury);
     expect(deserializeState(v1).economy.treasury).toBe(v2.economy.treasury);
@@ -120,7 +120,7 @@ describe('Sauvegardes', () => {
     delete v3.trade;
     for (const b of v3.buildings) delete b.upgrades;
     const { data, applied } = migrate(v3);
-    expect(applied).toEqual([3, 4, 5]);
+    expect(applied).toEqual([3, 4, 5, 6]);
     expect(data.trade.power).toEqual({ sell: false, buy: false });
     expect(data.buildings.every((b) => Array.isArray(b.upgrades))).toBe(true);
     const back = deserializeState(v3);

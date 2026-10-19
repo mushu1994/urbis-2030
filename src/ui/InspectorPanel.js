@@ -311,35 +311,62 @@ export class InspectorPanel {
     return blocks;
   }
 
-  /** Améliorations disponibles et installées pour cet équipement. */
+  /**
+   * Améliorations disponibles et installées pour cet équipement. v1.4 : regroupées par filière à niveaux
+   * (niveaux installés résumés, niveau suivant détaillé, niveaux à venir en aperçu).
+   */
   #upgrades(session, b, ups) {
     const state = session.state;
     const installed = new Set(b.upgrades ?? []);
+    const tracks = session.catalog.upgradeTracks(b.defId);
+    const effects = (up) => h('ul.up-effects', Object.entries(up.effects).map(([k, v]) => h('li', { class: isGoodEffect(k, v) ? 'pos' : 'neg' }, formatUpgradeEffect(k, v))));
+    const card = (up, tag) => {
+      const unlock = isUnlocked(state, up.unlock);
+      const pv = session.preview({ type: 'upgrade', buildingId: b.id, upgradeId: up.id });
+      return h('li.upgrade', { class: !unlock.ok ? 'locked' : '' },
+        h('div.up-head', h('strong', up.name), tag),
+        h('p.up-desc', up.description),
+        effects(up),
+        h('div.up-buy',
+          h('span.up-cost', `${formatMoney(up.costCents)} · ${formatMoney(up.upkeepCents)} / mois`),
+          h('button.btn.primary.compact', {
+            disabled: !pv.ok,
+            title: pv.ok ? '' : pv.messages.join(' · '),
+            on: { click: () => this.actions.onUpgrade(b, up.id) }
+          }, pv.ok ? 'Installer' : !unlock.ok ? unlock.reason : pv.messages[0])
+        )
+      );
+    };
+    const items = [];
+    for (const t of tracks) {
+      if (t.levels.length === 1 && !t.label) {
+        const up = t.levels[0];
+        items.push(installed.has(up.id)
+          ? h('li.upgrade.installed',
+              h('div.up-head', h('strong', up.name), h('span.up-state.pos', '✓ Installée')),
+              effects(up),
+              h('p.up-cost', `Entretien : ${formatMoney(up.upkeepCents)} / mois`))
+          : card(up, null));
+        continue;
+      }
+      const done = t.levels.filter((up) => installed.has(up.id)).length;
+      const next = t.levels.find((up) => !installed.has(up.id));
+      const pips = h('span.up-pips', { 'aria-label': `Niveau ${done} sur ${t.levels.length}` }, t.levels.map((up) => h('i', { class: installed.has(up.id) ? 'on' : '' })));
+      items.push(h('li.up-track',
+        h('div.up-track-head', h('strong', t.label ?? 'Filière'), pips, h('small', done === t.levels.length ? 'Niveau maximal' : `Niveau ${done} / ${t.levels.length}`)),
+        h('ul.up-levels',
+          t.levels.map((up) => {
+            const lv = h('span.up-lv', `Nv ${up.level ?? 1}`);
+            if (installed.has(up.id)) return h('li.up-level.done', lv, h('span', up.name), h('span.up-state.pos', '✓'));
+            if (up === next) return card(up, lv);
+            const unlock = isUnlocked(state, up.unlock);
+            return h('li.up-level.later', lv, h('span', up.name), h('small', unlock.ok ? `${formatMoney(up.costCents)}` : unlock.reason));
+          }))
+      ));
+    }
     return h('section.upgrades',
       h('h3', 'Améliorations', h('small', ` ${installed.size} / ${ups.length}`)),
-      h('ul.upgrade-list', ups.map((up) => {
-        const has = installed.has(up.id);
-        const unlock = isUnlocked(state, up.unlock);
-        const pv = has ? null : session.preview({ type: 'upgrade', buildingId: b.id, upgradeId: up.id });
-        return h('li.upgrade', { class: has ? 'installed' : !unlock.ok ? 'locked' : '' },
-          h('div.up-head',
-            h('strong', up.name),
-            has ? h('span.up-state.pos', '✓ Installée') : null
-          ),
-          h('p.up-desc', up.description),
-          h('ul.up-effects', Object.entries(up.effects).map(([k, v]) => h('li', { class: isGoodEffect(k, v) ? 'pos' : 'neg' }, formatUpgradeEffect(k, v)))),
-          has
-            ? h('p.up-cost', `Entretien : ${formatMoney(up.upkeepCents)} / mois`)
-            : h('div.up-buy',
-                h('span.up-cost', `${formatMoney(up.costCents)} · ${formatMoney(up.upkeepCents)} / mois`),
-                h('button.btn.primary.compact', {
-                  disabled: !pv.ok,
-                  title: pv.ok ? '' : pv.messages.join(' · '),
-                  on: { click: () => this.actions.onUpgrade(b, up.id) }
-                }, pv.ok ? 'Installer' : !unlock.ok ? unlock.reason : pv.messages[0])
-              )
-        );
-      }))
+      h('ul.upgrade-list', items)
     );
   }
 

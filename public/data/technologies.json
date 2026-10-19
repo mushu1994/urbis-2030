@@ -444,6 +444,252 @@
       "kpis": [
         "transit"
       ]
+    },
+    {
+      "id": "smart_grid",
+      "name": "Réseau électrique intelligent",
+      "family": "services",
+      "track": "power",
+      "trackLabel": "Électricité",
+      "level": 1,
+      "description": "Compteurs communicants et pilotage fin de la production : les centrales tournent à leur meilleur rendement.",
+      "unlock": {
+        "era": 2
+      },
+      "cost": 450000,
+      "upkeep": 6000,
+      "compute": 20,
+      "effects": [
+        {
+          "key": "power.outputMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Production des centrales +30 %"
+        },
+        {
+          "key": "satisfaction.high",
+          "op": "add",
+          "value": -0.5,
+          "side": true,
+          "label": "Compteurs connectés : débat sur les données de consommation"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "power"
+      ]
+    },
+    {
+      "id": "superconducting_grid",
+      "name": "Supraconducteurs et stockage géant",
+      "family": "services",
+      "track": "power",
+      "trackLabel": "Électricité",
+      "level": 2,
+      "description": "Lignes supraconductrices sans pertes et stockage à l'échelle de la région : encore +30 %.",
+      "unlock": {
+        "era": 3,
+        "tech": "smart_grid"
+      },
+      "cost": 1200000,
+      "upkeep": 12000,
+      "compute": 35,
+      "effects": [
+        {
+          "key": "power.outputMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Production des centrales +30 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "power"
+      ]
+    },
+    {
+      "id": "smart_water",
+      "name": "Réseau d'eau connecté",
+      "family": "services",
+      "track": "water",
+      "trackLabel": "Eau",
+      "level": 1,
+      "description": "Capteurs de fuites, pompes pilotées et traitement optimisé : chaque installation produit et épure 30 % de plus.",
+      "unlock": {
+        "era": 2
+      },
+      "cost": 350000,
+      "upkeep": 4500,
+      "compute": 15,
+      "effects": [
+        {
+          "key": "water.outputMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Production d'eau et épuration +30 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "water"
+      ]
+    },
+    {
+      "id": "water_reuse",
+      "name": "Réutilisation des eaux et biofiltration",
+      "family": "services",
+      "track": "water",
+      "trackLabel": "Eau",
+      "level": 2,
+      "description": "Les eaux usées traitées sont réutilisées pour l'arrosage et l'industrie ; la biofiltration remplace les bassins.",
+      "unlock": {
+        "era": 3,
+        "tech": "smart_water"
+      },
+      "cost": 900000,
+      "upkeep": 9000,
+      "compute": 25,
+      "effects": [
+        {
+          "key": "water.outputMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Production d'eau et épuration +30 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "water"
+      ]
+    },
+    {
+      "id": "robot_sorting",
+      "name": "Tri robotisé par vision",
+      "family": "services",
+      "track": "waste",
+      "trackLabel": "Déchets",
+      "level": 1,
+      "description": "Des robots guidés par caméra trient les déchets et les bennes suivent des tournées recalculées : collecte et traitement +30 %.",
+      "unlock": {
+        "era": 2
+      },
+      "cost": 300000,
+      "upkeep": 4000,
+      "compute": 20,
+      "effects": [
+        {
+          "key": "waste.collectMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Collecte +30 %"
+        },
+        {
+          "key": "waste.processMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Traitement des déchets +30 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "waste"
+      ]
+    },
+    {
+      "id": "molecular_recycling",
+      "name": "Recyclage moléculaire",
+      "family": "services",
+      "track": "waste",
+      "trackLabel": "Déchets",
+      "level": 2,
+      "description": "Les plastiques et textiles sont décomposés en matières premières : encore +30 % de collecte et de traitement.",
+      "unlock": {
+        "era": 3,
+        "tech": "robot_sorting"
+      },
+      "cost": 850000,
+      "upkeep": 8000,
+      "compute": 30,
+      "effects": [
+        {
+          "key": "waste.collectMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Collecte +30 %"
+        },
+        {
+          "key": "waste.processMult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Traitement des déchets +30 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "waste"
+      ]
+    },
+    {
+      "id": "adaptive_learning",
+      "name": "Plateforme d'apprentissage adaptatif",
+      "family": "services",
+      "track": "education",
+      "trackLabel": "Éducation",
+      "level": 1,
+      "description": "Chaque élève suit un parcours adapté, les enseignants pilotent les progrès : écoles, lycées, bibliothèques et université gagnent 30 % d'efficacité et de capacité.",
+      "unlock": {
+        "era": 2
+      },
+      "cost": 400000,
+      "upkeep": 5000,
+      "compute": 25,
+      "effects": [
+        {
+          "key": "education.mult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Éducation : efficacité et capacité +30 %"
+        },
+        {
+          "key": "satisfaction.mid",
+          "op": "add",
+          "value": -0.5,
+          "side": true,
+          "label": "Temps d'écran des enfants : les parents s'inquiètent"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "education"
+      ]
+    },
+    {
+      "id": "immersive_campus",
+      "name": "Campus immersif",
+      "family": "services",
+      "track": "education",
+      "trackLabel": "Éducation",
+      "level": 2,
+      "description": "Laboratoires virtuels, tutorat par IA et cours partagés entre établissements : encore +30 %.",
+      "unlock": {
+        "era": 3,
+        "tech": "adaptive_learning"
+      },
+      "cost": 1000000,
+      "upkeep": 10000,
+      "compute": 35,
+      "effects": [
+        {
+          "key": "education.mult",
+          "op": "mul",
+          "value": 0.3,
+          "label": "Éducation : efficacité et capacité +30 %"
+        }
+      ],
+      "risks": [],
+      "kpis": [
+        "education"
+      ]
     }
   ]
 }

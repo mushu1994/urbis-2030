@@ -99,7 +99,7 @@ export class WasteSystem {
     const capByKind = {};
     for (const f of facilities) {
       if (!f.active || !f.w.process) continue;
-      let cap = f.w.process * f.staffing;
+      let cap = f.w.process * f.staffing * (mods['waste.processMult'] ?? 1);
       if (f.w.kind === 'landfill') {
         const left = Math.max(0, (f.w.storage ?? 0) - (f.b.landfillUsed ?? 0));
         cap = Math.min(cap, left / Math.max(1, days));

@@ -142,7 +142,7 @@ test('lignes de bus et de tramway, quartiers, emprunts et marché régional', as
   await page.getByRole('tab', { name: 'Emprunts' }).click();
   await page.getByLabel('Remboursement').selectOption('bullet');
   await expect(page.locator('#panel-host')).toContainText('Intérêts seuls');
-  await page.getByRole('button', { name: 'Emprunter' }).click();
+  await page.locator('#panel-host').getByRole('button', { name: 'Emprunter' }).click();
   await expect.poll(() => page.evaluate(() => window.__urbis.session.state.economy.loans.at(-1)?.type)).toBe('bullet');
   await expect(page.locator('#panel-host')).toContainText('Échéancier des 12 prochains mois');
   await shot(page, 'v8-loans');

@@ -68,7 +68,12 @@ export const DEFAULT_MODIFIERS = Object.freeze({
   /** v0.7 : opinion (points de popularité par mois). */
   'approval.add': 0,
   /** v1.1 : écart de taux des nouveaux emprunts (adjoint aux Finances). */
-  'loan.rate': 0
+  'loan.rate': 0,
+  /** v1.4 : technologies de services urbains (rendement des centrales, de l'eau, des déchets, de l'éducation). */
+  'power.outputMult': 1,
+  'water.outputMult': 1,
+  'waste.processMult': 1,
+  'education.mult': 1
 });
 
 /** Un bâtiment est-il en état de fonctionner (ni abandonné, ni arrêté par un incident) ? */

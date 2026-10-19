@@ -76,6 +76,8 @@ export class HUD {
       this.cityName,
       h('div.hud-group.hud-time', h('div.hud-dateline', this.date, this.weather), h('div.hud-speeds', this.speedBtns)),
       h('button.hud-group.hud-money', { on: { click: () => actions.onOpenPanel('finance') }, title: 'Finances (B)' }, h('span.hud-label', 'Trésorerie'), this.treasury, this.net),
+      // v1.4 : l'emprunt, difficile à trouver dans les onglets, a son bouton dans la barre du haut
+      h('button.hud-loan', { type: 'button', title: 'Emprunter (Finances → Emprunts)', 'aria-label': 'Emprunter', on: { click: () => (actions.onLoan ? actions.onLoan() : actions.onOpenPanel('finance')) } }, icon('loan', 16), h('span', 'Emprunter')),
       h('div.hud-break', { 'aria-hidden': 'true' }),
       h('button.hud-group.hud-pop', { on: { click: () => actions.onOpenPanel('city') }, title: 'Ville (C)' }, h('span.hud-label', 'Habitants'), this.population, this.popSub),
       demand,

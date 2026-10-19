@@ -317,16 +317,19 @@ export function trafficDiagnosis(state, catalog) {
     });
   }
 
-  // 9. Seconde sortie d'autoroute
-  if (peak >= 15000 && (state.entries?.length ?? 0) < 2 && congestion > 0.4) {
+  // 9. Sorties d'autoroute (v1.4 : une par côté de la carte)
+  const exits = state.entries?.length ?? 0;
+  if (peak >= 15000 && exits < 4 && congestion > 0.4) {
     add({
       id: 'exit',
-      score: 20 + congestion * 15,
+      score: (exits < 2 ? 20 : 12) + congestion * 15,
       impact: 'moyen',
-      title: 'Ouvrir une seconde sortie d\'autoroute',
-      why: 'Tous les navetteurs, les camions et les habitants qui sortent de la ville passent par le même accès.',
-      how: 'Tracez une autoroute (seconde sortie) jusqu\'au bord de la carte, de l\'autre côté de la ville.',
-      actions: [{ label: 'Outil Autoroute', kind: 'tool', tool: 'road:road_motorway' }]
+      title: exits < 2 ? 'Ouvrir une seconde sortie d\'autoroute' : 'Ouvrir une sortie d\'autoroute sur un autre côté',
+      why: exits < 2
+        ? 'Tous les navetteurs, les camions et les habitants qui sortent de la ville passent par le même accès.'
+        : `La ville n'a que ${exits} accès vers la région : les quartiers éloignés font un long détour.`,
+      how: 'Territoire → Sorties d\'autoroute : choisissez un côté, le tracé le moins cher est proposé. Vous pouvez aussi tracer l\'autoroute de sortie jusqu\'au bord de la carte.',
+      actions: [{ label: 'Sorties d\'autoroute', kind: 'panel', panel: 'territory' }, { label: 'Outil Autoroute', kind: 'tool', tool: 'road:road_motorway' }]
     });
   }
 

@@ -39,20 +39,21 @@ function savingsKpi(s) {
 }
 
 export class FinancePanel {
-  constructor({ execute, notify }) {
+  constructor({ execute, notify, onPanel }) {
     this.id = 'finance';
+    this.onPanel = onPanel;
     this.title = 'Finances municipales';
     this.execute = execute;
     this.notify = notify;
     this.tabs = [
       { id: 'summary', label: 'Synthèse' },
+      { id: 'loans', label: 'Emprunts' },
       { id: 'pnl', label: 'Compte de résultat' },
       { id: 'cash', label: 'Trésorerie' },
       { id: 'taxes', label: 'Fiscalité et tarifs' },
       { id: 'districts', label: 'Quartiers' },
       { id: 'trade', label: 'Échanges régionaux' },
       { id: 'resources', label: 'Ressources' },
-      { id: 'loans', label: 'Emprunts' },
       { id: 'ledger', label: 'Journal' }
     ];
   }
@@ -93,7 +94,17 @@ export class FinancePanel {
     const future = fc.months.map((m) => m.treasury / 100);
     const debt = eco.loans.reduce((x, l) => x + l.remaining, 0);
     const kpi = (label, value, sub, cls = '') => h('div.kpi', h('span', label), h('strong', { class: cls }, value), sub ? h('small', sub) : null);
+    // v1.4 : l'emprunt est proposé dès la synthèse (il était caché au bout des onglets)
+    const maxLoan = session.sim.economy.maxLoanEuros(s);
+    const loanCard = h('div.loan-cta',
+      h('div',
+        h('strong', 'Financer un projet'),
+        h('p', maxLoan > 0
+          ? `Vous pouvez emprunter jusqu'à ${formatMoney(maxLoan * 100)} (note ${session.sim.economy.creditRating(s).grade}, taux ${(session.sim.economy.loanRate(s, 'annuity') * 100).toFixed(2).replace('.', ',')} %).`
+          : 'Capacité d\'emprunt épuisée : remboursez ou améliorez l\'épargne brute pour emprunter à nouveau.')),
+      h('button.btn.primary', { type: 'button', disabled: !this.onPanel, on: { click: () => this.onPanel?.('finance', 'loans') } }, 'Emprunter'));
     return [
+      loanCard,
       h('div.kpis',
         kpi('Trésorerie', formatMoney(eco.treasury), eco.monthsNegative ? `négative depuis ${eco.monthsNegative} mois` : null, eco.treasury < 0 ? 'neg' : ''),
         kpi('Recettes du dernier mois', last ? formatMoney(last.revenues) : '—'),

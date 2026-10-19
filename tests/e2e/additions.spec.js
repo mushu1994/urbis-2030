@@ -52,7 +52,8 @@ test('fiches du menu, améliorations, échanges régionaux, train et notificatio
   await expect(page.locator('#inspector h3', { hasText: 'Améliorations' })).toBeVisible();
   const treasury = await page.evaluate(() => window.__urbis.session.state.economy.treasury);
   await page.locator('#inspector .upgrade', { hasText: 'Patrouilles de proximité' }).getByRole('button', { name: 'Installer' }).click();
-  await expect(page.locator('#inspector .upgrade.installed', { hasText: 'Patrouilles de proximité' })).toBeVisible();
+  // v1.4 : niveau installé résumé dans sa filière
+  await expect(page.locator('#inspector .up-level.done', { hasText: 'Patrouilles de proximité' })).toBeVisible();
   expect(await page.evaluate((id) => window.__urbis.session.state.buildings.get(id).upgrades, police.id)).toEqual(['police_patrols']);
   expect(await page.evaluate(() => window.__urbis.session.state.economy.treasury)).toBeLessThan(treasury);
   await expect(page.locator('#inspector .kv', { hasText: 'Rayon d\'action' })).toContainText('18 cases');

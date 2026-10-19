@@ -64,7 +64,7 @@ export const GUIDE = [
         title: 'Les types de routes',
         items: [
           'Rue : 650 véhicules par jour, la moins chère. Avenue (statut Village, 500 habitants) : 1 800. Grand boulevard (statut Grande ville, 15 000) : 3 200, avec terre-plein planté.',
-          'Autoroute de seconde sortie (statut Métropole, 40 000 habitants) : tracée jusqu\'au bord de la carte, elle ouvre une nouvelle porte vers la région.',
+          'Autoroute de sortie (statut Grande ville, 15 000 habitants) : tracée jusqu\'au bord de la carte, même au-dessus de l\'eau, elle ouvre une nouvelle porte vers la région. Territoire → Sorties d\'autoroute propose le tracé le moins cher pour chacun des quatre côtés.',
           'Retracer une route existante avec un type plus large la remplace : c\'est ainsi qu\'on élargit un axe saturé.'
         ]
       },
@@ -132,7 +132,8 @@ export const GUIDE = [
       {
         title: 'Électricité',
         items: [
-          'Une centrale posée le long d\'une route alimente tout le réseau : routes et bâtiments contigus transportent le courant.',
+          'Une centrale posée le long d\'une route alimente tout le réseau : routes et bâtiments contigus transportent le courant (il n\'y a plus de lignes électriques à poser).',
+          'Chaque centrale a sa filière d\'améliorations « Production d\'électricité » : les deux derniers niveaux doublent sa production. La centrale nucléaire (Métropole) et le réacteur à fusion (ère 3) occupent 8 × 8 cases et produisent 20 000 et 45 000 unités.',
           'Si la demande dépasse la production, des délestages coupent des quartiers. Batteries et surplus évitent la panne géante.',
           'Les excédents se vendent à la région, les manques s\'achètent cher (Finances → Échanges régionaux).'
         ],
@@ -176,7 +177,8 @@ export const GUIDE = [
           'Éducation : qualification des actifs, donc emplois de bureaux et salaires plus élevés.',
           'Police : sécurité, et elle contient manifestations et émeutes. Pompiers : un incendie se propage moins et dure moins.',
           'Santé : satisfaction, et protection contre les épidémies. Parcs : verdure, fraîcheur, valeur foncière.',
-          'Chaque équipement peut recevoir des améliorations depuis son inspecteur (rayon, capacité, efficacité).'
+          'Chaque équipement peut recevoir des améliorations depuis son inspecteur (rayon, capacité, efficacité). Elles sont rangées en filières à niveaux : un niveau demande le précédent, et l\'inspecteur montre où vous en êtes (Nv 1, Nv 2…).',
+          'Un équipement (parc, école, caserne…) peut être posé sur des maisons ou des commerces de zone : ils sont démolis automatiquement, frais de démolition compris, après confirmation. « Annuler » rétablit tout.'
         ]
       }
     ]
@@ -255,7 +257,7 @@ export const GUIDE = [
         title: 'Quartiers, emprunts, marché',
         items: [
           'Fiscalité par quartier : un quartier moins taxé attire les constructions de son secteur, un quartier plus taxé rapporte davantage.',
-          'Emprunts : annuités constantes, amortissement constant ou in fine. La note de la dette (AAA à D) fixe le taux ; l\'échéancier montre les 12 prochains mois.',
+          'Emprunts : bouton « Emprunter » de la barre du haut, carte « Financer un projet » de la synthèse, ou onglet Emprunts. Annuités constantes, amortissement constant ou in fine. La note de la dette (AAA à D) fixe le taux ; l\'échéancier montre les 12 prochains mois. Un refus « budget insuffisant » propose aussi d\'emprunter.',
           'Le marché régional fait varier chaque mois le prix de l\'électricité, de l\'eau et du traitement des déchets ; un contrat à prix fixe protège des flambées.',
           'Ressources : cultures, élevage, pétrole et gaz se produisent ou s\'importent ; l\'excédent se vend.'
         ],
@@ -357,7 +359,8 @@ export const GUIDE = [
         title: 'Technologies et politiques',
         items: [
           'Panneau IA et politiques (I) : chaque technologie a un coût, un besoin en puissance de calcul, des effets chiffrés et parfois des incidents.',
-          'Les politiques publiques (télétravail, gratuité des transports, zone à faibles émissions, formation…) ont un coût mensuel et des effets sur la popularité ; les abroger moins d\'un an après est mal vu.'
+          'Les politiques publiques (télétravail, gratuité des transports, zone à faibles émissions, formation…) ont un coût mensuel et des effets sur la popularité ; les abroger moins d\'un an après est mal vu.',
+          'Services urbains : électricité, eau, déchets et éducation ont chacun deux technologies, la première à l\'ère 2, la seconde à l\'ère 3. Chacune augmente de 30 % le rendement de toutes les installations du domaine.'
         ],
         show: [{ label: 'IA et politiques', panel: 'ai' }]
       },
@@ -380,7 +383,7 @@ export const GUIDE = [
       {
         title: 'Extensions',
         items: [
-          'Le monde fait 8 × 8 parcelles de 32 × 32 cases. Achetez les parcelles voisines (touche T) : le prix suit votre épargne et augmente à chaque achat.',
+          'Le monde fait 8 × 8 parcelles de 32 × 32 cases. Achetez les parcelles voisines (touche T, statut Grande ville). Les 10 premières ont un prix fixe : 400 000 €, puis 200 000 € de plus à chaque achat. Ensuite, le prix suit votre épargne (environ une heure de jeu) et augmente de 20 % à chaque achat.',
           'Le monde complet est généré dès la fondation : relief, rivières et forêts se raccordent sans couture.'
         ],
         show: [{ label: 'Territoire', panel: 'territory' }]

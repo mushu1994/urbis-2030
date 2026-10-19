@@ -9,11 +9,23 @@ export const PARCEL = 32;
 export const WORLD_PARCELS = 8;
 export const MAX_WORLD = PARCEL * WORLD_PARCELS;
 
-/** Prix plancher d'une première extension (euros) et progression du prix à chaque achat. */
-export const PARCEL_BASE_EUROS = 1_500_000;
-export const PARCEL_GROWTH = 1.3;
+/**
+ * v1.4 : les 10 premières extensions ont un prix fixe, qui augmente d'un palier à chaque achat
+ * (400 000 €, 600 000 €… 2 200 000 €). Ensuite, le prix suit l'épargne de la ville.
+ */
+export const PARCEL_FIXED_COUNT = 10;
+export const PARCEL_FIRST_EUROS = 400_000;
+export const PARCEL_STEP_EUROS = 200_000;
+/** Au-delà : prix plancher (euros) et progression du prix à chaque achat. */
+export const PARCEL_BASE_EUROS = 2_400_000;
+export const PARCEL_GROWTH = 1.2;
 /** Une heure de jeu à vitesse normale = 60 mois. */
 export const PARCEL_MONTHS_OF_CASH = 60;
+
+/** Prix fixe (euros) de la n-ième extension (n à partir de 0), ou null au-delà des extensions à prix fixe. */
+export function fixedParcelEuros(n) {
+  return n < PARCEL_FIXED_COUNT ? PARCEL_FIRST_EUROS + PARCEL_STEP_EUROS * n : null;
+}
 
 const key = (gx, gy) => `${gx},${gy}`;
 
@@ -70,15 +82,18 @@ export function fullyOwned(state) {
 }
 
 /**
- * Prix de la prochaine extension (centimes) : environ une heure de jeu d'épargne (60 mois de variation moyenne de
- * trésorerie sur les 12 derniers mois), jamais sous un plancher, et de plus en plus cher à chaque achat.
+ * Prix de la prochaine extension (centimes). Les 10 premières : prix fixe croissant. Ensuite : environ une heure de
+ * jeu d'épargne (60 mois de variation moyenne de trésorerie sur les 12 derniers mois), jamais sous un plancher, et
+ * 20 % plus cher à chaque achat.
  */
 export function parcelPrice(state, summarize) {
   const land = landOf(state);
+  const fixed = fixedParcelEuros(land.purchases);
+  if (fixed !== null) return fixed * 100;
   const ps = state.economy.periods.slice(-12);
   const cash = ps.length ? ps.reduce((a, p) => a + summarize(p).cashChange, 0) / ps.length : 0;
   const base = Math.max(PARCEL_BASE_EUROS * 100, PARCEL_MONTHS_OF_CASH * Math.max(0, cash));
-  return Math.round((base * Math.pow(PARCEL_GROWTH, land.purchases)) / 10000) * 10000;
+  return Math.round((base * Math.pow(PARCEL_GROWTH, land.purchases - PARCEL_FIXED_COUNT)) / 10000) * 10000;
 }
 
 /** État de chaque parcelle du monde possible : possédée, achetable (voisine d'une parcelle possédée) ou hors d'atteinte. */

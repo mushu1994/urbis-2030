@@ -3,7 +3,7 @@ import { GameSession } from './GameSession.js';
 import { GameLoop } from './GameLoop.js';
 import { InputController } from './InputController.js';
 import { ToolController } from './ToolController.js';
-import { buildStarterTown, placeNear } from './scenarios.js';
+import { buildStarterTown, placeNear, ensureStartingCash } from './scenarios.js';
 import { SimulationClock } from '../simulation/SimulationClock.js';
 import { Renderer } from '../rendering/Renderer.js';
 import { SaveService, serializeState, deserializeState } from '../persistence/SaveService.js';
@@ -78,6 +78,7 @@ export class GameApp {
       onMenu: () => this.showMenu(),
       onUndo: () => this.undo(),
       onOpenPanel: (id) => this.togglePanel(id),
+      onLoan: () => this.openPanel('finance', 'loans'),
       onFullscreen: () => this.fullscreen.toggle(),
       onMute: () => this.togglePanel('sound'),
       onAlert: (kind) => this.locateAlert(kind),
@@ -125,13 +126,14 @@ export class GameApp {
     this.panelHost = new PanelHost(this.$('#panel-host'));
     this.overlays = new OverlayManager(this.$('#overlays'), { onChange: (id) => this.renderer.setOverlay(id), onUser: () => { this.autoOverlay = false; } });
     const execute = (cmd) => this.execute(cmd);
-    const notify = (level, message) => this.notifications.push({ level, message });
+    // v1.4 : un refus faute de budget propose d'emprunter (bouton de la notification)
+    const notify = (level, message) => this.notifications.push({ level, message, ...(/Budget insuffisant/.test(message ?? '') ? { panel: 'finance', tab: 'loans', action: 'Emprunter' } : {}) });
     this.fullscreen = new FullscreenController(this.root, {
       notify,
       onChange: ({ active }) => this.hud.setFullscreen(active)
     });
     this.panels = {
-      finance: new FinancePanel({ execute, notify }),
+      finance: new FinancePanel({ execute, notify, onPanel: (id, tab) => this.openPanel(id, tab) }),
       ai: new TechPanel({ execute, notify }),
       city: new CityPanel({ onFocus: (x, y) => this.focus(x, y), onPanel: (id, tab) => this.openPanel(id, tab), getRenderStats: () => this.renderer.stats, getHostStats: () => this.host?.stats, execute, notify }),
       saves: new SavesPanel({ saves: this.saves, settings: this.settings, onSave: (o) => this.save(o), onLoad: (id) => this.load(id), notify }),
@@ -147,7 +149,7 @@ export class GameApp {
       }),
       demand: new DemandPanel({ execute, notify }),
       politics: new PoliticsPanel({ execute, notify, onTool: (id) => { this.panelHost.close(); this.toolbar.selectById(id); } }),
-      territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price) }),
+      territory: new TerritoryPanel({ onBuy: (gx, gy, price) => this.buyParcel(gx, gy, price), onExit: (side, pv) => this.openExit(side, pv), onFocus: (x, y) => this.focus(x, y) }),
       lines: new LinesPanel({
         execute,
         notify,
@@ -422,6 +424,7 @@ export class GameApp {
       session.run(120);
       for (const id of ['police', 'fire', 'school', 'clinic']) placeNear(session, id, town.xEnd - 6, town.row - 2);
       session.run(240);
+      ensureStartingCash(session);
       delete session.state.meta.preparing;
       session.history.clear();
     }
@@ -506,6 +509,8 @@ export class GameApp {
       this.panelHost.refresh();
       this.#trafficTip();
     });
+    // v1.4 : ajustements faits au chargement d'une ancienne partie (lignes électriques retirées…)
+    for (const message of session.state.loadNotes ?? []) this.notifications.push({ level: 'info', message });
     // v0.9 : une seule fois, on signale le guide du maire au nouveau joueur
     if (!this.settings.get('guideHint')) {
       this.settings.set('guideHint', true);
@@ -679,6 +684,17 @@ export class GameApp {
     }
   }
 
+  /** v1.4 : ouvre une sortie d'autoroute sur un côté de la carte (tracé le moins cher, après confirmation). */
+  async openExit(side, pv) {
+    if (!this.session) return;
+    const where = { N: 'au nord', S: 'au sud', E: 'à l\'est', W: 'à l\'ouest' }[side];
+    if (!(await confirmDialog(`Tracer une autoroute de sortie ${where} (${pv.length} cases) pour ${formatMoney(pv.cost)} ?`, { confirmLabel: 'Construire' }))) return;
+    const r = this.execute({ type: 'exit', side });
+    if (!r?.ok) return this.notifications.push({ level: 'warning', message: r?.messages?.join(' · ') || 'Sortie impossible' });
+    this.focus(r.to.x, r.to.y);
+    this.panelHost.refresh(true);
+  }
+
   /**
    * Achète une parcelle (32 × 32) : paiement par commande, puis, si la carte doit grandir, la partie est
    * sérialisée, agrandie (WorldExpansion) et rechargée telle quelle — caméra recentrée au même endroit.
@@ -779,7 +795,7 @@ export class GameApp {
   locateAlert(kind) {
     const state = this.session?.state;
     if (!state || !kind) return this.togglePanel('city');
-    if (kind === 'treasury') return this.openPanel('finance');
+    if (kind === 'treasury') return this.openPanel('finance', 'loans');
     if (kind === 'crisis') {
       const c = state.crises?.active?.[0];
       if (c && Number.isInteger(c.x)) this.focus(c.x, c.y);

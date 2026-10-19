@@ -177,7 +177,7 @@ describe('Sauvegardes v5', () => {
     delete v4.scenario;
     delete v4.options;
     const { data, applied } = migrate(v4);
-    expect(applied).toEqual([4, 5]);
+    expect(applied).toEqual([4, 5, 6]);
     expect(data.options.disasters).toBe('off');
     expect(data.crises.active).toEqual([]);
     const back = deserializeState(v4);

@@ -120,7 +120,7 @@ export class UtilitySystem {
       const disabled = b.disabledUntil > state.time.tick;
       if (cap.waste?.powerPerUnit && !b.abandoned && !disabled) {
         // Valorisation énergétique : la production suit le volume de déchets traité
-        b.output = (b.wasteProcessed ?? 0) * cap.waste.powerPerUnit;
+        b.output = (b.wasteProcessed ?? 0) * cap.waste.powerPerUnit * (mods['power.outputMult'] ?? 1);
         supply[c] += b.output;
       }
       if (cap.powerOutput && !b.abandoned && !disabled) {
@@ -128,6 +128,7 @@ export class UtilitySystem {
         if (cap.powerSource === 'solar') out *= mods.solarFactor ?? 1;
         if (cap.powerSource === 'wind') out *= (mods.windFactor ?? 1) * (1 + 0.15 * g.altitude[g.idx(b.x, b.y)]);
         if (cap.jobs) out *= 0.5 + 0.5 * Math.min(1, b.jobsFilled / cap.jobs);
+        out *= mods['power.outputMult'] ?? 1;
         b.output = out;
         supply[c] += out;
       }
@@ -238,8 +239,9 @@ export class UtilitySystem {
       b._wc = c;
       if (c < 0) continue;
       const staffing = def.capacity.jobs ? 0.5 + 0.5 * Math.min(1, b.jobsFilled / def.capacity.jobs) : 1;
-      if (def.capacity.waterOutput && b.powered && !b.abandoned) wSupply[c] += def.capacity.waterOutput * staffing;
-      if (def.capacity.sewageTreatment && b.powered && !b.abandoned) treat[c] += def.capacity.sewageTreatment * staffing;
+      const wm = mods['water.outputMult'] ?? 1;
+      if (def.capacity.waterOutput && b.powered && !b.abandoned) wSupply[c] += def.capacity.waterOutput * staffing * wm;
+      if (def.capacity.sewageTreatment && b.powered && !b.abandoned) treat[c] += def.capacity.sewageTreatment * staffing * wm;
       const need = def.networks.water * this.activity(b, def) * (def.kind === 'growable' ? mods.waterDemandMult ?? 1 : 1);
       b.waterNeed = need;
       wDemand[c] += need;

@@ -34,7 +34,8 @@ describe('Territoire et extensions (v0.6)', () => {
     const park = s.execute({ type: 'building', defId: 'park_small', x: 10, y: 31 }).building;
     const treasury = s.state.economy.treasury;
     const price = parcelPrice(s.state, EconomySystem.summarize);
-    expect(price).toBeGreaterThanOrEqual(150_000_000);
+    // v1.4 : première extension à prix fixe (400 000 €)
+    expect(price).toBe(40_000_000);
     // Parcelle non voisine : refusée
     expect(s.preview({ type: 'buyParcel', gx: 7, gy: 3 }).ok).toBe(false);
     const east = grow(s, 5, 3);
@@ -44,8 +45,8 @@ describe('Territoire et extensions (v0.6)', () => {
     expect(st.economy.treasury).toBe(treasury - price);
     expect(st.buildings.get(park.id).x).toBe(10);
     expect(st.land.purchases).toBe(1);
-    // Le prix augmente de 30 %
-    expect(parcelPrice(st, EconomySystem.summarize)).toBe(Math.round((price * 1.3) / 10000) * 10000);
+    // v1.4 : la deuxième coûte 200 000 € de plus
+    expect(parcelPrice(st, EconomySystem.summarize)).toBe(60_000_000);
     const west = grow(east.s2, 2, 3);
     expect(west.offset).toEqual({ dx: 32, dy: 0 });
     st = west.s2.state;

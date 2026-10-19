@@ -1,3 +1,4 @@
+import { retireUselessPowerLines } from './Retirements.js';
 import { GameState, defaultTrade } from '../app/GameState.js';
 import { Grid } from '../world/Grid.js';
 import { Rng } from '../util/rng.js';
@@ -135,6 +136,13 @@ export function deserializeState(raw) {
     s.politics.announce = enabled;
   }
   s.modifiers = data.modifiers ?? {};
+  if (s.meta.retirePowerLines) {
+    // v1.4 : lignes électriques retirées (voir Retirements.js) ; le nombre est annoncé une fois au joueur
+    delete s.meta.retirePowerLines;
+    const n = retireUselessPowerLines(s);
+    // Note de chargement non sauvegardée (propriété non énumérable) : affichée une seule fois par l'interface
+    if (n) Object.defineProperty(s, 'loadNotes', { value: [`${n} ligne${n > 1 ? 's' : ''} électrique${n > 1 ? 's' : ''} inutile${n > 1 ? 's' : ''} retirée${n > 1 ? 's' : ''} : routes et bâtiments contigus conduisent le courant.`], enumerable: false, configurable: true });
+  }
   s.dirty = { ...s.dirty, ...(data.dirty ?? {}), roads: true, roadReach: true };
   if (!data.modifiers) s.dirty.modifiers = true;
   return s;

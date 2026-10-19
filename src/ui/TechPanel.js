@@ -6,7 +6,7 @@ import { computeBalance, isInOutage } from '../simulation/Modifiers.js';
 import { isUnlocked } from '../systems/ConstructionService.js';
 import { formatDate } from '../simulation/config.js';
 
-const FAMILY = { municipal: 'IA municipale', mobility: 'Mobilité autonome', logistics: 'Livraison autonome' };
+const FAMILY = { municipal: 'IA municipale', mobility: 'Mobilité autonome', logistics: 'Livraison autonome', services: 'Services urbains (milieu et fin de partie)' };
 
 const effectList = (effects) =>
   h('ul.effects', effects.map((e) => h('li', { class: e.side ? 'side' : 'gain' }, e.side ? '⚠ ' : '✓ ', e.label ?? `${e.key} ${e.value}`)));
@@ -58,8 +58,12 @@ export class TechPanel {
           const outage = isInOutage(s, t.id);
           const check = session.sim.ai.canResearch(s, t.id);
           const status = outage ? h('span.badge.bad', `Incident jusqu'au ${formatDate(s.tech.outages[t.id])}`) : deployed ? h('span.badge.ok', 'Déployée') : null;
+          // v1.4 : technologies à niveaux (Électricité, Eau, Déchets, Éducation)
+          const levels = t.track ? cat.technologies.filter((o) => o.track === t.track) : [];
+          const lvl = t.track ? h('span.up-lv', `${t.trackLabel} · niveau ${t.level} / ${levels.length}`) : null;
           return h('article.card', { class: deployed ? 'deployed' : '' },
             h('header', h('h4', t.name), status),
+            lvl,
             h('p', t.description),
             h('div.card-costs',
               h('span', `Déploiement ${formatMoney(t.costCents)}`),

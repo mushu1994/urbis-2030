@@ -3,7 +3,7 @@
  * Chaque entrée transforme une sauvegarde de la version N vers N+1. Les migrations sont appliquées
  * en chaîne jusqu'à la version courante, sur une copie : l'enregistrement d'origine n'est jamais modifié.
  */
-export const CURRENT_FORMAT_VERSION = 6;
+export const CURRENT_FORMAT_VERSION = 7;
 
 /** @type {Record<number, (data:any) => any>} */
 export const MIGRATIONS = {
@@ -94,6 +94,20 @@ export const MIGRATIONS = {
     for (const [r, pop] of [[1, 500], [2, 2000], [3, 5000], [4, 15000], [5, 40000], [6, 80000]]) if (peak >= pop) rank = r;
     d.milestones ??= { granted: rank, announced: rank };
     d.formatVersion = 6;
+    return d;
+  },
+
+  /**
+   * v6 → v7 (v1.4) : la centrale nucléaire et le réacteur à fusion passent en 8 × 8. Les centrales déjà construites
+   * gardent leur emprise et leur production sous le nom « ancienne génération ». Les lignes électriques inutiles
+   * sont retirées au chargement (`retireUselessPowerLines`, qui a besoin de la grille).
+   */
+  6: (d) => {
+    const LEGACY = { power_nuclear: 'power_nuclear_legacy', power_fusion: 'power_fusion_legacy' };
+    for (const b of d.buildings ?? []) if (LEGACY[b.defId]) b.defId = LEGACY[b.defId];
+    d.meta ??= {};
+    d.meta.retirePowerLines = true;
+    d.formatVersion = 7;
     return d;
   }
 };

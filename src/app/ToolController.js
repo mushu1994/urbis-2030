@@ -115,7 +115,8 @@ export class ToolController {
       return false;
     }
     this.pending = null;
-    this.#run(cmd);
+    if (cmd.type === 'building' && pv.replaced?.length) this.#confirmReplace(cmd, pv);
+    else this.#run(cmd);
     if (cmd.type === 'move') this.moveSource = 0;
     this.renderer.setPreview(null);
     this.lastKey = '';
@@ -193,6 +194,8 @@ export class ToolController {
       this.notify('warning', pv.messages?.filter(Boolean).join(' · ') || 'Action impossible');
     } else if (cmd.type === 'demolish' && this.needsConfirm(pv.cost)) {
       this.confirm(`Démolir pour ${formatMoney(pv.cost)} ?`).then((ok) => ok && this.#run(cmd));
+    } else if (cmd.type === 'building' && pv.replaced?.length) {
+      this.#confirmReplace(cmd, pv);
     } else if (cmd.type === 'zone' && pv.buildings?.length) {
       const n = pv.buildings.length;
       const who = pv.residents ? ` (${pv.residents} habitant${pv.residents > 1 ? 's' : ''} partiront)` : '';
@@ -203,6 +206,13 @@ export class ToolController {
     }
     this.lastKey = '';
     this.#refresh();
+  }
+
+  /** v1.4 : poser un équipement sur des bâtiments de zone demande confirmation (habitants, frais de démolition). */
+  #confirmReplace(cmd, pv) {
+    const n = pv.replaced.length;
+    const who = pv.residents ? ` (${pv.residents} habitant${pv.residents > 1 ? 's' : ''} partiront)` : '';
+    this.confirm(`Construire ici démolira ${n} bâtiment${n > 1 ? 's' : ''} de zone${who}. Coût total ${formatMoney(pv.cost)}, dont ${formatMoney(pv.demolition)} de démolition. Continuer ?`).then((ok) => ok && this.#run(cmd));
   }
 
   #lineCommand() {
@@ -432,6 +442,12 @@ export class ToolController {
       const c = pv.check;
       const parts = [c.forestTiles.length && 'défrichement', c.rockTiles.length && 'dérochage', c.level && 'nivellement'].filter(Boolean);
       r.textContent = `Dont préparation du terrain (${parts.join(', ')}) : ${formatMoney(pv.works)}`;
+      tip.append(r);
+    }
+    if (pv.ok && pv.replaced?.length) {
+      const r = document.createElement('small');
+      const n = pv.replaced.length;
+      r.textContent = `Démolit ${n} bâtiment${n > 1 ? 's' : ''} de zone${pv.residents ? ` (${pv.residents} habitant${pv.residents > 1 ? 's' : ''} partiront)` : ''} : ${formatMoney(pv.demolition)} compris`;
       tip.append(r);
     }
     if (pv.ok && pv.notes?.length) {

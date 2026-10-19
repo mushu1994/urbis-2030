@@ -83,6 +83,8 @@ export class GameSession {
         return this.construction.previewTerraform(s, cmd);
       case 'buyParcel':
         return this.construction.previewParcel(s, cmd);
+      case 'exit':
+        return this.construction.previewExit(s, cmd);
       case 'rail':
         return this.construction.previewRail(s, cmd);
       case 'line':
@@ -138,6 +140,9 @@ export class GameSession {
         break;
       case 'buyParcel':
         r = this.construction.buyParcel(s, cmd);
+        break;
+      case 'exit':
+        r = this.construction.openExit(s, cmd);
         break;
       case 'rail':
         r = this.construction.buildRail(s, cmd);

@@ -240,6 +240,8 @@ export function drawVerticalGarden(g, b, T, R, L, H, abandoned) {
 
 /** Centrale nucléaire : bâtiment réacteur et deux tours aéroréfrigérantes. */
 export function drawReactor(g, b, T, R, L, abandoned, disabled) {
+  // v1.4 : centrale 8 × 8 (deux réacteurs, salle des machines, quatre tours de refroidissement)
+  if ((b.w ?? 4) >= 6) return drawBigReactor(g, b, T, R, L, abandoned, disabled);
   box(g, T, R, L, 0.05, 0.05, 0.55, 0.55, 14, 0xc9ced3);
   const dome = up(at(T, R, L, 0.3, 0.3), 14);
   g.ellipse(dome.x, dome.y - 4, 13, 9).fill(0xdfe2e4);
@@ -259,17 +261,67 @@ export function drawReactor(g, b, T, R, L, abandoned, disabled) {
   }
 }
 
-/** Réacteur à fusion : enceinte basse et tore lumineux. */
+/** Tour de refroidissement (hyperboloïde) avec son panache. */
+function coolingTower(g, c, k, active) {
+  const H = 40 * k;
+  const w0 = 15 * k;
+  const w1 = 10 * k;
+  g.poly([c.x - w0, c.y, c.x - w1, c.y - H * 0.6, c.x - w1 - k, c.y - H, c.x + w1 + k, c.y - H, c.x + w1, c.y - H * 0.6, c.x + w0, c.y]).fill(0xd3d7da);
+  g.poly([c.x, c.y + 2 * k, c.x + w0, c.y, c.x + w1, c.y - H * 0.6, c.x + w1 + k, c.y - H, c.x, c.y - H]).fill(0xbfc4c8);
+  g.ellipse(c.x, c.y - H, w1 + k, 4 * k).fill(0x8e959a);
+  if (active) {
+    g.circle(c.x - 3 * k, c.y - H - 8 * k, 9 * k).fill({ color: 0xf2f2f2, alpha: 0.7 });
+    g.circle(c.x + 5 * k, c.y - H - 16 * k, 11 * k).fill({ color: 0xf2f2f2, alpha: 0.5 });
+  }
+}
+
+/** v1.4 : grande centrale nucléaire 8 × 8. */
+function drawBigReactor(g, b, T, R, L, abandoned, disabled) {
+  const k = ((b.w ?? 8) + (b.h ?? 8)) / 10;
+  const on = !abandoned && !disabled;
+  // Enceinte et voirie interne
+  quadFlat(g, T, R, L, 0.03, 0.03, 0.97, 0.97, 0xb7bdb3);
+  // Deux bâtiments réacteurs et leurs dômes
+  for (const v0 of [0.08, 0.36]) {
+    const hgt = 16 * k;
+    box(g, T, R, L, 0.07, v0, 0.33, v0 + 0.24, hgt, 0xc9ced3);
+    const d = up(at(T, R, L, 0.2, v0 + 0.12), hgt);
+    g.ellipse(d.x, d.y - 5 * k, 14 * k, 10 * k).fill(0xdfe2e4);
+    g.ellipse(d.x - 4 * k, d.y - 9 * k, 5 * k, 3 * k).fill({ color: 0xffffff, alpha: 0.4 });
+  }
+  // Salle des machines
+  box(g, T, R, L, 0.07, 0.66, 0.33, 0.94, 11 * k, 0xaeb6bd);
+  box(g, T, R, L, 0.09, 0.7, 0.31, 0.9, 3 * k, 0x8e98a0, 11 * k);
+  // Quatre tours de refroidissement, de l'arrière vers l'avant
+  const towers = [[0.55, 0.22], [0.82, 0.22], [0.55, 0.7], [0.82, 0.7]].sort((a, z) => a[0] + a[1] - (z[0] + z[1]));
+  for (const [u, v] of towers) coolingTower(g, at(T, R, L, u, v), k * 0.85, on);
+}
+
+/** Dalle au sol (sans épaisseur) sur une partie de l'emprise. */
+function quadFlat(g, T, R, L, u0, v0, u1, v1, color) {
+  g.poly(flat(at(T, R, L, u0, v0), at(T, R, L, u1, v0), at(T, R, L, u1, v1), at(T, R, L, u0, v1))).fill(color);
+}
+
+/** Réacteur à fusion : enceinte basse et tore lumineux (v1.4 : à l'échelle de l'emprise 8 × 8). */
 export function drawFusion(g, b, T, R, L, abandoned) {
-  box(g, T, R, L, 0.08, 0.08, 0.92, 0.92, 12, 0xe8eef6);
-  const c = up(at(T, R, L, 0.5, 0.5), 12);
-  const rx = Math.abs(R.x - L.x) * 0.28;
-  g.ellipse(c.x, c.y - 8, rx, rx * 0.5).fill(0xb8c6d4);
-  g.ellipse(c.x, c.y - 14, rx, rx * 0.5).fill(0xdfe7ef);
-  g.ellipse(c.x, c.y - 14, rx * 0.55, rx * 0.27).fill(abandoned ? 0x6a7480 : 0x1f3550);
+  const k = Math.max(1, ((b.w ?? 3) + (b.h ?? 3)) / 8);
+  const hb = 12 * k;
+  if (k > 1) {
+    quadFlat(g, T, R, L, 0.03, 0.03, 0.97, 0.97, 0xc4cdd6);
+    // Bâtiments annexes : alimentation des aimants et salle de contrôle
+    box(g, T, R, L, 0.06, 0.06, 0.24, 0.4, 8 * k, 0xd6dde6);
+    box(g, T, R, L, 0.06, 0.6, 0.24, 0.94, 8 * k, 0xd6dde6);
+  }
+  const u0 = k > 1 ? 0.3 : 0.08;
+  box(g, T, R, L, u0, 0.12, 0.92, 0.88, hb, 0xe8eef6);
+  const c = up(at(T, R, L, (u0 + 0.92) / 2, 0.5), hb);
+  const rx = Math.abs(R.x - L.x) * (k > 1 ? 0.22 : 0.28);
+  g.ellipse(c.x, c.y - 8 * k, rx, rx * 0.5).fill(0xb8c6d4);
+  g.ellipse(c.x, c.y - 14 * k, rx, rx * 0.5).fill(0xdfe7ef);
+  g.ellipse(c.x, c.y - 14 * k, rx * 0.55, rx * 0.27).fill(abandoned ? 0x6a7480 : 0x1f3550);
   if (!abandoned) {
-    g.ellipse(c.x, c.y - 14, rx * 0.78, rx * 0.39).stroke({ width: 3, color: NEON, alpha: 0.9 });
-    g.ellipse(c.x, c.y - 14, rx * 0.9, rx * 0.45).stroke({ width: 1, color: 0xc8f7ff, alpha: 0.6 });
+    g.ellipse(c.x, c.y - 14 * k, rx * 0.78, rx * 0.39).stroke({ width: 3 * k, color: NEON, alpha: 0.9 });
+    g.ellipse(c.x, c.y - 14 * k, rx * 0.9, rx * 0.45).stroke({ width: 1 * k, color: 0xc8f7ff, alpha: 0.6 });
   }
 }
 

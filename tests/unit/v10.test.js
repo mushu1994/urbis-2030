@@ -170,7 +170,7 @@ describe('v1.0 — anciennes parties', () => {
     delete v5.options.balance;
     delete v5.options.difficulty;
     const { data, applied } = migrate(v5);
-    expect(applied).toEqual([5]);
+    expect(applied).toEqual([5, 6]);
     expect(data.options.balance).toBe('legacy');
     expect(data.milestones).toEqual({ granted: 3, announced: 3 });
     const st = deserializeState(v5);

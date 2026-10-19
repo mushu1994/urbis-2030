@@ -120,6 +120,35 @@ export class Catalog {
   }
 
   /**
+   * v1.4 : niveau requis avant une amélioration de filière, pour ce type de bâtiment (le niveau précédent
+   * le plus élevé qui le concerne), ou null pour un premier niveau ou une amélioration isolée.
+   */
+  upgradePrerequisite(up, defId) {
+    if (!(up.level > 1)) return null;
+    let best = null;
+    for (const o of this.upgradesFor(defId)) {
+      if (o.track === up.track && o.level < up.level && (!best || o.level > best.level)) best = o;
+    }
+    return best;
+  }
+
+  /**
+   * v1.4 : améliorations d'un type de bâtiment regroupées par filière, niveaux dans l'ordre. Une amélioration
+   * sans filière forme son propre groupe (un seul niveau).
+   * @returns {{track:string, label:string|null, levels:any[]}[]}
+   */
+  upgradeTracks(defId) {
+    const groups = new Map();
+    for (const up of this.upgradesFor(defId)) {
+      const key = up.track ?? `#${up.id}`;
+      if (!groups.has(key)) groups.set(key, { track: key, label: up.track ? up.trackLabel ?? null : null, levels: [] });
+      groups.get(key).levels.push(up);
+    }
+    for (const g of groups.values()) g.levels.sort((a, b) => (a.level ?? 1) - (b.level ?? 1));
+    return [...groups.values()];
+  }
+
+  /**
    * Définition effective d'un bâtiment posé : la définition de base si aucune amélioration n'est installée,
    * sinon une définition dérivée (mise en cache, jamais modifiée).
    */
@@ -167,7 +196,8 @@ export class Catalog {
   plopsByCategory() {
     const out = new Map();
     for (const def of this.buildings.values()) {
-      if (def.kind !== 'plop') continue;
+      // v1.4 : bâtiments retirés du jeu (ligne électrique, centrales d'ancienne génération) : plus dans les menus
+      if (def.kind !== 'plop' || def.hidden) continue;
       if (!out.has(def.category)) out.set(def.category, []);
       out.get(def.category).push(def);
     }

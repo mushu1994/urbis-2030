@@ -11,7 +11,8 @@ export function placeNear(session, defId, cx, cy, { rot = 0, maxRadius = 30 } = 
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const cmd = { type: 'building', defId, x: cx + dx, y: cy + dy, rot };
+        // v1.4 : les scénarios ne démolissent jamais de maisons pour poser un équipement
+        const cmd = { type: 'building', defId, x: cx + dx, y: cy + dy, rot, keepZoned: true };
         const pv = session.preview(cmd);
         if (pv.ok) return session.execute(cmd);
       }
@@ -20,29 +21,48 @@ export function placeNear(session, defId, cx, cy, { rot = 0, maxRadius = 30 } = 
   return { ok: false };
 }
 
-/** Pose une route case par case en ignorant les cases impossibles (eau, pente, bâtiment). */
+/**
+ * Pose une route case par case en ignorant les cases impossibles (pente, bâtiment). v1.4 : une rivière étroite
+ * est franchie par un pont (un seul tracé de la rive à la rive) au lieu d'arrêter la route.
+ */
 export function roadLine(session, x0, y0, x1, y1, roadId = 'road_street') {
   const g = session.state.grid;
   let built = 0;
   const sx = Math.sign(x1 - x0);
   const sy = Math.sign(y1 - y0);
-  let x = x0;
-  let y = y0;
+  const water = (tx, ty) => g.inBounds(tx, ty) && g.terrain[g.idx(tx, ty)] === TERRAIN.WATER;
+  const step = (p) => (p.x !== x1 ? { x: p.x + sx, y: p.y } : { x: p.x, y: p.y + sy });
+  let p = { x: x0, y: y0 };
+  let prev = null;
   for (;;) {
-    if (g.inBounds(x, y)) {
-      const r = session.execute({ type: 'road', roadId, from: { x, y }, to: { x, y } });
-      if (r.ok) built++;
+    if (g.inBounds(p.x, p.y)) {
+      if (water(p.x, p.y) && prev) {
+        // Pont : de la case de terre précédente à la première case de terre après l'eau
+        let e = p;
+        while (water(e.x, e.y) && !(e.x === x1 && e.y === y1)) e = step(e);
+        if (!water(e.x, e.y) && session.execute({ type: 'road', roadId, from: prev, to: e }).ok) built++;
+        p = e;
+      } else if (!water(p.x, p.y) && session.execute({ type: 'road', roadId, from: p, to: p }).ok) built++;
+      if (!water(p.x, p.y)) prev = p;
     }
-    if (x === x1 && y === y1) break;
-    if (x !== x1) x += sx;
-    else y += sy;
+    if (p.x === x1 && p.y === y1) break;
+    p = step(p);
   }
   return built;
 }
 
-/** Première colonne d'eau rencontrée vers l'est sur une ligne (limite du bourg). */
+/**
+ * Limite est du bourg sur une ligne : la première étendue d'eau infranchissable. v1.4 : une rivière de 12 cases
+ * au plus est franchie par un pont (auparavant, une rivière proche de l'autoroute empêchait de bâtir le bourg).
+ */
 function eastLimit(g, row, fromX) {
-  for (let x = fromX; x < g.width; x++) if (g.terrain[g.idx(x, row)] === TERRAIN.WATER) return x - 2;
+  for (let x = fromX; x < g.width; x++) {
+    if (g.terrain[g.idx(x, row)] !== TERRAIN.WATER) continue;
+    let e = x;
+    while (e < g.width && g.terrain[g.idx(e, row)] === TERRAIN.WATER) e++;
+    if (e - x > 12 || e >= g.width - 4) return x - 2;
+    x = e;
+  }
   return g.width - 2;
 }
 
@@ -110,4 +130,18 @@ function buildTown(session, size) {
   placeNear(session, 'clinic', midX - 2, row + 4);
   placeNear(session, 'park', midX + 6, row - 4);
   return { row, xEnd };
+}
+
+/**
+ * v1.4 : le bourg existant a été bâti par l'équipe précédente ; le nouveau maire ne doit pas hériter d'une caisse
+ * vide (cartes où une rivière impose des ponts coûteux). La trésorerie est complétée jusqu'à `euros` par une
+ * dotation de l'État, inscrite au journal.
+ * @returns {number} montant versé (centimes)
+ */
+export function ensureStartingCash(session, euros = 60000) {
+  const s = session.state;
+  const missing = euros * 100 - s.economy.treasury;
+  if (missing <= 0) return 0;
+  session.sim.economy.post(s, { kind: 'grant', category: 'grant', label: 'Dotation de l\'État : reprise du bourg', amount: missing });
+  return missing;
 }

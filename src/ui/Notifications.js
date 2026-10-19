@@ -28,7 +28,7 @@ export class Notifications {
     this.clearBtn = h('button.toast-clear', { type: 'button', on: { click: () => this.clear() } }, 'Tout effacer');
   }
 
-  push({ level = 'info', message, x, y, key, panel, tab }) {
+  push({ level = 'info', message, x, y, key, panel, tab, action }) {
     const now = performance.now();
     if (key) {
       const last = this.lastByKey.get(key);
@@ -53,7 +53,7 @@ export class Notifications {
         ? h('button.link', { type: 'button', on: { click: (e) => { e.stopPropagation(); this.onLocate(x, y); this.dismiss(item); } } }, 'Voir')
         : null,
       panel && this.onPanel
-        ? h('button.link', { type: 'button', on: { click: (e) => { e.stopPropagation(); this.onPanel(panel, tab); this.dismiss(item); } } }, 'Ouvrir')
+        ? h('button.link', { type: 'button', on: { click: (e) => { e.stopPropagation(); this.onPanel(panel, tab); this.dismiss(item); } } }, action ?? 'Ouvrir')
         : null,
       h('button.toast-close', { type: 'button', 'aria-label': 'Fermer la notification', on: { click: (e) => { e.stopPropagation(); this.dismiss(item); } } }, icon('close', 12))
     );

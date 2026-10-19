@@ -95,7 +95,8 @@ export class ConstructionService {
       else pts.push({ x: p.x, y: p.y, i: g.idx(p.x, p.y) });
     }
     // Franchissements d'eau : ponts rectilignes entre deux rives
-    const bridges = planBridges(state, pts);
+    const onBorder = (p) => p.x === 0 || p.y === 0 || p.x === g.width - 1 || p.y === g.height - 1;
+    const bridges = planBridges(state, pts, { openEnd: road.exit ? onBorder : null });
     const hasWater = pts.some((p) => g.terrain[p.i] === TERRAIN.WATER);
     if (hasWater && !road.bridgeCostCents) reasons.add('noBridge');
     else for (const r of bridges.reasons) reasons.add(r);
@@ -222,13 +223,16 @@ export class ConstructionService {
     }
     // Autoroute de sortie (v0.6) : une case posée au bord de la carte devient un nouvel accès régional
     if (road.exit) {
-      for (const i of changed) {
+      // Seules les extrémités du tracé ouvrent un accès (un tracé qui longe le bord n'en crée pas une rangée)
+      const ends = [pv.tiles[0], pv.tiles.at(-1)].filter((t) => t && t.status !== 'same').map((t) => t.i);
+      for (const i of new Set(ends)) {
         const x = g.xOf(i);
         const y = g.yOf(i);
         const border = x === 0 || y === 0 || x === g.width - 1 || y === g.height - 1;
         if (border && !state.entries.includes(i)) {
           state.entries = [...state.entries, i];
-          this.bus?.emit('notify', { level: 'success', message: 'Nouvel accès autoroutier ouvert : la ville a une seconde sortie vers la région.', x, y });
+          const side = sideOf(g, i);
+          this.bus?.emit('notify', { level: 'success', message: `Nouvelle sortie d'autoroute ${SIDES[side].to} : la ville compte ${state.entries.length} accès vers la région.`, x, y });
         }
       }
     }
@@ -242,29 +246,41 @@ export class ConstructionService {
 
   // ───────────────────────────── Bâtiments ─────────────────────────────
 
-  previewBuilding(state, { defId, x, y, rot = 0 }) {
+  previewBuilding(state, { defId, x, y, rot = 0, keepZoned = false }) {
     const def = this.catalog.building(defId);
     if (def.kind !== 'plop') return { ok: false, cost: 0, reasons: ['locked'], messages: ['Ce bâtiment se développe seul sur une zone'] };
-    const check = checkBuildingPlacement(state, def, x, y, def.rotatable ? rot : 0);
+    // v1.4 : poser un équipement sur des bâtiments de zone (maisons, commerces…) les démolit automatiquement
+    const replaceable = (id) => {
+      if (keepZoned) return false;
+      const o = state.buildings.get(id);
+      return !!o && this.catalog.building(o.defId).kind === 'growable';
+    };
+    const check = checkBuildingPlacement(state, def, x, y, def.rotatable ? rot : 0, { replaceable });
     const reasons = [...check.reasons];
+    if (def.hidden) reasons.push('retired');
     const unlock = isUnlocked(state, def.unlock);
     if (!unlock.ok) reasons.push('locked');
     // v1.2 : gel des investissements décidé pendant une polémique (« Dépense de prestige »)
     if (investmentFrozen(state, def)) reasons.push('frozen');
     const works = siteWorksCents(check);
-    const cost = def.costCents + works;
+    const replaced = check.replaced.map((id) => state.buildings.get(id));
+    const demolition = replaced.reduce((a, o) => a + this.demolitionCost(o), 0);
+    const cost = def.costCents + works + demolition;
     if (reasons.length === 0 && !this.economy.canAfford(state, cost)) reasons.push('budget');
     return {
       ok: reasons.length === 0,
       cost,
       works,
+      demolition,
+      replaced: check.replaced,
+      residents: replaced.reduce((n, o) => n + (o.residents ?? 0), 0),
       check,
       upkeep: def.upkeepCents,
       tiles: check.tiles,
       w: check.w,
       h: check.h,
       reasons,
-      messages: reasons.map((r) => (r === 'locked' ? unlock.reason : r === 'frozen' ? 'Investissements gelés (polémique) : aucun équipement de plus de 50 000 € pour le moment' : REASONS[r]))
+      messages: reasons.map((r) => (r === 'locked' ? unlock.reason : r === 'frozen' ? 'Investissements gelés (polémique) : aucun équipement de plus de 50 000 € pour le moment' : r === 'retired' ? 'Ce bâtiment n\'est plus construit' : REASONS[r]))
     };
   }
 
@@ -273,26 +289,38 @@ export class ConstructionService {
     if (!pv.ok) return pv;
     const def = this.catalog.building(params.defId);
     const rot = def.rotatable ? params.rot ?? 0 : 0;
-    const snapshot = this.#snapshotTiles(state, pv.tiles);
+    const g = state.grid;
+    const replaced = pv.replaced.map((id) => state.buildings.get(id));
+    const touched = new Set(pv.tiles);
+    for (const o of replaced) for (let dy = 0; dy < o.h; dy++) for (let dx = 0; dx < o.w; dx++) touched.add(g.idx(o.x + dx, o.y + dy));
+    const tiles = [...touched];
+    const snapshot = this.#snapshotTiles(state, tiles);
     const pay = this.economy.payCapex(state, {
-      amount: pv.cost,
+      amount: pv.cost - pv.demolition,
       category: accountForCategory(def.category),
       label: `Construction : ${def.name}`,
       lifeYears: def.lifeYears
     });
     if (!pay.ok) return { ...pv, ok: false, reasons: ['budget'], messages: [REASONS.budget] };
+    let removed = {};
+    let demoTx = null;
+    if (replaced.length) {
+      if (pv.demolition > 0) demoTx = this.economy.payOpex(state, { amount: pv.demolition, category: 'demolition', label: `Démolition avant construction : ${replaced.length} bâtiment${replaced.length > 1 ? 's' : ''} (${def.name})` });
+      removed = this.removeBuildings(state, replaced);
+    }
     prepareSite(state, pv.check);
     const b = createBuilding(state, def, params.x, params.y, rot, 'player');
     b.assetId = pay.assetId;
     const asset = state.economy.assets.find((a) => a.id === pay.assetId);
     if (asset) asset.ref = b.id;
-    this.#record(state, `Construire : ${def.name}`, snapshot, pv.tiles, [pay.tx], {
+    this.#record(state, `Construire : ${def.name}`, snapshot, tiles, [pay.tx, demoTx], {
       buildingsAdded: [b.id],
-      assetsAdded: pay.assetId ? [pay.assetId] : []
+      assetsAdded: pay.assetId ? [pay.assetId] : [],
+      ...removed
     });
     this.bus?.emit('building:added', { building: b });
     // Nivellement : les falaises dessinées par les cases voisines changent aussi
-    this.bus?.emit('world:changed', { tiles: pv.check.level ? withNeighbors(state, pv.tiles) : pv.tiles, reason: 'building' });
+    this.bus?.emit('world:changed', { tiles: pv.check.level ? withNeighbors(state, tiles) : tiles, reason: 'building' });
     return { ...pv, ok: true, building: b };
   }
 
@@ -312,6 +340,9 @@ export class ConstructionService {
     if (b.abandoned) return fail('Bâtiment abandonné');
     const u = isUnlocked(state, up.unlock);
     if (!u.ok) return fail(u.reason);
+    // v1.4 : une amélioration de niveau n demande le niveau précédent de sa filière
+    const prev = this.catalog.upgradePrerequisite(up, b.defId);
+    if (prev && !b.upgrades?.includes(prev.id)) return fail(`Installez d'abord « ${prev.name} » (niveau ${prev.level})`);
     if (!this.economy.canAfford(state, up.costCents)) return { ok: false, cost: up.costCents, reasons: ['budget'], messages: [REASONS.budget] };
     return { ok: true, cost: up.costCents, upkeep: up.upkeepCents, reasons: [], messages: [] };
   }
@@ -343,6 +374,64 @@ export class ConstructionService {
     state.dirty.modifiers = true;
     this.bus?.emit('building:changed', { building: b });
     return { ...pv, ok: true, building: b, upgrade: up };
+  }
+
+  // ───────────────────────────── Sorties d'autoroute (v1.4) ─────────────────────────────
+
+  /**
+   * Prépare l'ouverture d'une sortie d'autoroute sur un côté de la carte : autoroute rectiligne depuis la route reliée
+   * à la région la plus proche de ce bord, jusqu'au bord (pont possible au-dessus de l'eau). Choisit le tracé le moins cher.
+   * @param {{side:'N'|'S'|'E'|'W'}} params
+   */
+  previewExit(state, { side }) {
+    const road = this.catalog.road('road_motorway');
+    const g = state.grid;
+    const fail = (message, reasons = ['exit']) => ({ ok: false, cost: 0, side, reasons, messages: [message] });
+    if (!SIDES[side]) return fail('Côté inconnu');
+    const unlock = isUnlocked(state, road.unlock);
+    if (!unlock.ok) return fail(unlock.reason, ['locked']);
+    const linked = linkedRoads(state);
+    // Pour chaque ligne (côtés est-ouest) ou colonne (nord-sud), la case de route reliée la plus proche du bord
+    const along = side === 'N' || side === 'S' ? g.width : g.height;
+    const depth = side === 'N' || side === 'S' ? g.height : g.width;
+    let best = null;
+    let lastReason = null;
+    // Une nouvelle sortie s'écarte d'au moins 8 cases des sorties existantes du même côté
+    const taken = exitsBySide(state)[side].map((i) => (side === 'N' || side === 'S' ? g.xOf(i) : g.yOf(i)));
+    // Les lignes qui longent un autre bord (coins) sont exclues : la sortie arrive perpendiculairement au bord
+    for (let a = 3; a < along - 3; a++) {
+      if (taken.some((t) => Math.abs(t - a) < 8)) continue;
+      let start = -1;
+      for (let d = 0; d < depth; d++) {
+        const [x, y] = sidePoint(g, side, a, d);
+        if (linked[g.idx(x, y)]) {
+          start = d;
+          break;
+        }
+      }
+      if (start <= 0) continue; // aucune route sur cette ligne, ou déjà au bord
+      const [x0, y0] = sidePoint(g, side, a, start - 1);
+      const [x1, y1] = sidePoint(g, side, a, 0);
+      const pv = this.previewRoad(state, { roadId: road.id, from: { x: x0, y: y0 }, to: { x: x1, y: y1 } });
+      const okButBudget = pv.reasons.every((r) => r === 'budget');
+      if (!okButBudget) {
+        lastReason = pv.messages[0];
+        continue;
+      }
+      if (!best || pv.cost < best.cost) best = { ...pv, from: { x: x0, y: y0 }, to: { x: x1, y: y1 } };
+    }
+    if (!best) {
+      return fail(lastReason
+        ? `Aucun tracé possible vers ${SIDES[side].to} (${lastReason.toLowerCase()})`
+        : `Aucune route reliée à la région ne s'approche ${SIDES[side].from}`);
+    }
+    return { ...best, side, roadId: road.id, length: best.tiles.length };
+  }
+
+  openExit(state, params) {
+    const pv = this.previewExit(state, params);
+    if (!pv.ok) return pv;
+    return { ...this.buildRoad(state, { roadId: pv.roadId, from: pv.from, to: pv.to }), side: pv.side, from: pv.from, to: pv.to };
   }
 
   // ───────────────────────────── Démolition ─────────────────────────────
@@ -841,4 +930,62 @@ function withNeighbors(state, tiles) {
     if (y < g.height - 1) out.add(i + g.width);
   }
   return [...out];
+}
+
+/** v1.4 : côtés de la carte pour les sorties d'autoroute. */
+export const SIDES = {
+  N: { label: 'Nord', to: 'au nord', from: 'du bord nord' },
+  S: { label: 'Sud', to: 'au sud', from: 'du bord sud' },
+  E: { label: 'Est', to: 'à l\'est', from: 'du bord est' },
+  W: { label: 'Ouest', to: 'à l\'ouest', from: 'du bord ouest' }
+};
+
+/** Côté d'une case du bord de la carte. */
+export function sideOf(g, i) {
+  const x = g.xOf(i);
+  const y = g.yOf(i);
+  if (x === 0) return 'W';
+  if (x === g.width - 1) return 'E';
+  if (y === 0) return 'N';
+  return 'S';
+}
+
+/** Accès régionaux par côté : { N: [i…], S, E, W }. */
+export function exitsBySide(state) {
+  const out = { N: [], S: [], E: [], W: [] };
+  for (const i of state.entries ?? []) out[sideOf(state.grid, i)].push(i);
+  return out;
+}
+
+/** Case à la position `a` le long d'un bord et à la distance `d` de ce bord. */
+function sidePoint(g, side, a, d) {
+  if (side === 'N') return [a, d];
+  if (side === 'S') return [a, g.height - 1 - d];
+  if (side === 'W') return [d, a];
+  return [g.width - 1 - d, a];
+}
+
+/** Routes reliées à un accès régional (parcours en largeur sur les routes). */
+function linkedRoads(state) {
+  const g = state.grid;
+  const seen = new Uint8Array(g.size);
+  const queue = [];
+  for (const e of state.entries ?? []) {
+    if (g.road[e] && !seen[e]) {
+      seen[e] = 1;
+      queue.push(e);
+    }
+  }
+  const nb = new Int32Array(4);
+  for (let q = 0; q < queue.length; q++) {
+    const n = g.neighbors4(queue[q], nb);
+    for (let k = 0; k < n; k++) {
+      const o = nb[k];
+      if (!seen[o] && g.road[o]) {
+        seen[o] = 1;
+        queue.push(o);
+      }
+    }
+  }
+  return seen;
 }

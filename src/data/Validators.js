@@ -127,6 +127,15 @@ export function validateCatalogData(b, t, p, u) {
     }
     if (up.unlock?.tech && !techIds.has(up.unlock.tech)) errors.push(`${w} : technologie « ${up.unlock.tech} » inconnue`);
     if (up.unlock?.era && ![1, 2, 3].includes(up.unlock.era)) errors.push(`${w} : ère de déblocage invalide`);
+    // v1.4 : filières à niveaux (niveau entier ≥ 1, filière nommée)
+    if (up.level !== undefined && !(Number.isInteger(up.level) && up.level >= 1)) errors.push(`${w} : niveau invalide`);
+    if (up.level !== undefined && typeof up.track !== 'string') errors.push(`${w} : niveau sans filière`);
+  }
+  // Chaque niveau d'une filière (au-delà du premier) doit avoir un niveau précédent pour au moins un bâtiment concerné
+  for (const up of u?.upgrades ?? []) {
+    if (!(up.level > 1)) continue;
+    const ok = up.appliesTo.some((bid) => (u.upgrades ?? []).some((o) => o.track === up.track && o.level < up.level && o.appliesTo.includes(bid)));
+    if (!ok) errors.push(`amélioration ${up.id} : niveau ${up.level} sans niveau précédent`);
   }
   return errors;
 }

@@ -4,6 +4,9 @@
     {
       "id": "police_patrols",
       "name": "Patrouilles de proximité",
+      "track": "police",
+      "trackLabel": "Sécurité",
+      "level": 1,
       "appliesTo": [
         "police",
         "police_post"
@@ -18,6 +21,9 @@
     {
       "id": "police_video",
       "name": "Centre de vidéoprotection",
+      "track": "police",
+      "trackLabel": "Sécurité",
+      "level": 2,
       "appliesTo": [
         "police"
       ],
@@ -35,6 +41,9 @@
     {
       "id": "police_predictive",
       "name": "Analyse prédictive",
+      "track": "police",
+      "trackLabel": "Sécurité",
+      "level": 3,
       "appliesTo": [
         "police",
         "police_post"
@@ -54,6 +63,9 @@
     {
       "id": "fire_ladder",
       "name": "Grande échelle et camion-citerne",
+      "track": "fire",
+      "trackLabel": "Secours",
+      "level": 1,
       "appliesTo": [
         "fire",
         "fire_drone"
@@ -68,6 +80,9 @@
     {
       "id": "fire_sensors",
       "name": "Capteurs d'incendie connectés",
+      "track": "fire",
+      "trackLabel": "Secours",
+      "level": 2,
       "appliesTo": [
         "fire",
         "fire_drone"
@@ -85,6 +100,9 @@
     {
       "id": "health_imaging",
       "name": "Plateau d'imagerie médicale",
+      "track": "health",
+      "trackLabel": "Soins",
+      "level": 1,
       "appliesTo": [
         "clinic",
         "hospital"
@@ -100,6 +118,9 @@
     {
       "id": "health_telemed",
       "name": "Téléconsultation",
+      "track": "health",
+      "trackLabel": "Soins",
+      "level": 2,
       "appliesTo": [
         "clinic",
         "hospital",
@@ -118,6 +139,9 @@
     {
       "id": "edu_digital",
       "name": "Classes numériques",
+      "track": "education",
+      "trackLabel": "Pédagogie",
+      "level": 1,
       "appliesTo": [
         "school",
         "high_school",
@@ -150,6 +174,9 @@
     {
       "id": "edu_ai_tutor",
       "name": "Tuteurs IA personnalisés",
+      "track": "education",
+      "trackLabel": "Pédagogie",
+      "level": 2,
       "appliesTo": [
         "school",
         "high_school",
@@ -197,6 +224,9 @@
     {
       "id": "gas_combined",
       "name": "Turbine à cycle combiné",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 1,
       "appliesTo": [
         "power_gas"
       ],
@@ -208,8 +238,50 @@
       "description": "La chaleur des fumées fait tourner une seconde turbine : plus d'électricité pour le même gaz."
     },
     {
+      "id": "gas_turbines",
+      "name": "Turbines à haut rendement",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 2,
+      "appliesTo": [
+        "power_gas"
+      ],
+      "cost": 55000,
+      "upkeep": 600,
+      "unlock": {
+        "milestone": 3
+      },
+      "effects": {
+        "powerOutput": 1.4
+      },
+      "description": "Turbines de nouvelle génération et récupération de chaleur : la centrale produit 40 % de plus."
+    },
+    {
+      "id": "gas_hydrogen",
+      "name": "Cogénération à l'hydrogène vert",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 3,
+      "appliesTo": [
+        "power_gas"
+      ],
+      "cost": 95000,
+      "upkeep": 900,
+      "unlock": {
+        "era": 2
+      },
+      "effects": {
+        "powerOutput": 1.43,
+        "pollution": 0.8
+      },
+      "description": "Mélange d'hydrogène vert et cogénération : production encore accrue, fumées réduites."
+    },
+    {
       "id": "solar_trackers",
       "name": "Suiveurs solaires",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 1,
       "appliesTo": [
         "power_solar"
       ],
@@ -221,8 +293,49 @@
       "description": "Les panneaux s'orientent vers le soleil tout au long de la journée."
     },
     {
+      "id": "solar_bifacial",
+      "name": "Panneaux bifaciaux",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 2,
+      "appliesTo": [
+        "power_solar"
+      ],
+      "cost": 30000,
+      "upkeep": 100,
+      "unlock": {
+        "milestone": 3
+      },
+      "effects": {
+        "powerOutput": 1.4
+      },
+      "description": "Les panneaux captent aussi la lumière réfléchie par le sol : +40 %."
+    },
+    {
+      "id": "solar_perovskite",
+      "name": "Cellules pérovskite-silicium",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 3,
+      "appliesTo": [
+        "power_solar"
+      ],
+      "cost": 50000,
+      "upkeep": 150,
+      "unlock": {
+        "era": 2
+      },
+      "effects": {
+        "powerOutput": 1.43
+      },
+      "description": "Cellules en tandem au rendement record."
+    },
+    {
       "id": "wind_large",
       "name": "Pales de grande envergure",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 1,
       "appliesTo": [
         "power_wind"
       ],
@@ -233,6 +346,45 @@
         "noise": 1.2
       },
       "description": "Captent plus de vent, au prix d'un peu plus de bruit."
+    },
+    {
+      "id": "wind_ai",
+      "name": "Pales allongées et pilotage par IA",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 2,
+      "appliesTo": [
+        "power_wind"
+      ],
+      "cost": 9000,
+      "upkeep": 50,
+      "unlock": {
+        "milestone": 3
+      },
+      "effects": {
+        "powerOutput": 1.4
+      },
+      "description": "Pales plus longues orientées en continu selon le vent : +40 %."
+    },
+    {
+      "id": "wind_nextgen",
+      "name": "Rotor de nouvelle génération",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 3,
+      "appliesTo": [
+        "power_wind"
+      ],
+      "cost": 15000,
+      "upkeep": 75,
+      "unlock": {
+        "era": 2
+      },
+      "effects": {
+        "powerOutput": 1.43,
+        "noise": 1.1
+      },
+      "description": "Génératrice sans engrenage et rotor géant."
     },
     {
       "id": "battery_cells",
@@ -248,10 +400,46 @@
       "description": "Davantage d'énergie stockée dans le même bâtiment."
     },
     {
+      "id": "hydro_kaplan",
+      "name": "Turbines Kaplan modernisées",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 1,
+      "appliesTo": [
+        "power_hydro"
+      ],
+      "cost": 110000,
+      "upkeep": 350,
+      "effects": {
+        "powerOutput": 1.4
+      },
+      "description": "Turbines à pales orientables, efficaces quel que soit le débit : +40 %."
+    },
+    {
+      "id": "hydro_pumped",
+      "name": "Station de pompage-turbinage",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 2,
+      "appliesTo": [
+        "power_hydro"
+      ],
+      "cost": 190000,
+      "upkeep": 500,
+      "unlock": {
+        "era": 2
+      },
+      "effects": {
+        "powerOutput": 1.43
+      },
+      "description": "Le barrage stocke l'eau aux heures creuses et la turbine aux heures de pointe."
+    },
+    {
       "id": "nuclear_safety",
       "name": "Sûreté renforcée",
       "appliesTo": [
-        "power_nuclear"
+        "power_nuclear",
+        "power_nuclear_legacy"
       ],
       "cost": 60000,
       "upkeep": 1200,
@@ -259,6 +447,77 @@
         "riskChance": 0.25
       },
       "description": "Redondance des systèmes de refroidissement : les arrêts d'urgence deviennent rares."
+    },
+    {
+      "id": "nuclear_uprate",
+      "name": "Montée en puissance des réacteurs",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 1,
+      "appliesTo": [
+        "power_nuclear",
+        "power_nuclear_legacy"
+      ],
+      "cost": 1400000,
+      "upkeep": 3000,
+      "effects": {
+        "powerOutput": 1.4
+      },
+      "description": "Générateurs de vapeur et turbines remplacés : +40 % de puissance."
+    },
+    {
+      "id": "nuclear_fuel",
+      "name": "Combustible avancé",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 2,
+      "appliesTo": [
+        "power_nuclear",
+        "power_nuclear_legacy"
+      ],
+      "cost": 2300000,
+      "upkeep": 5000,
+      "unlock": {
+        "era": 2
+      },
+      "effects": {
+        "powerOutput": 1.43
+      },
+      "description": "Combustible à haut taux de combustion et pilotage fin du cœur."
+    },
+    {
+      "id": "fusion_magnets",
+      "name": "Aimants supraconducteurs haute température",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 1,
+      "appliesTo": [
+        "power_fusion",
+        "power_fusion_legacy"
+      ],
+      "cost": 1900000,
+      "upkeep": 4000,
+      "effects": {
+        "powerOutput": 1.4
+      },
+      "description": "Champ magnétique plus intense : le plasma est mieux confiné, +40 %."
+    },
+    {
+      "id": "fusion_ai",
+      "name": "Confinement piloté par IA",
+      "track": "power",
+      "trackLabel": "Production d'électricité",
+      "level": 2,
+      "appliesTo": [
+        "power_fusion",
+        "power_fusion_legacy"
+      ],
+      "cost": 3000000,
+      "upkeep": 6000,
+      "effects": {
+        "powerOutput": 1.43
+      },
+      "description": "Une IA corrige les instabilités du plasma en temps réel."
     },
     {
       "id": "dc_cooling",
@@ -277,6 +536,9 @@
     {
       "id": "pump_efficient",
       "name": "Pompes à haut rendement",
+      "track": "water",
+      "trackLabel": "Production d'eau",
+      "level": 1,
       "appliesTo": [
         "water_pump",
         "water_tower",
@@ -293,6 +555,9 @@
     {
       "id": "sewage_membrane",
       "name": "Traitement membranaire",
+      "track": "sewage",
+      "trackLabel": "Épuration",
+      "level": 1,
       "appliesTo": [
         "sewage_plant",
         "sewage_big"
@@ -338,6 +603,9 @@
     {
       "id": "landfill_extension",
       "name": "Extension de la décharge",
+      "track": "landfill",
+      "trackLabel": "Décharge",
+      "level": 1,
       "appliesTo": [
         "landfill"
       ],
@@ -351,6 +619,9 @@
     {
       "id": "landfill_gas",
       "name": "Captage du biogaz",
+      "track": "landfill",
+      "trackLabel": "Décharge",
+      "level": 2,
       "appliesTo": [
         "landfill"
       ],
@@ -365,6 +636,9 @@
     {
       "id": "incinerator_filters",
       "name": "Filtres à fumées",
+      "track": "incinerator",
+      "trackLabel": "Incinération",
+      "level": 1,
       "appliesTo": [
         "incinerator"
       ],
@@ -378,6 +652,9 @@
     {
       "id": "incinerator_heat",
       "name": "Récupération de chaleur",
+      "track": "incinerator",
+      "trackLabel": "Incinération",
+      "level": 2,
       "appliesTo": [
         "incinerator"
       ],
@@ -522,6 +799,9 @@
     {
       "id": "pump_deep",
       "name": "Captage profond et ultrafiltration",
+      "track": "water",
+      "trackLabel": "Production d'eau",
+      "level": 2,
       "appliesTo": [
         "water_pump",
         "water_plant",
@@ -541,6 +821,9 @@
     {
       "id": "sewage_bio",
       "name": "Bioréacteurs à membranes",
+      "track": "sewage",
+      "trackLabel": "Épuration",
+      "level": 2,
       "appliesTo": [
         "sewage_plant",
         "sewage_big"

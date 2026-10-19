@@ -96,6 +96,8 @@ export function drawCraneJib(g, geo, swing, hookDepth) {
 export function drawBuildingLights(g, def, b, alt, { burning = false } = {}) {
   const v = def.visual;
   if (b.abandoned || burning || ['park', 'panels', 'basins', 'none', 'tank', 'farm', 'derrick', 'quarry', 'sawmill'].includes(v.roof)) return;
+  // Centrales dessinées comme un site (bâtiments séparés) : pas de façade continue à éclairer
+  if (v.detail === 'reactor' || v.detail === 'fusion') return;
   const occupied = (b.residents ?? 0) > 0 || (b.jobsFilled ?? 0) > 0 || def.kind === 'plop';
   if (!occupied) return;
   const H = v.height;

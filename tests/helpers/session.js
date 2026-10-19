@@ -28,7 +28,8 @@ export function flatSession({ width = 30, height = 30, row = 15, unlockAll = tru
   if (unlockAll) {
     state.stats.peakPopulation = 1e6;
     state.progression.era = 3;
-    for (const t of catalog.technologies) state.tech.researched[t.id] = 0;
+    // Les technologies de services urbains (v1.4, +30 % de rendement) restent à déployer explicitement
+    for (const t of catalog.technologies) if (t.family !== 'services') state.tech.researched[t.id] = 0;
   }
   state.economy.treasury = 1e10;
   state.economy.opening = state.economy.treasury;

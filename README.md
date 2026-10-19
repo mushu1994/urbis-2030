@@ -6,6 +6,65 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
 
+## Nouveautés de la version 1.4 — retours de jeu
+
+### Emprunter sans chercher
+- Bouton **« Emprunter »** dans la barre du haut, à côté de la trésorerie (sur téléphone : en tête de la synthèse des
+  finances). Il ouvre l'onglet **Emprunts**, désormais juste après la synthèse.
+- Carte **« Financer un projet »** en tête de Finances → Synthèse : montant empruntable, note et taux du moment.
+- Un refus « Budget insuffisant » (construction, technologie) propose **Emprunter** dans sa notification ;
+  l'alerte « trésorerie négative » ouvre directement les emprunts.
+
+### Construire un équipement sur des maisons
+- Un parc, une école, une caserne… peut être posé sur des **bâtiments de zone** (maisons, immeubles, commerces,
+  bureaux, usines) : ils sont démolis automatiquement. L'aperçu indique le nombre de bâtiments et d'habitants
+  concernés et les frais de démolition (compris dans le coût) ; une confirmation est demandée. « Annuler » rétablit tout.
+- Un équipement public, une route ou une voie ferrée bloquent toujours la pose.
+
+### Énergie
+- **Lignes électriques retirées** : routes et bâtiments contigus conduisent déjà le courant. Dans une ancienne partie,
+  les pylônes qui ne relient pas deux réseaux distincts sont retirés au chargement (une notification en donne le
+  nombre) ; ceux qui font vraiment la jonction restent en service.
+- **Centrale nucléaire et réacteur à fusion en 8 × 8** (nivelés automatiquement) : production × 5 (20 000 et
+  45 000 unités), prix × 2 (2,88 M€ et 3,9 M€), deux fois plus d'emplois ; nouveau dessin (deux réacteurs, salle des
+  machines, quatre tours de refroidissement ; tore géant pour la fusion). Les centrales déjà construites restent en
+  service sous le nom « ancienne génération ».
+- **Deux nouveaux niveaux d'amélioration par centrale** (+40 % puis +43 %, soit × 2) : turbines à haut rendement et
+  hydrogène vert (gaz), panneaux bifaciaux et cellules pérovskite (solaire), pales allongées et rotor nouvelle
+  génération (éolien), turbines Kaplan et pompage-turbinage (barrage), montée en puissance et combustible avancé
+  (nucléaire), aimants supraconducteurs et confinement par IA (fusion).
+
+### Améliorations par niveaux
+- Les améliorations sont rangées en **filières** : Production d'électricité, Sécurité, Secours, Soins, Pédagogie,
+  Production d'eau, Épuration, Décharge, Incinération. Un niveau demande le précédent ; l'inspecteur affiche une jauge
+  (Nv 1, Nv 2…), les niveaux installés en résumé, le niveau suivant en détail et les niveaux à venir avec leur condition.
+
+### Technologies de milieu et de fin de partie (panneau IA → Services urbains)
+
+| Domaine | Ère 2 (ville autonome) | Ère 3 (ville symbiotique) | Effet de chaque niveau |
+| --- | --- | --- | --- |
+| Électricité | Réseau électrique intelligent (450 k€) | Supraconducteurs et stockage géant (1,2 M€) | production de toutes les centrales +30 % |
+| Eau | Réseau d'eau connecté (350 k€) | Réutilisation des eaux et biofiltration (900 k€) | production d'eau et épuration +30 % |
+| Déchets | Tri robotisé par vision (300 k€) | Recyclage moléculaire (850 k€) | collecte et traitement +30 % |
+| Éducation | Plateforme d'apprentissage adaptatif (400 k€) | Campus immersif (1 M€) | efficacité et capacité des établissements +30 % |
+
+Le second niveau demande le premier ; les effets se cumulent (× 1,69) et dépendent, comme les autres technologies, de
+la puissance de calcul disponible.
+
+### Bourg existant
+- Correction : sur environ une carte 64 × 64 sur dix, une rivière proche de l'autoroute bloquait l'axe principal et le
+  bourg restait vide, caisse dans le rouge. L'axe et les rues franchissent désormais une rivière de 12 cases au plus
+  par un pont, et le maire hérite d'au moins 60 000 € (dotation de l'État inscrite au journal si besoin).
+- Les bourgs et scénarios ne démolissent jamais de maisons pour poser leurs équipements.
+
+### Territoire et accès
+- **Extensions** : les 10 premières à prix fixe — 400 000 €, puis 200 000 € de plus à chaque achat (2,2 M€ pour la
+  dixième). Ensuite, environ une heure d'épargne, plancher 2,4 M€, +20 % par achat.
+- **Sorties d'autoroute sur les quatre côtés** (statut Grande ville, au lieu de Métropole) : le panneau Territoire et
+  accès liste nord, est, sud et ouest, avec le nombre de sorties et le coût du tracé le moins cher, proposé
+  automatiquement depuis la route reliée la plus proche du bord. L'autoroute de sortie peut désormais finir en pont
+  au-dessus de l'eau, au bord de la carte. Une nouvelle sortie s'écarte d'au moins 8 cases des autres du même côté.
+
 ## Nouveautés de la version 1.3 — électorat par groupes et scrutin à deux tours
 
 ### Huit groupes d'électeurs (Mairie → Opinion)
@@ -136,8 +195,8 @@ Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun 
 | Village | 500 | 2 | école, poste de police, éolienne, bus, avenue, zone bureaux, industrie forestière, parc, terrain de sport | 60 000 € |
 | Bourg | 2 000 | 3 | commissariat, caserne, lycée, centre de tri, batteries, gare et voie ferrée, logistique, extraction, marina ; lignes de bus tracées ; emprunts in fine et à amortissement constant | 150 000 € |
 | Ville | 5 000 | 4 (avec l'ère 2) | hôpital, centre de données, incinérateur, barrage, dessalement, tramway, grandes surfaces, musée ; fiscalité par quartier | 300 000 € |
-| Grande ville | 15 000 | 5 (avec l'ère 3) | boulevard, métro, université, usine d'eau potable, station d'épuration métropolitaine, zoo, port ; extensions de territoire, contrats à prix fixe | 700 000 € |
-| Métropole | 40 000 | 5 | centrale nucléaire, stade, aéroport, autoroute de seconde sortie | 1 500 000 € |
+| Grande ville | 15 000 | 5 (avec l'ère 3) | boulevard, métro, université, usine d'eau potable, station d'épuration métropolitaine, zoo, port, autoroute de sortie (v1.4) ; extensions de territoire, contrats à prix fixe | 700 000 € |
+| Métropole | 40 000 | 5 | centrale nucléaire, stade, aéroport | 1 500 000 € |
 | Capitale régionale | 80 000 | 5 | (grands événements, v1.2) | 3 000 000 € |
 
 - Un statut est acquis sur la **population maximale atteinte** : il n'est jamais perdu. Au passage, écran « Nouveau
@@ -910,11 +969,12 @@ y compris après sauvegarde et rechargement (testé).
 
 ### Sauvegardes
 
-IndexedDB, format versionné (`formatVersion` = 6) avec migrations explicites (`SaveMigration.js` : v1 → v2 ;
+IndexedDB, format versionné (`formatVersion` = 7) avec migrations explicites (`SaveMigration.js` : v1 → v2 ;
 v2 → v3 ajoute ponts, transports, déchets et progression ; v3 → v4 ajoute améliorations et échanges régionaux, tous
 désactivés, pour que l'équilibre d'une ancienne partie ne change pas ; v4 → v5 ajoute météo, crises, scénario et
 options de partie, catastrophes désactivées pour une ancienne partie ; v5 → v6 ajoute le statut de la ville et
-l'option d'équilibrage, « legacy » pour une ancienne partie).
+l'option d'équilibrage, « legacy » pour une ancienne partie ; v6 → v7 classe les centrales nucléaires et à fusion déjà
+construites en « ancienne génération » et retire au chargement les lignes électriques qui ne relient pas deux réseaux).
 Somme de contrôle, validation structurelle avant intégration, relecture après écriture. La sauvegarde automatique
 alterne entre deux emplacements : un état invalide ou une écriture ratée n'écrase jamais la dernière sauvegarde valide.
 Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est enregistré.
@@ -936,7 +996,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 384 tests Vitest (37 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 401 tests Vitest (38 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -965,7 +1025,11 @@ v1.3 : huit groupes d'électeurs (tailles, participation, moyenne égale à la p
 premier tour (listes écologiste et citoyenne), élection dès le premier tour, fusion et report de 80 %, alliance de
 l'adversaire, prime majoritaire et plus forte moyenne, second tour une semaine après, délégation du partenaire,
 vote du conseil sur une hausse d'impôt, présidence de la métropole.
-`npm run test:e2e` : 19 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+v1.4 : équipement posé sur des bâtiments de zone (démolition, frais, annulation), lignes électriques retirées des menus
+et des anciennes parties (chaînes utiles conservées), centrales 8 × 8 et anciennes générations, niveaux d'améliorations
+(prérequis, production doublée), technologies de services urbains (ère, prérequis, +30 %), prix des extensions, sorties
+d'autoroute sur les quatre côtés (pont jusqu'au bord, une par côté), bourg existant coupé par une rivière.
+`npm run test:e2e` : 20 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -979,7 +1043,9 @@ la souris dans une vue tournée, vue de dessus et sélection d'un bâtiment, bou
 difficulté et trésorerie de départ, statut affiché, écran « Nouveau statut » et dotation, progression, taux d'épargne,
 profils d'emprunt débloqués ; v1.1 : nomination d'un adjoint et priorités du mandat ;
 v1.2 : polémique née d'une hausse d'impôt et réponse, journal, fête de quartier organisée depuis l'inspecteur ;
-v1.3 : opinion par groupe, premier tour, fusion d'entre-deux-tours et résultat du second tour avec les sièges.
+v1.3 : opinion par groupe, premier tour, fusion d'entre-deux-tours et résultat du second tour avec les sièges ;
+v1.4 : bouton « Emprunter » et carte de la synthèse, niveau d'amélioration installé depuis l'inspecteur, parc posé à la
+souris sur des maisons (aperçu, confirmation), sortie d'autoroute ouverte depuis le panneau Territoire et accès.
 
 ## Performances mesurées
 

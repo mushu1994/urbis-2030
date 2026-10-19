@@ -90,7 +90,7 @@
     },
     {
       "id": "road_motorway",
-      "name": "Autoroute (seconde sortie)",
+      "name": "Autoroute de sortie",
       "category": "roads",
       "cost": 900,
       "upkeep": 15.0,
@@ -102,7 +102,7 @@
       "buildable": true,
       "exit": true,
       "unlock": {
-        "milestone": 5
+        "milestone": 4
       },
       "visual": {
         "color": "#3f434a",
@@ -110,7 +110,7 @@
         "marking": "#ffffff",
         "width": 0.92
       },
-      "description": "Fin de partie : une autoroute tracée jusqu'au bord de la carte ouvre un nouvel accès au réseau régional (habitants, navetteurs, fret) et soulage l'accès d'origine."
+      "description": "Tracée jusqu'au bord de la carte (pont possible au-dessus de l'eau), elle ouvre un nouvel accès au réseau régional (habitants, navetteurs, fret) et soulage l'accès d'origine. Une sortie par côté au moins : Territoire → Sorties d'autoroute les trace pour vous."
     }
   ],
   "zones": [
@@ -2201,7 +2201,8 @@
         "roofColor": "#6b6f75",
         "detail": "pylon"
       },
-      "description": "Relie deux réseaux électriques séparés. Inutile en ville : routes et bâtiments contigus conduisent déjà le courant."
+      "description": "Retirée du jeu en v1.4 : routes et bâtiments contigus conduisent le courant. Les pylônes qui relient deux réseaux distincts dans une ancienne partie restent en service.",
+      "hidden": true
     },
     {
       "id": "data_center",
@@ -3196,6 +3197,68 @@
       "category": "energy",
       "kind": "plop",
       "footprint": {
+        "w": 8,
+        "h": 8
+      },
+      "rotatable": false,
+      "cost": 2880000,
+      "upkeep": 6500,
+      "lifeYears": 50,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "autoLevel": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 400
+      },
+      "capacity": {
+        "jobs": 180,
+        "qualification": 0.72,
+        "powerOutput": 20000,
+        "powerSource": "nuclear"
+      },
+      "environment": {
+        "heat": 10,
+        "noise": 8,
+        "radius": 12
+      },
+      "unlock": {
+        "milestone": 5
+      },
+      "visual": {
+        "height": 48,
+        "color": "#dfe2e4",
+        "roof": "dome",
+        "roofColor": "#b9c2c8",
+        "detail": "reactor"
+      },
+      "description": "Production massive sans CO₂ ni fumée : 20 000 unités, de quoi alimenter une métropole. Emprise 8 × 8 (nivelée automatiquement). Un arrêt d'urgence reste possible : gardez une seconde source.",
+      "risk": {
+        "monthlyChance": 0.004,
+        "durationDays": 45,
+        "label": "Arrêt d'urgence du réacteur nucléaire : la ville s'inquiète",
+        "effects": [
+          {
+            "key": "satisfaction.all",
+            "op": "add",
+            "value": -6
+          }
+        ]
+      }
+    },
+    {
+      "id": "power_nuclear_legacy",
+      "name": "Centrale nucléaire (ancienne génération)",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
         "w": 4,
         "h": 4
       },
@@ -3237,7 +3300,7 @@
         "roofColor": "#b9c2c8",
         "detail": "reactor"
       },
-      "description": "Très forte production sans émission de CO₂ ni fumée. Un arrêt d'urgence reste possible : gardez une seconde source.",
+      "description": "Centrale construite avant la v1.4 (4 × 4). Elle reste en service ; les nouvelles centrales font 8 × 8 et produisent cinq fois plus.",
       "risk": {
         "monthlyChance": 0.004,
         "durationDays": 45,
@@ -3249,11 +3312,61 @@
             "value": -6
           }
         ]
-      }
+      },
+      "hidden": true
     },
     {
       "id": "power_fusion",
       "name": "Réacteur à fusion",
+      "category": "energy",
+      "kind": "plop",
+      "footprint": {
+        "w": 8,
+        "h": 8
+      },
+      "rotatable": false,
+      "cost": 3900000,
+      "upkeep": 9000,
+      "lifeYears": 60,
+      "placement": {
+        "terrain": [
+          "grass",
+          "sand",
+          "forest"
+        ],
+        "flat": true,
+        "requiresRoadAccess": true,
+        "autoLevel": true
+      },
+      "networks": {
+        "power": 0,
+        "water": 160
+      },
+      "capacity": {
+        "jobs": 120,
+        "qualification": 0.9,
+        "powerOutput": 45000,
+        "powerSource": "fusion"
+      },
+      "environment": {
+        "heat": 4,
+        "radius": 8
+      },
+      "unlock": {
+        "era": 3
+      },
+      "visual": {
+        "height": 44,
+        "color": "#e8eef6",
+        "roof": "flat",
+        "roofColor": "#8fdcf5",
+        "detail": "fusion"
+      },
+      "description": "L'énergie de l'ère symbiotique : 45 000 unités, propres et silencieuses. Emprise 8 × 8 (nivelée automatiquement), très coûteuse à construire."
+    },
+    {
+      "id": "power_fusion_legacy",
+      "name": "Réacteur à fusion (ancienne génération)",
       "category": "energy",
       "kind": "plop",
       "footprint": {
@@ -3297,7 +3410,8 @@
         "roofColor": "#8fdcf5",
         "detail": "fusion"
       },
-      "description": "L'énergie de l'ère symbiotique : production colossale, propre et silencieuse. Très coûteuse à construire."
+      "description": "Réacteur construit avant la v1.4 (3 × 3). Il reste en service ; les nouveaux réacteurs font 8 × 8 et produisent cinq fois plus.",
+      "hidden": true
     },
     {
       "id": "desalination",

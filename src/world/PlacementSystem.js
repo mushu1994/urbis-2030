@@ -40,15 +40,17 @@ export function footprintOf(def, rot = 0) {
  * @param {import('../data/Catalog.js').BuildingDef} def
  * Forêt et roche ne bloquent plus : elles sont défrichées ou dérochées (coût ajouté par le service de construction).
  * Un bâtiment « autoLevel » (port, pompe…) accepte un terrain inégal : il est nivelé à l'altitude la plus basse.
- * @returns {{ok:boolean, reasons:string[], tiles:number[], forestTiles:number[], rockTiles:number[], level:{target:number, units:number}|null, access:number, w:number, h:number}}
+ * @returns {{ok:boolean, reasons:string[], tiles:number[], forestTiles:number[], rockTiles:number[], level:{target:number, units:number}|null, access:number, w:number, h:number, replaced:number[]}}
  */
-export function checkBuildingPlacement(state, def, x, y, rot = 0) {
+export function checkBuildingPlacement(state, def, x, y, rot = 0, { replaceable = null } = {}) {
   const g = state.grid;
   const { w, h } = footprintOf(def, rot);
   const reasons = new Set();
   const tiles = [];
   const forestTiles = [];
   const rockTiles = [];
+  /** v1.4 : bâtiments de zone recouverts par l'emprise, démolis à la pose (si `replaceable` les accepte). */
+  const replaced = new Set();
   let alt = -1;
   let minAlt = Infinity;
   let maxAlt = -Infinity;
@@ -65,7 +67,10 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
       tiles.push(i);
       if (checkOwned && !isOwnedIndex(state, i)) reasons.add('notOwned');
       const terr = g.terrain[i];
-      if (g.building[i]) reasons.add('occupied');
+      if (g.building[i]) {
+        if (replaceable?.(g.building[i])) replaced.add(g.building[i]);
+        else reasons.add('occupied');
+      }
       if (g.road[i]) reasons.add('road');
       if (g.rail[i]) reasons.add('rail');
       if (terr === TERRAIN.WATER) reasons.add('water');
@@ -97,7 +102,7 @@ export function checkBuildingPlacement(state, def, x, y, rot = 0) {
   if (def.placement.unique) {
     for (const b of state.buildings.values()) if (b.defId === def.id) reasons.add('unique');
   }
-  return { ok: reasons.size === 0, reasons: [...reasons], tiles, forestTiles, rockTiles, level, access, w, h };
+  return { ok: reasons.size === 0, reasons: [...reasons], tiles, forestTiles, rockTiles, level, access, w, h, replaced: [...replaced] };
 }
 
 /** Surcoût de préparation du terrain d'une emprise (défrichement, dérochage, nivellement), en centimes. */
@@ -139,7 +144,7 @@ export const MAX_BRIDGE_LENGTH = 16;
  * @param {{x:number,y:number,i:number}[]} pts cases du tracé, dans l'ordre
  * @returns {{deck: Map<number, number>, reasons: Set<string>}}
  */
-export function planBridges(state, pts) {
+export function planBridges(state, pts, { openEnd = null } = {}) {
   const g = state.grid;
   const deck = new Map();
   const reasons = new Set();
@@ -156,8 +161,19 @@ export function planBridges(state, pts) {
     const after = pts[e + 1];
     const run = pts.slice(k, e + 1);
     k = e + 1;
-    if (!before || !after) {
+    // v1.4 : une autoroute de sortie peut finir en pont au bord de la carte (elle continue vers la région)
+    const open = !!openEnd && (!after ? openEnd(run.at(-1)) : !before ? openEnd(run[0]) : false);
+    if ((!before || !after) && !(open && (before || after))) {
       reasons.add('bridgeEnds');
+      continue;
+    }
+    if (open) {
+      const land = before ?? after;
+      const line = before ? [before, ...run] : [...run, after];
+      const straight = line.every((p) => p.x === land.x) || line.every((p) => p.y === land.y);
+      if (!straight) reasons.add('bridgeStraight');
+      else if (run.length > MAX_BRIDGE_LENGTH) reasons.add('bridgeLong');
+      else for (const p of run) deck.set(p.i, Math.max(1, g.altitude[land.i]));
       continue;
     }
     const line = [before, ...run, after];

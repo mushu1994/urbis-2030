@@ -15,7 +15,9 @@ function sandbox() {
   for (const t of s.catalog.technologies) st.tech.researched[t.id] = 0;
   st.economy.treasury = 1e12;
   const g = st.grid;
-  for (let y = 4; y < 60; y += 6) s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y }, to: { x: 60, y } });
+  // v1.4 : une bande plus large au sud pour les centrales 8 × 8
+  for (let y = 4; y < 44; y += 6) s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y }, to: { x: 60, y } });
+  s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y: 54 }, to: { x: 60, y: 54 } });
   return s;
 }
 
@@ -96,10 +98,10 @@ describe('Catalogue des équipements', () => {
     const s = newSession({ catalog });
     s.state.stats.peakPopulation = 1e6;
     s.state.economy.treasury = 1e12;
-    for (let y = 4; y < 60; y += 6) s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y }, to: { x: 60, y } });
+    for (let y = 4; y < 60; y += 12) s.execute({ type: 'road', roadId: 'road_street', from: { x: 3, y }, to: { x: 60, y } });
     const spot = findSpot(s, 'power_nuclear');
     const plant = s.execute({ type: 'building', defId: 'power_nuclear', x: spot.x, y: spot.y }).building;
-    plant.jobsFilled = 90;
+    plant.jobsFilled = 180;
     s.sim.utilities.update(s.state);
     expect(plant.output).toBeGreaterThan(1000);
     s.sim.events.monthly(s.state);
@@ -122,6 +124,6 @@ describe('Catalogue des équipements', () => {
     const data = structuredClone(defaultData.buildings);
     data.buildings.find((b) => b.id === 'res_low_1').growth.requires.push('teleportation');
     expect(() => new Catalog(data, defaultData.technologies, defaultData.policies)).toThrow(/teleportation/);
-    expect(getCatalog().buildings.size).toBe(117);
+    expect(getCatalog().buildings.size).toBe(119);
   });
 });
