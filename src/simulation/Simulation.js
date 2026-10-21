@@ -24,6 +24,7 @@ import { MilestoneSystem } from './Milestones.js';
 import { CouncilSystem } from './CouncilSystem.js';
 import { ControversySystem } from './ControversySystem.js';
 import { CivicEventSystem } from './CivicEventSystem.js';
+import { CrimeSystem } from './CrimeSystem.js';
 
 /**
  * Orchestrateur de la simulation (indépendant du rendu et de l'interface).
@@ -70,6 +71,8 @@ export class Simulation {
     // v1.2 : polémiques et journal local, événements populaires
     this.controversies = new ControversySystem({ economy: this.economy, catalog, bus });
     this.civic = new CivicEventSystem({ economy: this.economy, catalog, bus });
+    // v1.5 : cambriolages et braquages (tirages déterministes indépendants du générateur de la partie)
+    this.crime = new CrimeSystem({ catalog, bus });
     this.politics.controversies = this.controversies;
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
@@ -152,6 +155,7 @@ export class Simulation {
     this.milestones.daily(state);
     this.weather.daily(state);
     this.crises.daily(state);
+    if (!state.meta?.preparing) this.crime.daily(state);
     this.council.daily(state, this.crises);
     this.politics.daily(state);
 
@@ -166,6 +170,7 @@ export class Simulation {
     this.#time('resources', () => this.resources.monthly(state));
     this.council.monthly(state);
     this.civic.monthly(state);
+    this.crime.monthly(state);
     const period = this.economy.closeMonth(state);
     // Marché régional (v0.8) : nouveaux cours pour le mois qui commence
     this.market.monthly(state);

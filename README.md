@@ -1,10 +1,90 @@
 # URBIS 2030
 
-City builder isométrique pour navigateur de bureau. Le joueur, maire d'une ville de 2030, construit sur une grille,
+City builder en 3D (avec une vue isométrique 2D au choix) pour navigateur, sur ordinateur, tablette et téléphone.
+Le joueur, maire d'une ville de 2030, construit sur une grille,
 finance ses équipements, gère sa population et déploie des technologies autonomes (feux prédictifs, robots et drones
 de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs besoins en calcul et leurs effets secondaires.
 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
+
+## Nouveautés de la version 1.5 — la ville en 3D
+
+La partie s'affiche désormais en 3D (Three.js) : les 119 bâtiments ont leur modèle, la ville vit (circulation,
+piétons, fumées, secours) et se parcourt comme un jeu mobile. La vue isométrique 2D reste disponible (bouton **2D/3D**
+de la barre de navigation, ou Paramètres → Affichage) ; le choix est mémorisé. Si l'appareil ne permet pas la 3D
+(WebGL), le jeu reste en 2D.
+
+La 3D est un second moteur d'affichage branché sur la vraie partie : il lit l'état (un « miroir » de la carte, mis à
+jour par différences) et ne décide d'aucune règle. Tous les outils fonctionnent à l'identique : tracé des routes,
+zonage, pose d'un équipement (avec son modèle 3D en fantôme, vert ou rouge, et son rayon d'action), démolition,
+déplacement, couches de données, inspecteur, annulation.
+
+### Navigation
+
+| Geste ou touche | Action |
+| --- | --- |
+| Glisser (un doigt, ou clic gauche avec l'outil Sélection) | Déplacer la carte : le point saisi reste sous le doigt, avec un élan au lâcher |
+| Pincer à deux doigts, molette | Zoomer vers le point visé |
+| Tourner deux doigts | Faire tourner la vue librement |
+| Glisser deux doigts ensemble vers le haut ou le bas | Incliner la vue |
+| Double appui, double clic | Zoomer vers ce point |
+| Clic droit (ou Ctrl/Alt + glisser) | Tourner et incliner |
+| Virgule, point-virgule ; boussole ; V | Quart de tour ; retour au nord ; vue de dessus |
+
+Pas de gyroscope : la navigation est entièrement tactile (ou à la souris et au clavier).
+
+### Une ville vivante, à l'image de la simulation
+
+- **Circulation** : le nombre de véhicules et leur densité sur chaque tronçon suivent le trafic et la congestion de la
+  simulation — quelques voitures quand c'est fluide, des files serrées dans les bouchons. Aucune collision : files,
+  priorités et cédez-le-passage, passages piétons réservés. Les feux n'apparaissent qu'avec la technologie « Feux de
+  circulation prédictifs ». Bus et tramways roulent sur les vraies lignes (flotte en service calculée par la
+  simulation, à l'arrêt pendant une grève) ; bennes à ordures en tournée.
+- **Habitants** : piétons sur les trottoirs, voyageurs à la gare, joueurs au stade et dans les parcs, animaux et
+  tracteurs dans les fermes. La nuit, les parcs, écoles et commerces de jour se vident ; restent les boîtes de nuit,
+  les services d'urgence et les gares.
+- **Industrie** : cheminées qui fument, pompes de forage, carrière dont les pierres défilent, avions qui décollent à
+  tour de rôle, navires au port et péniches sur le fleuve, drones quand la livraison par drones est déployée.
+- **Nuit** : fenêtres allumées, lampadaires et halos au sol, phares des voitures — même cycle que la vue 2D (un jour
+  et une nuit par mois de jeu).
+- **Améliorations et technologies visibles** : chaque amélioration d'un équipement et chaque technologie déployée
+  change le modèle (panneaux, capteurs, hologrammes, robots…) ; une technologie en panne (cyberattaque) disparaît.
+- **Décharge** : un dôme arrondi qui grossit avec le volume réellement stocké.
+
+### Catastrophes mises en scène
+
+- **Incendie** : flammes et fumée noire sur chaque bâtiment en feu, propagation aux voisins (règles de la simulation),
+  camions de pompiers envoyés depuis les casernes les plus proches puis rentrés quand le feu est éteint (la fumée
+  s'arrête avec le feu).
+- **Inondation** : eau boueuse sur les cases inondées, fleuve brun, pluie, bateaux de secours ; les bâtiments touchés
+  restent **sinistrés un mois** après la décrue (quinze jours si les secours ont pompé) — c'est aussi une règle :
+  satisfaction −8 et occupation réduite pendant la remise en état (inspecteur : « Sinistré : remise en état… »).
+- **Manifestation et émeute** : cortège qui bloque la rue, voitures incendiées, gaz lacrymogènes et cordon de police.
+- **Démolition** : le bâtiment s'effondre dans la poussière. **Bâtiments à l'abandon** : ternis et éteints ; quand un
+  incendie de la simulation s'y déclare, ils flambent puis restent calcinés.
+- **Poubelles** : bacs qui débordent là où les déchets ne sont pas collectés, vidés au passage des bennes.
+
+### Délinquance : cambriolages et braquages (nouvel indicateur)
+
+Cambriolages (logements, bureaux) et braquages (commerces) sont décidés chaque jour par la simulation, de façon
+déterministe et sans toucher au générateur de la partie. Le risque baisse fortement avec la couverture police et monte
+avec le chômage ; les améliorations du commissariat (patrouilles, vidéoprotection, police prédictive) aident à
+interpeller les auteurs. C'est un indicateur, sans effet sur la croissance, la satisfaction ni les finances :
+l'équilibrage est inchangé (`npm run balance` donne exactement les mêmes chiffres qu'en v1.4). En 3D : alarme, fuite
+des malfaiteurs, voiture des braqueurs, police dépêchée et barrage. Bilan dans Tableau de bord → Risques et météo →
+Délinquance ; l'inspecteur du bâtiment touché le signale pendant un mois.
+
+### Son spatial
+
+En 3D, l'ambiance est placée dans la scène et mixée selon le zoom et la position de la caméra : de près, oiseaux près
+des forêts et des parcs, grillons la nuit, moteurs et klaxons dans les bouchons, usines, fleuve, musique des boîtes de
+nuit ; de loin, la rumeur de la ville et le vent. Les événements ont leur son : feu, sirènes, alarme et bris de verre,
+pluie et crue, foule d'une manifestation. Tout est synthétisé (aucun fichier) et suit les réglages de volume.
+
+### Réglages
+
+Paramètres → Affichage : vue 3D, ombres portées (désactivées par défaut sur écran tactile), qualité graphique. Les
+réglages existants (cycle jour/nuit, météo, animations, véhicules, quadrillage) s'appliquent aussi à la 3D.
 
 ## Nouveautés de la version 1.4 — retours de jeu
 
@@ -652,7 +732,9 @@ Toutes ces fonctions sont aussi accessibles à la souris.
 | Geste | Action |
 | --- | --- |
 | Pincer | Zoomer / dézoomer |
-| Tourner deux doigts | Faire pivoter la carte d'un quart de tour |
+| Tourner deux doigts | Vue 2D : faire pivoter la carte d'un quart de tour ; vue 3D : rotation libre |
+| Glisser deux doigts ensemble vers le haut ou le bas | Vue 3D : incliner la caméra |
+| Double appui | Vue 3D : zoomer vers ce point |
 | Glisser à deux doigts | Déplacer la carte, quel que soit l'outil (annule un tracé en cours) |
 | Glisser à un doigt | Outil Sélection : déplacer la carte ; route ou zone : tracer |
 | Toucher un emplacement, puis « Valider » | Poser ou déplacer un bâtiment (l'aperçu montre le coût ; toucher ailleurs le déplace) |
@@ -860,13 +942,17 @@ src/
 ├── world/        Grid (tableaux typés), Tile (vue d'une case), Terrain, WorldGenerator, PlacementSystem
 ├── simulation/   Simulation (orchestrateur), SimulationClock, PopulationSystem, BuildingSystem,
 │                 EconomySystem, TrafficSystem, UtilitySystem, EnvironmentSystem, AISystem, WasteSystem,
-│                 TransitSystem, ProgressionSystem, WeatherSystem, CrisisSystem, ScenarioSystem, Modifiers, config
+│                 TransitSystem, ProgressionSystem, WeatherSystem, CrisisSystem, CrimeSystem, ScenarioSystem,
+│                 Modifiers, config
 ├── systems/      ConstructionService, ZoningService, RoadNetwork, Pathfinding, RouteService (itinéraires en cache),
 │                 TransportService, EventSystem, ActionHistory, BuildingFactory
 ├── debug/        Invariants (contrôles de cohérence de l'état)
 ├── rendering/    Renderer (PixiJS), IsometricProjection, Camera, LayerManager, SelectionRenderer,
 │                 VehicleRenderer, EffectsRenderer (jour/nuit, météo, chantiers, fumées, crises), Overlays,
 │                 art/ (dessin procédural original)
+├── rendering3d/  vue 3D (v1.5, chargée à la demande) : Adapter3D (miroir de la carte, sans Three.js), Renderer3D
+│                 (caméra et gestes, pointage sur le relief, aperçus, couches, alertes, lignes), Engine3D (modèles des
+│                 119 bâtiments, vie de la ville, circulation, crises mises en scène), Sound3D (son spatial)
 ├── audio/        AudioEngine (effets, ambiance et musique synthétisés)
 ├── ui/           HUD, Toolbar, InspectorPanel, FinancePanel, TechPanel, CityPanel, OverlayManager,
 │                 Notifications, PanelHost, MenuPanels (accueil, sauvegardes, paramètres, aide),
@@ -884,7 +970,8 @@ Règles respectées :
 
 - **La simulation ne dépend pas du rendu.** `GameSession` et tout `simulation/`, `systems/`, `world/` s'exécutent sous
   Node sans navigateur (c'est ce que font les tests et le banc de mesure).
-- **Le rendu ne décide d'aucune règle** : il lit l'état et écoute le bus d'événements.
+- **Le rendu ne décide d'aucune règle** : il lit l'état et écoute le bus d'événements. Les deux moteurs (2D et 3D)
+  exposent les mêmes méthodes (pointage, aperçus, sélection, couches) ; outils et entrées parlent au moteur actif.
 - **L'interface ne modifie jamais le monde directement** : elle envoie des commandes à `GameSession.execute()`,
   qui passent par `ConstructionService`, `ZoningService`, `EconomySystem` ou `AISystem`. Chaque commande a une
   prévisualisation (`preview()`) qui renvoie coût, validité et raisons du refus.
@@ -996,7 +1083,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 401 tests Vitest (38 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 427 tests Vitest (39 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -1029,7 +1116,15 @@ v1.4 : équipement posé sur des bâtiments de zone (démolition, frais, annulat
 et des anciennes parties (chaînes utiles conservées), centrales 8 × 8 et anciennes générations, niveaux d'améliorations
 (prérequis, production doublée), technologies de services urbains (ère, prérequis, +30 %), prix des extensions, sorties
 d'autoroute sur les quatre côtés (pont jusqu'au bord, une par côté), bourg existant coupé par une rivière.
-`npm run test:e2e` : 20 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+v1.5 : catalogue 3D complet (119 bâtiments, routes, améliorations, technologies), miroir 3D fidèle à la partie (cases,
+emprises, occupation, façade côté route, rive), mise à jour par différences identique à une reconstruction complète au
+fil d'une partie, lecture seule (état et générateur inchangés), déterminisme avec ou sans vue 3D, états visibles
+(chantier, ruines, abandon, crue, remise en état), cycle jour/nuit identique à la 2D, technologie en panne ; les 119
+modèles dans les quatre orientations sans déborder de leur emprise (sauf pontons sur l'eau), chaque amélioration ;
+délinquance (risque et police, interpellations et améliorations, déterminisme sans consommer le générateur, aucun
+effet sur la croissance ni les finances, bilans, sauvegarde et ancienne partie, synchronisation du Web Worker) ; remise
+en état après une crue (selon la réponse), bâtiment abandonné incendié puis calciné.
+`npm run test:e2e` : 25 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,
@@ -1045,7 +1140,13 @@ profils d'emprunt débloqués ; v1.1 : nomination d'un adjoint et priorités du 
 v1.2 : polémique née d'une hausse d'impôt et réponse, journal, fête de quartier organisée depuis l'inspecteur ;
 v1.3 : opinion par groupe, premier tour, fusion d'entre-deux-tours et résultat du second tour avec les sièges ;
 v1.4 : bouton « Emprunter » et carte de la synthèse, niveau d'amélioration installé depuis l'inspecteur, parc posé à la
-souris sur des maisons (aperçu, confirmation), sortie d'autoroute ouverte depuis le panneau Territoire et accès.
+souris sur des maisons (aperçu, confirmation), sortie d'autoroute ouverte depuis le panneau Territoire et accès ;
+v1.5 (`tests/e2e/v15-3d.spec.js`) : vue 3D au démarrage, bascule 2D/3D (case centrale conservée), quarts de tour,
+boussole et vue de dessus, réglage mémorisé ; route tracée à la souris sur le relief, fantôme 3D et pose d'un
+équipement, sélection au clic et inspecteur, démolition et annulation suivies par la scène ; la vue ne modifie jamais
+la partie (caméra, couches, survol des outils) ; incendie et camion de pompiers, manifestation, incident de
+délinquance décidé par la simulation, crue ; téléphone : glisser, pincer, tourner, incliner, double appui. Les autres
+parcours restent en 2D (`view3d: false` dans `playwright.config.js`).
 
 ## Performances mesurées
 
@@ -1064,6 +1165,12 @@ et n'a pas pu être mesurée sur cette machine.
 Le budget de 16,7 ms par image (60 i/s) est respecté côté processeur sur 64 × 64. Sur 128 × 128, la vue d'ensemble
 s'en approche : les tronçons hors écran sont masqués et seuls les tronçons modifiés sont redessinés.
 
+Vue 3D (v1.5, même machine, bourg de départ sur une carte 128 × 128 : 287 bâtiments, 138 véhicules, 60 piétons) :
+construction complète de la scène 0,2 s ; rapprochement du miroir avec l'état 2,9 ms (au plus une fois tous les
+dixièmes de seconde, et seulement après un changement) ; préparation CPU d'une image 3,3 ms (vue normale) et 3,0 ms
+(carte entière, 1,5 million de triangles, 126 appels de dessin). Le module 3D (Three.js compris) pèse 203 Ko
+compressés et n'est chargé que si la vue 3D est utilisée.
+
 ## Limites connues et suites
 
 - Lignes de transport : boucles uniquement (pas de lignes en navette aller-retour ni d'horaires) ; le métro et le train
@@ -1072,7 +1179,9 @@ s'en approche : les tronçons hors écran sont masqués et seuls les tronçons m
 - Les e2e Playwright ne couvrent pas l'installation hors ligne : elle a été vérifiée sur le build de production
   (`vite preview`, rechargement sans réseau).
 - Ponts droits uniquement ; pas de tunnels ni de ponts au-dessus des routes.
-- Piétons : non implémentés.
+- Piétons : présents en 3D (décor animé, sans incidence sur la simulation) ; la vue 2D n'en montre pas.
+- Vue 3D : les ombres portées et l'anticrénelage sont réduits sur écran tactile pour préserver l'autonomie ; en rendu
+  logiciel (sans GPU), les animations ralentissent.
 - Graphismes 100 % procéduraux et originaux ; les dossiers `public/assets/*` accueilleront des sprites.
 - Les e2e Playwright sont lents sans GPU (rendu logiciel, environ 1,5 image par seconde : une vingtaine de minutes pour les 8 parcours) ; ils coupent le son et les effets décoratifs (`storageState` de `playwright.config.js`) et passent avec les délais configurés.
 - Une gare sans voie ferrée posée par le joueur garde un réseau ferré régional implicite.

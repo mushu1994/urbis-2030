@@ -34,7 +34,8 @@ export const GUIDE = [
           'Au doigt : un doigt avec l\'outil Sélection, deux doigts avec n\'importe quel outil, pincer pour zoomer.',
           'La boussole en bas à droite fait tourner la carte d\'un quart de tour (⟲ ⟳, touches virgule et point-virgule, ou torsion à deux doigts) pour voir derrière les immeubles ; un clic sur l\'aiguille revient au nord.',
           '« Vue de dessus » (touche V) montre la ville en plan, vue du ciel : pratique pour tracer un réseau régulier ou lire une couche de données.',
-          'X rend translucides les bâtiments devant le curseur ; L fait défiler les couches de données.'
+          'X rend translucides les bâtiments devant le curseur ; L fait défiler les couches de données.',
+          'Vue 3D (bouton 2D / 3D) : la caméra tourne librement — torsion et inclinaison à deux doigts, clic droit à la souris, double appui pour zoomer. Le son de la ville suit la caméra.'
         ]
       },
       {

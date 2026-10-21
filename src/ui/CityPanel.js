@@ -310,6 +310,7 @@ export class CityPanel {
           row('Dépenses de crise (mois en cours)', formatMoney(s.economy.current?.opex?.crisis ?? 0))
         )
       ),
+      this.#crime(s),
       h('section',
         h('h3', 'Risques du mois'),
         row('Fréquence des catastrophes', DISASTER_LEVEL_LABELS[level] ?? level),
@@ -331,6 +332,22 @@ export class CityPanel {
         )
       )
     ];
+  }
+
+  /** v1.5 : cambriolages et braquages du mois et de l'année écoulée. */
+  #crime(s) {
+    const cr = s.crime ?? { month: { burglaries: 0, robberies: 0, arrests: 0 }, history: [] };
+    const year = cr.history.reduce((a, m) => ({ b: a.b + m.burglaries, r: a.r + m.robberies, k: a.k + m.arrests }), { b: 0, r: 0, k: 0 });
+    const total = year.b + year.r;
+    const recent = (cr.incidents ?? []).slice(-5).reverse();
+    return h('section',
+      h('h3', 'Délinquance'),
+      row('Ce mois-ci', `${cr.month.burglaries} cambriolage(s), ${cr.month.robberies} braquage(s)`),
+      row('Sur les 12 derniers mois', `${year.b} cambriolage(s), ${year.r} braquage(s)`),
+      row('Auteurs interpellés', total ? pct(year.k / total) : '—'),
+      recent.length ? h('ul.plain', recent.map((f) => h('li', `${f.kind === 'robbery' ? '🚨 Braquage' : '🔓 Cambriolage'} — ${formatDate(f.tick)}${f.arrested ? ' · interpellés' : ' · en fuite'}`, h('button.link', { type: 'button', on: { click: () => this.onFocus(f.x, f.y) } }, ' Voir')))) : null,
+      h('p.hint', 'Les commissariats et postes de police, avec leurs améliorations (patrouilles, vidéoprotection, police prédictive), font baisser les cambriolages et braquages et aident à interpeller les auteurs. Le chômage les fait monter.')
+    );
   }
 
   #perf(session) {

@@ -14,6 +14,7 @@ import { defaultDistricts } from '../simulation/Districts.js';
 import { defaultMilestones } from '../simulation/Milestones.js';
 import { defaultControversies } from '../simulation/ControversySystem.js';
 import { defaultCivicEvents } from '../simulation/CivicEventSystem.js';
+import { defaultCrime } from '../simulation/CrimeSystem.js';
 
 /**
  * @typedef {Object} Building
@@ -125,6 +126,8 @@ export class GameState {
     /** Polémiques municipales, relations presse et journal local ; événements populaires (v1.2). */
     this.controversies = defaultControversies();
     this.civicEvents = defaultCivicEvents();
+    /** Délinquance : incidents récents et bilans mensuels (v1.5). */
+    this.crime = defaultCrime();
 
     /** Modificateurs effectifs (dérivés des technologies, politiques et événements ; recalculés). */
     this.modifiers = {};

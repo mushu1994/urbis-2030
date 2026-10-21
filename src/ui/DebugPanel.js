@@ -28,8 +28,10 @@ export class DebugPanel {
     const loop = this.getLoop();
     const mem = performance.memory;
     const routes = session.sim.routes;
-    const gfx = r.buildingGfx.size;
-    const objects = r.layers.objects.children.length;
+    // v1.5 : la vue 3D a ses propres compteurs (bâtiments de la scène, véhicules, triangles)
+    const d3 = r.is3d ? r.debugInfo() : null;
+    const gfx = d3 ? d3.picks : r.buildingGfx.size;
+    const objects = d3 ? r.stats.drawCalls : r.layers.objects.children.length;
     const timings = Object.entries(session.sim.timings);
     return [
       h('div.grid2',
@@ -38,8 +40,10 @@ export class DebugPanel {
           row('Images par seconde', formatNumber(r.stats.fps, 0)),
           row('Préparation d\'une image', `${r.stats.frameMs.toFixed(2)} ms`),
           row('Bâtiments simulés / dessinés', `${s.buildings.size} / ${gfx}`, gfx !== s.buildings.size ? 'neg' : 'pos'),
-          row('Objets dans le calque des bâtiments', formatNumber(objects)),
-          row('Véhicules animés', formatNumber(r.vehicles.cars.length)),
+          row(d3 ? 'Appels de dessin (3D)' : 'Objets dans le calque des bâtiments', formatNumber(objects)),
+          d3 ? row('Triangles affichés (3D)', formatNumber(r.stats.triangles)) : null,
+          row('Véhicules animés', formatNumber(d3 ? d3.vehicles : r.vehicles.cars.length)),
+          d3 ? row('Piétons, cyclistes et robots (3D)', formatNumber(d3.pedestrians)) : null,
           mem ? row('Mémoire JavaScript', `${formatNumber(mem.usedJSHeapSize / 1048576, 1)} Mo`) : row('Mémoire JavaScript', 'non mesurable dans ce navigateur')
         ),
         h('section',

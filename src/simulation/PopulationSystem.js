@@ -64,6 +64,8 @@ export class PopulationSystem {
     if (ev) f.events = ev;
     // Sinistre en cours (inondation, incendie) : habitants évacués ou relogés
     if (b.disasterUntil > state.time.tick) f.disaster = -30;
+    // v1.5 : remise en état après une crue (un mois)
+    else if (b.recoverUntil > state.time.tick) f.recovery = -8;
     let total = 0;
     for (const v of Object.values(f)) total += v;
     return { total: clamp(total, 0, 100), factors: f };
@@ -105,6 +107,7 @@ export class PopulationSystem {
         if (!net.isConnectedToOutside(b.access)) target *= 0.25;
         if (state.demand.R < -30) target *= 0.85;
         if (b.disasterUntil > state.time.tick) target *= 0.4;
+        else if (b.recoverUntil > state.time.tick) target *= 0.85;
       }
       const delta = Math.round(target) - b.residents;
       const step = Math.max(1, Math.ceil(cap * 0.12));

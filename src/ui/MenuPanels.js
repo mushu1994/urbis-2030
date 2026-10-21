@@ -10,7 +10,8 @@ const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle
 
 export const SHORTCUTS = [
   ['Flèches, ZQSD ou WASD', 'Déplacer la caméra'],
-  ['Clic droit ou molette enfoncée + glisser', 'Déplacer la caméra'],
+  ['Clic droit ou molette enfoncée + glisser', 'Déplacer la caméra (vue 3D : le clic droit fait tourner et incliner)'],
+  ['Double clic (vue 3D)', 'Zoomer vers ce point'],
   ['Molette', 'Zoomer / dézoomer'],
   ['Clic gauche', 'Sélectionner, construire ; glisser pour tracer routes et zones'],
   ['Maj (en traçant une route)', 'Tracer d\'abord à la verticale'],
@@ -46,7 +47,10 @@ export const TOUCH = [
   ['Toucher un bâtiment', 'L\'inspecter (outil Sélection)'],
   ['Toucher un emplacement, puis « Valider »', 'Poser ou déplacer un bâtiment : l\'aperçu montre le coût, toucher ailleurs le déplace'],
   ['Bandeau de l\'outil', 'Valider, annuler, pivoter le bâtiment ou revenir à la sélection'],
-  ['Tourner deux doigts', 'Faire pivoter la carte d\'un quart de tour (ou boutons ⟲ ⟳ de la boussole)'],
+  ['Tourner deux doigts', 'Vue 3D : rotation libre ; vue 2D : un quart de tour (ou boutons ⟲ ⟳ de la boussole)'],
+  ['Glisser deux doigts vers le haut ou le bas', 'Vue 3D : incliner la caméra'],
+  ['Double appui', 'Vue 3D : zoomer vers ce point'],
+  ['Bouton 2D / 3D', 'Basculer entre la vue 3D et la vue isométrique'],
   ['Bouton « Vue de dessus »', 'Basculer entre la vue isométrique et le plan vu du ciel'],
   ['Toucher les jauges R C B I', 'Détail des besoins de la ville'],
   ['Bouton plein écran (en haut à droite)', 'Plein écran, ou interface réduite sur iPhone']
@@ -209,6 +213,8 @@ export class SettingsPanel {
       toggle('weatherFx', 'Météo visible (pluie, neige, brouillard, éclairs)', true),
       toggle('effects', 'Chantiers animés, fumées et incendies', true),
       h('h3', 'Affichage'),
+      toggle('view3d', 'Vue 3D : modèles en relief, navigation libre (un doigt pour déplacer, deux pour zoomer, tourner et incliner)', true),
+      toggle('shadows3d', 'Ombres portées en 3D (plus gourmand)', !(typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches)),
       select('uiScale', 'Taille de l\'interface', [[0.9, '90 %'], [1, '100 %'], [1.15, '115 %'], [1.3, '130 %']]),
       select('renderScale', 'Qualité graphique (résolution)', [['auto', 'Automatique'], [1, 'Haute'], [0.75, 'Moyenne'], [0.5, 'Économie']]),
       toggle('showVehicles', 'Afficher les véhicules et les drones'),

@@ -57,7 +57,10 @@ export class GameApp {
     this.clock = new SimulationClock();
     this.settings = new SettingsService();
     this.saves = new SaveService();
-    this.renderer = new Renderer({ catalog });
+    /** Vue isométrique 2D (PixiJS) et vue 3D (Three.js, chargée à la demande) : une seule est active. */
+    this.renderer2d = new Renderer({ catalog });
+    this.renderer3d = null;
+    this.use3d = false;
     this.lastAutosave = performance.now();
     this.uiTimers = { hud: 0, inspector: 0, panel: 0, preview: 0, audio: 0 };
     /** Hôte de la simulation (fil principal ou Web Worker). */
@@ -70,8 +73,22 @@ export class GameApp {
     return this.root.querySelector(sel);
   }
 
+  /** Moteur d'affichage actif (2D ou 3D). */
+  get renderer() {
+    return this.use3d && this.renderer3d ? this.renderer3d : this.renderer2d;
+  }
+
   async init() {
-    await this.renderer.init(this.$('#viewport'));
+    await this.renderer2d.init(this.$('#viewport'));
+    // Les outils et les entrées parlent au moteur actif, quel qu'il soit (bascule 2D/3D à chaud)
+    const app = this;
+    this.view = new Proxy({}, {
+      get(_, k) {
+        const r = app.renderer;
+        const v = r[k];
+        return typeof v === 'function' ? v.bind(r) : v;
+      }
+    });
     this.notifications = new Notifications(this.$('#toasts'), { onLocate: (x, y) => this.focus(x, y), onPanel: (id, tab) => this.openPanel(id, tab) });
     this.hud = new HUD(this.$('#hud'), {
       onSpeed: (i) => this.setSpeed(i),
@@ -87,17 +104,21 @@ export class GameApp {
     });
     // Navigation (v0.9) : faire tourner la carte d'un quart de tour, boussole, vue de dessus
     const needle = h('span.nav-needle', { 'aria-hidden': 'true' }, h('i'), h('b', 'N'));
-    const compass = h('button.nav-btn.nav-compass', { type: 'button', 'aria-label': 'Boussole : revenir à l\'orientation d\'origine', on: { click: () => this.rotateView(-this.renderer.viewMode.rot) } }, needle);
+    const compass = h('button.nav-btn.nav-compass', { type: 'button', 'aria-label': 'Boussole : revenir à l\'orientation d\'origine', on: { click: () => this.resetNorth() } }, needle);
     const view = h('button.nav-btn.nav-view', { type: 'button', 'aria-pressed': 'false', on: { click: () => this.toggleTopView() } });
+    // v1.5 : bascule entre la vue 3D et la vue isométrique 2D
+    const dim = h('button.nav-btn.nav-3d', { type: 'button', 'aria-pressed': 'false', on: { click: () => this.setView3d(!this.use3d) } });
     this.nav = {
       needle,
       compass,
       view,
+      dim,
       root: h('div#nav-widget', { role: 'group', 'aria-label': 'Navigation de la carte' },
         h('button.nav-btn', { type: 'button', title: 'Tourner la carte vers la gauche (,)', 'aria-label': 'Tourner la carte vers la gauche', on: { click: () => this.rotateView(-1) } }, icon('rotl', 18)),
         compass,
         h('button.nav-btn', { type: 'button', title: 'Tourner la carte vers la droite (;)', 'aria-label': 'Tourner la carte vers la droite', on: { click: () => this.rotateView(1) } }, icon('rotr', 18)),
-        view)
+        view,
+        dim)
     };
     this.$('#stage').append(this.nav.root);
     this.toolbar = new Toolbar(this.$('#toolbar'), {
@@ -203,7 +224,7 @@ export class GameApp {
     const tooltip = this.$('#cursor-tip');
     this.tools = new ToolController({
       getSession: () => this.session,
-      renderer: this.renderer,
+      renderer: this.view,
       tooltip,
       onSelect: (t) => this.select(t),
       notify,
@@ -216,8 +237,8 @@ export class GameApp {
       confirmPlacement: () => !!this.settings.get('confirmPlacement')
     });
     this.input = new InputController({
-      canvas: this.renderer.canvas,
-      renderer: this.renderer,
+      canvas: this.$('#viewport'),
+      renderer: this.view,
       tools: this.tools,
       settings: this.settings,
       isBlocked: () => !this.session || this.menu.visible || !!document.querySelector('.dialog-backdrop'),
@@ -226,7 +247,7 @@ export class GameApp {
     });
 
     // Toucher la carte referme les menus ouverts (utile au doigt, où il n'y a pas de survol).
-    this.renderer.canvas.addEventListener('pointerdown', () => {
+    this.$('#viewport').addEventListener('pointerdown', () => {
       if (this.toolbar.openCat) this.toolbar.closeFlyout();
       if (this.overlays.expanded) this.overlays.toggleExpanded(false);
     });
@@ -252,8 +273,11 @@ export class GameApp {
     document.addEventListener('click', (e) => {
       if (e.target instanceof Element && e.target.closest('button, .btn, [role="tab"], select')) this.audio.play('click');
     }, { capture: true });
-    this.renderer.effects.onThunder = () => this.audio.play('thunder');
-    this.renderer.airsea.onSound = (name) => this.audio.play(name);
+    this.renderer2d.effects.onThunder = () => this.audio.play('thunder');
+    this.renderer2d.airsea.onSound = (name) => this.audio.play(name);
+    // v1.5 : vue 3D par défaut (si l'appareil la permet) ; la vue 2D reste disponible
+    if (this.settings.get('view3d') !== false) await this.setView3d(true, { persist: false, quiet: true });
+    else this.#showCanvas();
     await this.showMenu();
   }
 
@@ -368,17 +392,24 @@ export class GameApp {
 
   applySettings() {
     const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.renderer.setEffects({
-      dayNight: this.settings.get('dayNight') !== false,
-      weather: this.settings.get('weatherFx') !== false,
-      effects: this.settings.get('effects') !== false,
-      reducedMotion: reduced
-    });
+    for (const r of [this.renderer2d, this.renderer3d]) {
+      if (!r) continue;
+      r.setEffects({
+        dayNight: this.settings.get('dayNight') !== false,
+        weather: this.settings.get('weatherFx') !== false,
+        effects: this.settings.get('effects') !== false,
+        reducedMotion: reduced
+      });
+      r.setVehicles(this.settings.get('showVehicles'));
+      r.setGridLines(this.settings.get('showGridLines'));
+      r.setRenderScale(this.settings.get('renderScale'));
+    }
+    this.renderer3d?.setShadows?.(this.settings.get('shadows3d'));
     this.audio.applyVolumes();
     this.hud?.setMuted(!!this.settings.get('muted'));
-    this.renderer.setVehicles(this.settings.get('showVehicles'));
-    this.renderer.setGridLines(this.settings.get('showGridLines'));
-    this.renderer.setRenderScale(this.settings.get('renderScale'));
+    // Bascule 2D/3D demandée depuis les paramètres
+    const want3d = this.settings.get('view3d') !== false;
+    if (this.nav && want3d !== this.use3d && !this.switching && !(want3d && this.renderer3dFailed)) this.setView3d(want3d, { persist: false });
     document.documentElement.style.setProperty('--ui-scale', String(this.settings.get('uiScale') || 1));
     this.$('#fps-meter').hidden = !this.settings.get('showFps');
   }
@@ -494,6 +525,9 @@ export class GameApp {
     this.host = await this.#createHost(session);
     // Orientation et vue de dessus mémorisées (v0.9)
     setView({ rot: Number(this.settings.get('viewRot')) || 0, top: !!this.settings.get('viewTop') });
+    // Seul le moteur affiché est associé à la partie ; l'autre le sera au moment de la bascule
+    for (const r of [this.renderer2d, this.renderer3d]) if (r && r !== this.renderer) r.detach();
+    if (this.renderer.is3d) this.renderer.setViewMode({ rot: Number(this.settings.get('viewRot')) || 0, top: !!this.settings.get('viewTop') });
     this.renderer.attach(session);
     this.#updateNav();
     this.select(null);
@@ -608,6 +642,82 @@ export class GameApp {
     this.notifications.push({ level: 'warning', message: `Circulation saturée (${Math.round(c * 100)} % de charge moyenne) : le conseiller circulation propose des solutions (touche P).`, panel: 'traffic' });
   }
 
+  /** Boussole : retour au nord d'origine (en 3D, annule aussi une rotation libre). */
+  resetNorth() {
+    if (this.renderer.is3d) {
+      this.renderer.setViewMode({ rot: 0, exact: true });
+      this.settings.set('viewRot', 0);
+      return;
+    }
+    this.rotateView(-this.renderer.viewMode.rot);
+  }
+
+  /**
+   * v1.5 : affiche la vue 3D (Three.js, chargée à la première demande) ou la vue isométrique 2D. La case au centre
+   * de l'écran, la sélection, la couche d'information et l'outil en cours sont conservés.
+   */
+  async setView3d(on, { persist = true, quiet = false } = {}) {
+    if (this.switching) return;
+    this.switching = true;
+    try {
+      if (on && !this.renderer3d) {
+        try {
+          this.#busy('Préparation de la vue 3D…');
+          const { Renderer3D } = await import('../rendering3d/Renderer3D.js');
+          const r = new Renderer3D({ catalog: this.catalog, audio: this.audio });
+          await r.init(this.$('#viewport'));
+          this.renderer3d = r;
+          this.applySettings();
+        } catch (err) {
+          console.warn('Vue 3D indisponible :', err);
+          this.renderer3dFailed = true;
+          on = false;
+          if (!quiet) this.notifications?.push({ level: 'warning', message: 'La vue 3D n\'est pas disponible sur cet appareil (WebGL) : la vue 2D reste active.' });
+        } finally {
+          this.#busy(null);
+        }
+      }
+      const prev = this.renderer;
+      const v = prev.view;
+      const center = this.session ? prev.tileAtScreen(v.width / 2, v.height / 2) : null;
+      this.use3d = !!on && !!this.renderer3d;
+      if (persist) this.settings.set('view3d', this.use3d);
+      const r = this.renderer;
+      if (prev !== r) {
+        prev.setPreview(null);
+        prev.setHover(null);
+      }
+      this.#showCanvas();
+      if (this.session && r.session !== this.session) {
+        if (!r.is3d) setView({ rot: Number(this.settings.get('viewRot')) || 0, top: !!this.settings.get('viewTop') });
+        else r.setViewMode({ rot: Number(this.settings.get('viewRot')) || 0, top: !!this.settings.get('viewTop') });
+        r.attach(this.session);
+      }
+      if (this.session) {
+        r.setOverlay(this.overlays?.current ?? null);
+        r.setXray(!!this.xray);
+        r.setSelected(this.inspector?.target?.buildingId ?? 0);
+        if (center && prev !== r) {
+          if (r.is3d) r.lookAt(center.x, center.y);
+          else r.focus(center.x, center.y);
+        }
+        this.tools?.tickRefresh?.();
+      }
+      this.#updateNav();
+      if (!quiet && prev !== r) this.notifications?.push({ level: 'info', message: this.use3d ? 'Vue 3D : un doigt pour déplacer, deux pour zoomer, tourner et incliner (clic droit à la souris).' : 'Vue isométrique 2D', key: 'view3d' });
+    } finally {
+      this.switching = false;
+    }
+  }
+
+  /** Affiche le canevas du moteur actif, masque l'autre. */
+  #showCanvas() {
+    const c2 = this.renderer2d.canvas;
+    if (c2) c2.style.display = this.use3d ? 'none' : 'block';
+    this.renderer3d?.setActive(this.use3d);
+    this.root.classList.toggle('view-3d', this.use3d);
+  }
+
   /** Fait tourner la carte d'un quart de tour (+1 : sens des aiguilles d'une montre). */
   rotateView(dir = 1) {
     if (!this.session) return;
@@ -631,14 +741,29 @@ export class GameApp {
     if (!nav) return;
     const v = this.renderer.viewMode;
     // Direction du nord (vers les y décroissants de la grille) à l'écran
-    const a = gridToWorld(10, 10);
-    const b = gridToWorld(10, 9);
-    const deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + 90;
+    let deg;
+    if (this.renderer.is3d) deg = this.renderer.northAngle();
+    else {
+      const a = gridToWorld(10, 10);
+      const b = gridToWorld(10, 9);
+      deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + 90;
+    }
+    const key = `${Math.round(deg)}:${v.rot}:${v.top}:${this.use3d}`;
+    if (key === nav.key) return;
+    nav.key = key;
     nav.needle.style.transform = `rotate(${deg}deg)`;
     nav.compass.title = `Nord de la carte · orientation ${v.rot * 90}° (clic : orientation d'origine)`;
-    setChildren(nav.view, icon(v.top ? 'isoview' : 'topview', 18), h('span', v.top ? 'Vue 3D' : 'Vue de dessus'));
+    const persp = this.use3d ? 'Vue inclinée' : 'Vue isométrique';
+    setChildren(nav.view, icon(v.top ? 'isoview' : 'topview', 18), h('span', v.top ? persp : 'Vue de dessus'));
     nav.view.setAttribute('aria-pressed', String(v.top));
-    nav.view.title = v.top ? 'Revenir à la vue isométrique (V)' : 'Vue de dessus : la ville en plan (V)';
+    nav.view.title = v.top ? (this.use3d ? 'Revenir à la vue inclinée (V)' : 'Revenir à la vue isométrique (V)') : 'Vue de dessus : la ville en plan (V)';
+    if (nav.dim) {
+      setChildren(nav.dim, h('b', this.use3d ? '2D' : '3D'));
+      nav.dim.setAttribute('aria-pressed', String(this.use3d));
+      nav.dim.title = this.use3d ? 'Passer à la vue isométrique 2D' : 'Passer à la vue 3D (modèles 3D, navigation libre)';
+      nav.dim.setAttribute('aria-label', nav.dim.title);
+      nav.dim.hidden = !!this.renderer3dFailed && !this.use3d;
+    }
   }
 
   /** Guide du maire : « Montre-moi » ouvre l'outil, le panneau, la couche ou le menu concernés. */
@@ -779,6 +904,7 @@ export class GameApp {
 
   focus(x, y) {
     this.renderer.focus(x, y);
+    if (this.renderer.is3d) return;
     // La carte des crises occupe le haut de l'écran : la cible est montrée un peu plus bas
     const crisis = this.$('#crisis');
     if (crisis && !crisis.hidden && window.innerWidth > 760) {
@@ -873,6 +999,11 @@ export class GameApp {
     this.renderer.setShowRoutes(this.tools.tool.kind === 'line' || this.panelHost.openId === 'lines', this.panels.lines.highlight);
     this.renderer.render(dt, { paused: this.clock.paused, speedIndex: this.clock.speedIndex });
     const now = performance.now();
+    // Boussole : la caméra 3D tourne librement (gestes), l'aiguille suit
+    if (this.use3d && now - (this.uiTimers.nav ?? 0) > 120) {
+      this.uiTimers.nav = now;
+      this.#updateNav();
+    }
     if (now - this.uiTimers.audio > 300) {
       this.uiTimers.audio = now;
       this.#updateAudio();
@@ -959,7 +1090,9 @@ export class GameApp {
       night: this.renderer.effects?.night ?? 0,
       season: month === 11 || month <= 1 ? 'winter' : month <= 4 ? 'spring' : month <= 7 ? 'summer' : 'autumn',
       paused: this.clock.paused,
-      inMenu: this.menu.visible
+      inMenu: this.menu.visible,
+      // v1.5 : en 3D, l'ambiance est spatialisée par la vue (sources placées dans la scène)
+      spatial: this.use3d
     });
     this.audio.setMusic({ era: s.progression?.era ?? 1, crisis: (s.crises?.active ?? []).some((x) => x.kind !== 'strike') });
   }

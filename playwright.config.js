@@ -17,7 +17,7 @@ export default defineConfig({
       origins: [
         {
           origin: 'http://localhost:5173',
-          localStorage: [{ name: 'urbis2030.settings', value: JSON.stringify({ muted: true, dayNight: false, weatherFx: false, effects: false }) }]
+          localStorage: [{ name: 'urbis2030.settings', value: JSON.stringify({ muted: true, dayNight: false, weatherFx: false, effects: false, view3d: false }) }]
         }
       ]
     }

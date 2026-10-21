@@ -1544,6 +1544,31 @@ details.factors summary {
   transform: translateX(-50%);
 }
 
+/* v1.5 : bascule 2D / 3D */
+.nav-3d {
+  min-width: 40px;
+  border: 1px solid var(--line);
+}
+
+.nav-3d b {
+  font: 800 13px var(--font);
+  letter-spacing: 0.02em;
+}
+
+.nav-3d[aria-pressed='true'] {
+  border-color: var(--sign);
+}
+
+/* En 3D, l'aiguille suit la caméra en continu : pas de transition qui la ferait traîner */
+.view-3d .nav-needle {
+  transition: none;
+}
+
+#viewport canvas.view3d {
+  position: absolute;
+  inset: 0;
+}
+
 /* Sur ordinateur, les notifications passent au-dessus de la boussole */
 @media (min-width: 761px) and (min-height: 501px) {
   #toasts {

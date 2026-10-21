@@ -5,6 +5,11 @@
  * Tactile :
  *  - un doigt : action de l'outil actif (avec l'outil Sélection, glisser déplace la carte) ;
  *  - deux doigts : pincer pour zoomer, glisser pour déplacer la carte (annule le tracé en cours).
+ *
+ * Vue 3D (v1.5) : la caméra fournit des gestes dédiés, utilisés quand ils existent —
+ *  - glisser ancré (le point saisi reste sous le doigt) avec inertie au lâcher ;
+ *  - deux doigts : pincer, tourner librement (torsion) et déplacer ; glisser les deux doigts verticalement incline la vue ;
+ *  - double appui : zoom vers le point touché ; souris : clic droit (ou Ctrl/Alt + glisser) pour tourner et incliner.
  */
 export class InputController {
   /**
@@ -73,8 +78,13 @@ export class InputController {
       return;
     }
     if (this.suppress) return;
-    const pan = e.button === 1 || e.button === 2;
-    this.drag = { id: e.pointerId, type: e.pointerType, button: e.button, start: p, last: p, moved: false, pan };
+    const cam = this.renderer.camera;
+    const three = typeof cam.dragStart === 'function';
+    // 3D : clic droit (ou Ctrl/Alt + clic) fait tourner et incliner la vue ; clic milieu la déplace
+    const orbit = three && e.pointerType === 'mouse' && (e.button === 2 || (e.button === 0 && (e.ctrlKey || e.altKey) && this.tools.tool.kind === 'select'));
+    const pan = e.button === 1 || (e.button === 2 && !orbit) || orbit;
+    this.drag = { id: e.pointerId, type: e.pointerType, button: e.button, start: p, last: p, moved: false, pan, orbit, three };
+    if (three) cam.stop?.();
     if (!pan && e.button === 0) {
       const tile = this.renderer.tileAtScreen(p.x, p.y);
       if (e.pointerType !== 'mouse') this.tools.hover(tile, { shift: false });
@@ -86,6 +96,12 @@ export class InputController {
   #gesture() {
     const [a, b] = [...this.pointers.values()];
     if (!a || !b) return;
+    const cam3 = this.renderer.camera;
+    if (typeof cam3.gesture === 'function') {
+      cam3.gesture([a, b], !this.gesture);
+      this.gesture = { three: true };
+      return;
+    }
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
     const angle = Math.atan2(b.y - a.y, b.x - a.x);
@@ -132,8 +148,18 @@ export class InputController {
       const threshold = d.type === 'mouse' ? 4 : 10;
       if (Math.hypot(p.x - d.start.x, p.y - d.start.y) > threshold) d.moved = true;
       // Glisser avec l'outil de sélection, le clic droit ou la molette : déplace la caméra
-      if (d.pan || (this.tools.tool.kind === 'select' && d.moved)) {
-        this.renderer.camera.pan(dx, dy);
+      if (d.orbit) {
+        this.renderer.camera.orbit(dx, dy);
+        this.canvas.style.cursor = 'grabbing';
+      } else if (d.pan || (this.tools.tool.kind === 'select' && d.moved)) {
+        const cam = this.renderer.camera;
+        if (d.three) {
+          if (!d.anchored) {
+            cam.dragStart(d.last.x, d.last.y);
+            d.anchored = true;
+          }
+          cam.dragTo(p.x, p.y);
+        } else cam.pan(dx, dy);
         this.canvas.style.cursor = 'grabbing';
       }
       d.last = p;
@@ -146,7 +172,10 @@ export class InputController {
   #up(e, cancelled) {
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.delete(e.pointerId);
-    if (this.pointers.size < 2) this.gesture = null;
+    if (this.pointers.size < 2 && this.gesture) {
+      if (this.gesture.three) this.renderer.camera.gestureEnd?.();
+      this.gesture = null;
+    }
     if (this.suppress) {
       if (this.pointers.size === 0) this.suppress = false;
       return;
@@ -155,6 +184,7 @@ export class InputController {
     if (!d || d.id !== e.pointerId) return;
     this.drag = null;
     this.canvas.style.cursor = '';
+    if (d.anchored) this.renderer.camera.dragEnd?.();
     if (cancelled) {
       this.tools.cancel();
       return;
@@ -162,6 +192,17 @@ export class InputController {
     if (d.pan || d.button !== 0) return;
     const p = this.#local(e);
     const touch = d.type !== 'mouse';
+    // 3D : double appui (ou double clic) avec l'outil Sélection = zoom vers ce point
+    if (!d.moved && this.tools.tool.kind === 'select' && typeof this.renderer.camera.doubleTap === 'function') {
+      const now = performance.now();
+      const lt = this.lastTap;
+      if (lt && now - lt.t < 320 && Math.hypot(p.x - lt.x, p.y - lt.y) < 30) {
+        this.lastTap = null;
+        this.renderer.camera.doubleTap(p.x, p.y);
+        return;
+      }
+      this.lastTap = { t: now, x: p.x, y: p.y };
+    }
     this.tools.up(this.renderer.tileAtScreen(p.x, p.y), { moved: d.moved, screen: p, touch });
     // Au doigt, il n'y a pas de survol : on efface l'aperçu sauf s'il attend une confirmation.
     if (touch && !this.tools.pending) this.tools.hover(null, { shift: false });

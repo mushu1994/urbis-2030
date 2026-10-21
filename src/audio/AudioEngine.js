@@ -30,7 +30,7 @@ export class AudioEngine {
     this.lastPlay = {};
     this.music = { era: 1, crisis: false, step: 0, nextTime: 0, timer: null, chord: 0 };
     this.ambience = null;
-    this.env = { density: 0, traffic: 0, zoom: 1, weather: 'clear', intensity: 0, night: 0, season: 'summer', paused: false, inMenu: true, green: 0 };
+    this.env = { density: 0, traffic: 0, zoom: 1, weather: 'clear', intensity: 0, night: 0, season: 'summer', paused: false, inMenu: true, green: 0, spatial: false };
   }
 
   get supported() {
@@ -366,7 +366,8 @@ export class AudioEngine {
     const t = ctx.currentTime;
     const a = this.ambience;
     const near = Math.max(0, Math.min(1, (e.zoom - 0.45) / 1.2));
-    const active = e.inMenu ? 0 : 1;
+    // v1.5 : en vue 3D, l'ambiance est spatialisée par la scène (Sound3D) ; celle-ci se tait
+    const active = e.inMenu || e.spatial ? 0 : 1;
     const level = active * (e.paused ? 0.45 : 1);
     a.hum.set(level * (e.density > 0.02 ? 0.05 + 0.22 * e.density : 0) * (0.6 + 0.4 * (1 - near)), t, 0.6);
     a.traffic.set(level * e.traffic * (0.06 + 0.2 * near), t, 0.5);

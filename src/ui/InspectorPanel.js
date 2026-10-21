@@ -43,7 +43,8 @@ const FACTOR_LABELS = {
   sanitation: 'Assainissement',
   delivery: 'Livraisons',
   policies: 'Politiques, IA, météo et crises',
-  disaster: 'Sinistre en cours'
+  disaster: 'Sinistre en cours',
+  recovery: 'Remise en état après la crue'
 };
 
 const row = (label, value, cls = '') => h('div.kv', h('span', label), h('strong', { class: cls }, value));
@@ -123,6 +124,8 @@ export class InspectorPanel {
         ? ['En construction', 'warn']
       : halted
         ? [`À l'arrêt jusqu'au ${formatDate(b.disabledUntil)}`, 'neg']
+        : b.recoverUntil > state.time.tick
+          ? [`Sinistré : remise en état après la crue jusqu'au ${formatDate(b.recoverUntil)}`, 'warn']
         : !b.powered
           ? ['Sans électricité', 'neg']
           : !b.watered
@@ -132,6 +135,9 @@ export class InspectorPanel {
       h('header.insp-head', h('h2', def.name), h('p', `${CATEGORY_LABELS[def.category] ?? def.category}${def.level ? ` · niveau ${def.level}` : ''} · ${b.w}×${b.h}`)),
       h('div.insp-status', { class: status[1] }, status[0])
     );
+    // v1.5 : cambriolage ou braquage récent (CrimeSystem)
+    const crime = b.crimeUntil > state.time.tick ? (state.crime?.incidents ?? []).filter((f) => f.buildingId === b.id).at(-1) : null;
+    if (crime) blocks.push(h('p.hint', `${crime.kind === 'robbery' ? 'Braqué' : 'Cambriolé'} le ${formatDate(crime.tick)} : ${crime.arrested ? 'les auteurs ont été interpellés' : 'les auteurs courent toujours'}.`));
     if (b.ruins) {
       if (def.kind === 'growable') {
         blocks.push(h('p.hint', b.ruins.until > state.time.tick

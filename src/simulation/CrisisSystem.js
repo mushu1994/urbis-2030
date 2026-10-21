@@ -200,6 +200,9 @@ function residentCover(state, layer) {
   return n ? sum / n : 0;
 }
 
+/** Remise en état d'un bâtiment inondé après la décrue (jours, v1.5). */
+export const RECOVERY_DAYS = 30;
+
 /** Délai de reconstruction d'un bâtiment privé en ruines (jours) avant le début du chantier. */
 export const RUIN_REBUILD_DAYS = 30;
 /** Reconstruction d'un équipement public : part du coût d'origine. */
@@ -907,6 +910,14 @@ export class CrisisSystem {
       dmg += 150 * (c.tiles ?? []).filter((i) => state.grid.road[i]).length;
       if (c.response === 'rescue') dmg = Math.round(dmg / 2);
       c.damage += toCents(dmg);
+      // v1.5 : les bâtiments inondés restent sinistrés un mois (séchage, remise en état), moins si les secours ont pompé
+      const recover = t + (c.response === 'rescue' ? RECOVERY_DAYS / 2 : RECOVERY_DAYS);
+      for (const id of c.buildings ?? []) {
+        const b = state.buildings.get(id);
+        if (!b) continue;
+        b.recoverUntil = Math.max(b.recoverUntil ?? 0, recover);
+        this.bus?.emit('building:changed', { building: b });
+      }
       this.bus?.emit('world:changed', { tiles: c.tiles ?? [], reason: 'flood-end' });
     }
     if (c.kind === 'flood' && c.severity > 0.5) {

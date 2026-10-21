@@ -13,6 +13,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   showFps: false,
   confirmDemolish: true,
   confirmPlacement: false,
+  /** v1.5 : vue 3D (Three.js) ; la vue isométrique 2D reste disponible. */
+  view3d: true,
   lastSaveId: null
 });
 
