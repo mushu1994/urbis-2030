@@ -375,7 +375,7 @@ export class CouncilSystem {
     }
     c.requests.push(req);
     c.lastRequest = m;
-    this.#notify(state, 'info', `🏛 ${req.label} (Mairie → Conseil)`);
+    this.#notify(state, 'info', `🏛 ${req.label} (Mairie → Conseil)`, { tab: 'council', decision: true, action: 'Répondre' });
     return req;
   }
 

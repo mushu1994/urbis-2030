@@ -1,10 +1,11 @@
-import { h, setChildren } from './dom.js';
+import { h, setChildren, icon } from './dom.js';
 import { formatMoney, formatNumber } from '../util/money.js';
 import { confirmDialog, textDialog, pasteDialog } from './Dialog.js';
 import { CHALLENGES } from '../app/challenges.js';
 import { DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
 import { DIFFICULTIES, balancePhase } from '../simulation/Milestones.js';
 import { openGuideDialog } from './GuidePanel.js';
+import { cloudSection } from './CloudPanel.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -107,7 +108,11 @@ export class HelpPanel {
  * Gestion des sauvegardes : liste, sauvegarde, chargement, suppression, export/import, sauvegarde automatique.
  */
 export class SavesPanel {
-  constructor({ saves, settings, onSave, onLoad, notify }) {
+  constructor({ saves, settings, onSave, onLoad, notify, cloud, cloudSync, onShare, onImported }) {
+    this.cloud = cloud;
+    this.cloudSync = cloudSync;
+    this.onShare = onShare;
+    this.onImported = onImported;
     this.id = 'saves';
     this.title = 'Sauvegardes';
     this.static = true;
@@ -124,11 +129,13 @@ export class SavesPanel {
     const auto = h('select', { 'aria-label': 'Sauvegarde automatique', on: { change: (e) => this.settings.set('autosaveMinutes', Number(e.target.value)) } },
       [0, 2, 5, 10, 20].map((m) => h('option', { value: m, selected: this.settings.get('autosaveMinutes') === m }, m ? `toutes les ${m} min` : 'désactivée')));
     const importGame = async () => {
-      const text = await pasteDialog('Importer une partie');
+      const text = await pasteDialog('Ouvrir une partie reçue ou exportée');
       if (!text) return;
       try {
-        await this.saves.importRecord(text);
-        this.notify('success', 'Partie importée');
+        const saved = await this.saves.importRecord(text);
+        this.notify('success', `Partie importée : ${saved.name}`);
+        // v1.6 : une ville reçue d'un ami se reprend aussitôt
+        if (this.onImported && (await confirmDialog(`« ${saved.name} » est enregistrée dans ce navigateur. La charger maintenant ?`, { confirmLabel: 'Charger' }))) return this.onImported(saved.id);
       } catch (err) {
         this.notify('danger', err.message);
       }
@@ -140,6 +147,7 @@ export class SavesPanel {
         h('div', h('strong', it.name), h('small', `${it.kind === 'auto' ? 'automatique · ' : ''}${dateFmt.format(it.updatedAt)} · ${it.summary.date} · ${formatNumber(it.summary.population)} hab. · ${formatMoney(it.summary.treasury, { compact: true })} · ${it.summary.size} · ${it.sizeKb} Ko`)),
         h('div.save-actions',
           h('button.btn.primary', { on: { click: () => this.onLoad(it.id) } }, 'Charger'),
+          this.onShare ? h('button.btn', { title: 'Envoyer cette ville à un ami', on: { click: () => this.onShare({ localId: it.id, name: it.name }) } }, 'Partager') : null,
           session ? h('button.btn', { title: 'Remplacer par la partie en cours', on: { click: async () => { await this.onSave({ id: it.id, name: it.name }); rerender(); } } }, 'Écraser') : null,
           h('button.btn.danger', { on: { click: async () => { if (await confirmDialog(`Supprimer « ${it.name} » ?`, { confirmLabel: 'Supprimer', danger: true })) { await this.saves.remove(it.id); rerender(); } } } }, 'Supprimer')
         )
@@ -152,9 +160,12 @@ export class SavesPanel {
           h('label', 'Nom', name), h('button.btn.primary', { type: 'submit' }, 'Sauvegarder la partie'),
           h('button.btn', { type: 'button', on: { click: () => {
             textDialog('Exporter la partie', this.saves.exportRecord(session.state), `${session.state.meta.name.replace(/[^\w-]+/g, '_')}.urbis.json`);
-          } } }, 'Exporter'))
+          } } }, 'Exporter'),
+          this.onShare ? h('button.btn', { type: 'button', title: 'Envoyer une copie de la ville à un ami', on: { click: () => this.onShare({ current: true }) } }, icon('share', 15), 'Partager la ville') : null)
         : null,
-      h('div.save-form', h('label', 'Sauvegarde automatique', auto), h('button.btn', { type: 'button', on: { click: importGame } }, 'Importer une partie')),
+      h('div.save-form', h('label', 'Sauvegarde automatique', auto), h('button.btn', { type: 'button', on: { click: importGame } }, 'Ouvrir une partie reçue')),
+      // v1.6 : copie en ligne sur Google Drive
+      this.cloud ? cloudSection({ cloud: this.cloud, sync: this.cloudSync, getSession: () => session, onLoad: (id) => this.onLoad(id), onShare: (src) => this.onShare?.(src), notify: (l, m) => this.notify(l, m), rerender }) : null,
       h('h3', 'Parties enregistrées dans ce navigateur'),
       list
     ];
@@ -300,7 +311,10 @@ export class SoundPanel {
  * Écran d'accueil : nouvelle partie, reprise, chargement.
  */
 export class StartMenu {
-  constructor(root, { onNew, onContinue, onLoad, onClose, saves, install }) {
+  constructor(root, { onNew, onContinue, onLoad, onClose, saves, install, onCloud, onImported, cloudConfigured = false }) {
+    this.onCloud = onCloud;
+    this.onImported = onImported;
+    this.cloudConfigured = cloudConfigured;
     this.root = root;
     this.install = install;
     this.tab = 'new';
@@ -387,11 +401,27 @@ export class StartMenu {
             h('h2', 'Reprendre'),
             canResume ? h('button.btn.big', { on: { click: () => { this.hide(); this.onClose(); } } }, 'Retour à la partie en cours') : null,
             latest ? h('button.btn.big', { on: { click: () => { this.hide(); this.onContinue(latest.id); } } }, `Continuer « ${latest.name} »`, h('small', `${latest.summary.date} · ${formatNumber(latest.summary.population)} hab.`)) : h('p.hint', 'Aucune partie sauvegardée dans ce navigateur.'),
-            items.slice(1, 5).map((it) => h('button.btn.ghost', { on: { click: () => { this.hide(); this.onLoad(it.id); } } }, it.name, h('small', ` ${it.summary.date}`)))
+            items.slice(1, 5).map((it) => h('button.btn.ghost', { on: { click: () => { this.hide(); this.onLoad(it.id); } } }, it.name, h('small', ` ${it.summary.date}`))),
+            // v1.6 : villes sauvegardées sur Google Drive, ville reçue d'un ami
+            h('div.menu-cloud',
+              this.cloudConfigured && this.onCloud ? h('button.btn', { type: 'button', on: { click: () => this.onCloud() } }, icon('cloud', 16), 'Mes villes en ligne (Google)') : null,
+              this.onImported ? h('button.btn', { type: 'button', on: { click: async () => {
+                const text = await pasteDialog('Ouvrir une partie reçue');
+                if (!text) return;
+                try {
+                  const saved = await this.saves.importRecord(text);
+                  this.hide();
+                  this.onImported(saved.id);
+                } catch (err) {
+                  const p = this.root.querySelector('.menu-cloud-error');
+                  if (p) p.textContent = err.message;
+                }
+              } } }, 'Ouvrir une partie reçue') : null,
+              h('p.hint.neg.menu-cloud-error'))
           )
         ),
         installBox,
-        h('p.menu-foot', 'Toutes les données restent dans votre navigateur. Aucun compte, aucun service distant.')
+        h('p.menu-foot', this.cloudConfigured ? 'Vos parties restent dans votre navigateur, et sur votre Google Drive si vous vous connectez (Sauvegardes). Aucun autre service distant.' : 'Toutes les données restent dans votre navigateur. Aucun compte, aucun service distant.')
       )
     );
     this.offInstall?.();

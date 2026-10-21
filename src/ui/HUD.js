@@ -70,6 +70,9 @@ export class HUD {
     });
     this.undo = h('button.hud-icon', { title: 'Annuler la dernière action (Ctrl+Z)', 'aria-label': 'Annuler', on: { click: actions.onUndo } }, icon('undo', 17));
     this.mute = h('button.hud-icon.hud-mute', { title: 'Réglages du son (N : couper)', 'aria-label': 'Réglages du son', 'aria-pressed': 'false', on: { click: () => actions.onMute?.() } }, icon('sound', 17));
+    // v1.6 : déroulé des notifications (badge : non lues ; point rouge : décisions à traiter)
+    this.bellBadge = h('span.hud-bell-badge', { hidden: true });
+    this.bell = h('button.hud-icon.hud-bell', { type: 'button', title: 'Notifications', 'aria-label': 'Notifications', 'aria-expanded': 'false', on: { click: () => actions.onHistory?.() } }, icon('bell', 18), this.bellBadge);
     this.fullscreen = h('button.hud-icon.hud-fullscreen', { title: 'Plein écran (F)', 'aria-label': 'Plein écran', 'aria-pressed': 'false', on: { click: actions.onFullscreen } }, icon('expand', 17));
 
     root.append(
@@ -84,10 +87,21 @@ export class HUD {
       this.approvalBtn,
       h('div.hud-spacer'),
       this.alerts,
+      this.bell,
       this.undo,
       this.mute,
       this.fullscreen
     );
+  }
+
+  /** v1.6 : badge du bouton cloche. */
+  setNotifications({ unread = 0, pending = 0, open = false } = {}) {
+    this.bellBadge.hidden = !unread && !pending;
+    this.bellBadge.textContent = unread ? String(Math.min(99, unread)) : '';
+    this.bellBadge.classList.toggle('pending', pending > 0);
+    this.bell.setAttribute('aria-expanded', String(open));
+    this.bell.classList.toggle('active', open);
+    this.bell.title = pending ? `Notifications — ${pending} à traiter` : unread ? `Notifications — ${unread} non lue${unread > 1 ? 's' : ''}` : 'Notifications';
   }
 
   setMuted(muted) {

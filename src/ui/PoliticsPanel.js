@@ -1,6 +1,9 @@
 import { h } from './dom.js';
 import { lineChart, meter } from './charts.js';
-import { formatNumber } from '../util/money.js';
+import { formatNumber, formatMoney } from '../util/money.js';
+import { confirmDialog } from './Dialog.js';
+import { countAnimation, prefersReducedMotion } from './ElectionNight.js';
+import { FRAUD_LEVELS, fraudCost, FRAUD_ANNUL_MONTHS } from '../simulation/ElectionFraud.js';
 import { MONTH_NAMES, SIM } from '../simulation/config.js';
 import { THEMES, MAX_PROMISES, METRICS, CAMPAIGN_MONTHS } from '../simulation/PoliticsSystem.js';
 import { DELEGATIONS, DEPUTY_EFFECTS, AXES, CRISIS_AXIS, councilOf, agendaOf, slotsOf, candidatesFor, councilSeats, allowanceEuros, efficiency } from '../simulation/CouncilSystem.js';
@@ -364,6 +367,12 @@ export class PoliticsPanel {
   }
 
   #mandate(session, rerender) {
+    const fraudHint = session.state.politics.fraudPending ? h('p.hint.neg', 'Une enquête sur les urnes des dernières municipales est en cours : elle peut aboutir à tout moment de ce mandat.') : null;
+    const body = [this.#mandateBody(session, rerender)].flat();
+    return [body[0], fraudHint, ...body.slice(1)];
+  }
+
+  #mandateBody(session, rerender) {
     const s = session.state;
     const p = s.politics;
     const pol = session.sim.politics;
@@ -452,7 +461,11 @@ export class PoliticsPanel {
     // v1.1 : cohérence du thème avec les priorités du mandat, liste dissidente d'un ancien adjoint
     const coherence = pol.coherenceFor(s, d.theme);
     const dissident = pol.dissidentPenalty(s);
-    const est = Math.max(4, Math.min(96, 50 + base + points + themePts + coherence - dissident - rival));
+    const honestEst = Math.max(4, Math.min(96, 50 + base + points + themePts + coherence - dissident - rival));
+    // v1.6 : faux bulletins (part des exprimés ajoutée à votre liste)
+    const ballots = c.fraud ? FRAUD_LEVELS[c.fraud.level]?.ballots ?? 0 : 0;
+    const urns = ballots ? (ballots * (100 - honestEst)) / (1 + ballots) : 0;
+    const est = Math.min(97, honestEst + urns);
     const saved = c.chosen.join() === d.chosen.join() && c.theme === d.theme;
     const lastPoll = [...(p.polls ?? [])].reverse().find((x) => x.vote !== undefined);
     return [
@@ -463,7 +476,7 @@ export class PoliticsPanel {
         h('p', h('small', `Scrutin en ${monthLong(p.nextElection)} (dans ${months(Math.max(0, p.nextElection - m))})${lastPoll ? ` · dernier sondage : ${Math.round(lastPoll.vote)} % pour votre liste` : ''}`))),
       h('div.vote-estimate', { class: est >= 50 ? 'pos' : 'neg' },
         h('strong', `Intentions de vote estimées : ${pc(est)}`),
-        h('small', `popularité ${pts(base)} · programme ${pts(points)} · thème ${pts(themePts)}${coherence ? ` · cohérence avec vos priorités ${pts(coherence)}` : ''}${dissident ? ` · liste dissidente (${c.dissident.name}) ${pts(-dissident)}` : ''} · adversaire ${pts(-rival)} · aléa ±2,5`),
+        h('small', `popularité ${pts(base)} · programme ${pts(points)} · thème ${pts(themePts)}${coherence ? ` · cohérence avec vos priorités ${pts(coherence)}` : ''}${dissident ? ` · liste dissidente (${c.dissident.name}) ${pts(-dissident)}` : ''} · adversaire ${pts(-rival)}${urns ? ` · urnes « préparées » ${pts(urns)}` : ''} · aléa ±2,5`),
         h('div.vote-bar', h('span', { style: { width: `${est}%` } }), h('i', { style: { left: '50%' } })),
         this.#projection(s, est, points, d.theme)),
       h('h3', `Programme : ${d.chosen.length} / ${MAX_PROMISES} engagements`),
@@ -496,8 +509,39 @@ export class PoliticsPanel {
               rerender?.();
             }
           }
-        }, saved ? 'Programme enregistré' : 'Déposer ce programme'))
+        }, saved ? 'Programme enregistré' : 'Déposer ce programme')),
+      this.#backroom(session, rerender)
     ];
+  }
+
+  /** v1.6 : les coulisses de la campagne (bourrage des urnes). */
+  #backroom(session, rerender) {
+    const s = session.state;
+    const c = s.politics.campaign;
+    if (c.fraud) {
+      const L = FRAUD_LEVELS[c.fraud.level];
+      return h('section.backroom',
+        h('h3', 'Dans les coulisses'),
+        h('p', `Les urnes sont « préparées » (${L.short}). Personne n'est au courant… pour l'instant.`),
+        h('p.hint', `Au dépouillement, ${Math.round(L.countRisk * 100)} % de risque que des assesseurs repèrent les faux bulletins. Ensuite, chaque mois du mandat, environ ${String(L.monthlyRisk * 100).replace('.', ',')} % de risque que l'enquête aboutisse.`));
+    }
+    const buy = async (id) => {
+      const L = FRAUD_LEVELS[id];
+      const cost = fraudCost(s, id);
+      const ok = await confirmDialog(`${L.label} : ${formatMoney(cost * 100)} pris sur la trésorerie, environ +${id === 'massive' ? '4 à 5' : '2'} points le jour du vote. Si la fraude est découverte (${Math.round(L.countRisk * 100)} % au dépouillement, puis ${String(L.monthlyRisk * 100).replace('.', ',')} % par mois pendant le mandat) : popularité −${L.penalty} points, affaire exploitée par l'adversaire, presse hostile, adjoints qui lâchent, manifestation et grève, amende de ${formatMoney(cost * L.fine * 100)} — et, dans les ${FRAUD_ANNUL_MONTHS} premiers mois, élection annulée. Continuer ?`, { confirmLabel: 'Bourrer les urnes', danger: true });
+      if (!ok) return;
+      const r = this.execute({ type: 'politics', op: 'fraud', level: id });
+      if (!r?.ok) this.notify?.('warning', r?.reason ?? r?.messages?.[0] ?? 'Impossible');
+      else this.notify?.('info', 'Les urnes seront « préparées » pour le jour du vote. Espérons que personne ne parle…');
+      rerender?.();
+    };
+    return h('section.backroom',
+      h('h3', 'Dans les coulisses'),
+      h('p.hint', 'Un proche de la campagne propose de « sécuriser » le scrutin en glissant de faux bulletins dans les urnes. Assez pour l\'emporter de justesse, pas pour renverser un rejet massif. Si la fraude éclate, les conséquences pèseront sur tout le mandat suivant.'),
+      h('div.dialog-actions', Object.values(FRAUD_LEVELS).map((L) => {
+        const pv = session.sim.politics.fraudPreview(s, { level: L.id });
+        return h('button.btn.danger', { type: 'button', disabled: !pv.ok, title: pv.ok ? L.detail : pv.reason, on: { click: () => buy(L.id) } }, `${L.label} — ${formatMoney(pv.cost * 100, { compact: true })}`);
+      })));
   }
 
   #results(session, rerender) {
@@ -557,6 +601,9 @@ export function electionCard(e, { detailed = true } = {}) {
     detailed && e.seats ? h('p', h('small', `Conseil municipal : ${e.seats.total} sièges — ${Object.entries(e.seats.byList).filter(([, n]) => n > 0).map(([id, n]) => `${id === 'mayor' ? 'votre liste' : e.rounds?.[0]?.lists.find((l) => l.id === id)?.label ?? id} ${n}`).join(', ')} (prime majoritaire : la moitié des sièges à la liste en tête).`)) : null,
     detailed ? h('p', h('small', `Popularité ${Math.round(e.approval)} % (${pts(b.approval ?? 0)}) · programme ${pts(b.programme ?? 0)} · thème ${pts(b.theme ?? 0)}${b.coherence ? ` · cohérence ${pts(b.coherence)}` : ''}${b.dissident ? ` · liste dissidente ${pts(b.dissident)}` : ''} · adversaire ${pts(b.rival ?? 0)} · bilan du mandat : ${e.kept} promesse(s) tenue(s), ${e.broken} rompue(s)`)) : null,
     detailed && e.programme?.length ? h('p', h('small', `Programme : ${e.programme.join(' · ')}`)) : null,
+    detailed && e.fraud ? h('p.hint.neg', e.fraud.caught
+      ? 'Urnes bourrées : la fraude a été repérée au dépouillement, les faux bulletins ont été annulés.'
+      : `Urnes bourrées (${FRAUD_LEVELS[e.fraud.level]?.short ?? 'fraude'}) : sans les faux bulletins, votre liste aurait obtenu ${pc(e.fraud.honestShare ?? e.share)}.${e.fraud.decisive ? ' La fraude a fait la différence.' : ''}`) : null,
     detailed && e.districts?.length
       ? h('table.fin',
         h('thead', h('tr', h('th', 'Quartier'), h('th.num', 'Habitants'), h('th.num', 'Satisfaction'), h('th.num', 'Votre liste'), h('th', 'En tête'))),
@@ -587,24 +634,35 @@ export function secondRoundBox(sr, { onChoose }) {
 }
 
 /** Dialogue d'entre-deux-tours (soirée du premier tour). */
-export function secondRoundDialog(sr, { onChoose }) {
+export function secondRoundDialog(sr, { onChoose, onBeat, onReveal }) {
   const backdrop = h('div.dialog-backdrop.second-round-backdrop', { role: 'presentation' });
-  const box = h('div.dialog.scenario-end.round-one', { role: 'dialog', 'aria-modal': 'true' },
-    h('h3', 'Premier tour des municipales'),
-    secondRoundBox(sr, { onChoose: (id) => { backdrop.remove(); onChoose(id); } }));
+  const box = h('div.dialog.scenario-end.round-one', { role: 'dialog', 'aria-modal': 'true' });
+  const reveal = () => {
+    box.replaceChildren(
+      h('h3', 'Premier tour des municipales'),
+      secondRoundBox(sr, { onChoose: (id) => { backdrop.remove(); onChoose(id); } }));
+    box.classList.add('revealed');
+    onReveal?.();
+  };
+  // v1.6 : dépouillement animé du premier tour
+  const lists = sr.r1?.lists ?? [];
+  if (lists.length) box.append(countAnimation({ lists, title: 'Premier tour des municipales', fraud: sr.fraud ?? null, seed: sr.month, reduced: prefersReducedMotion(), onBeat, onDone: reveal }).el);
+  else reveal();
   backdrop.append(box);
   document.body.append(backdrop);
   return () => backdrop.remove();
 }
 
 /** Soirée électorale : résultats, puis suite de la partie (en cas de défaite : continuer sans élections ou menu). */
-export function electionDialog(e, { onContinue, onFree, onMenu }) {
+export function electionDialog(e, { onContinue, onFree, onMenu, onBeat, onReveal }) {
   const backdrop = h('div.dialog-backdrop', { role: 'presentation' });
   const close = (fn) => {
     backdrop.remove();
     fn?.();
   };
-  const box = h('div.dialog.scenario-end.election-night', { role: 'dialog', 'aria-modal': 'true', class: e.won ? 'won' : 'lost' },
+  // v1.6 : la soirée commence par le dépouillement animé ; le verdict n'apparaît qu'à la fin du comptage
+  const box = h('div.dialog.scenario-end.election-night', { role: 'dialog', 'aria-modal': 'true' });
+  const result = () => [
     h('div.scenario-medal', { 'aria-hidden': 'true' }, e.won ? '★' : '✕'),
     h('h3', e.won ? 'Réélu(e) !' : 'Battu(e) aux municipales'),
     h('p', e.won
@@ -618,8 +676,16 @@ export function electionDialog(e, { onContinue, onFree, onMenu }) {
           h('button.btn', { type: 'button', on: { click: () => close(onMenu) } }, 'Menu (charger, nouvelle partie)'),
           h('button.btn.primary', { type: 'button', on: { click: () => close(onFree) } }, 'Continuer sans élections')
         ])
-  );
+  ];
+  const reveal = () => {
+    box.replaceChildren(...result());
+    box.classList.add(e.won ? 'won' : 'lost', 'revealed');
+    box.querySelector('.btn.primary')?.focus();
+    onReveal?.();
+  };
+  const finalRound = e.rounds?.at(-1)?.lists ?? [{ id: 'mayor', label: 'Votre liste', share: e.share }, { id: 'rival', label: e.rival?.list ?? 'Liste adverse', share: e.rivalShare }];
+  const title = e.rounds?.length > 1 ? 'Second tour des municipales' : 'Municipales';
+  box.append(countAnimation({ lists: finalRound, title, fraud: e.fraud && e.rounds?.length <= 1 ? e.fraud : null, seed: e.m, reduced: prefersReducedMotion(), onBeat, onDone: reveal }).el);
   backdrop.append(box);
   document.body.append(backdrop);
-  box.querySelector('.btn.primary')?.focus();
 }

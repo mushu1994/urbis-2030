@@ -174,6 +174,7 @@ export class GameSession {
         else if (cmd.op === 'enable') r = this.sim.politics.setEnabled(s, cmd.enabled);
         else if (cmd.op === 'presidency') r = this.sim.politics.runForPresidency(s);
         else if (cmd.op === 'secondRound') r = this.sim.politics.resolveSecondRound(s, { mergeWith: cmd.mergeWith ?? null });
+        else if (cmd.op === 'fraud') r = this.sim.politics.stuffBallots(s, { level: cmd.level });
         else return { ok: false, reasons: ['invalid'], messages: ['Commande politique inconnue'] };
         break;
       case 'tax': {

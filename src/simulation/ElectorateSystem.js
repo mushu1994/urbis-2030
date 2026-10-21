@@ -187,7 +187,7 @@ export function opposingLists(state, groups) {
  * `base` : score du maire selon la formule de la v0.7 (popularité, programme, thème, cohérence, adversaire, aléa),
  * que les groupes déclinent sans changer sa moyenne.
  */
-export function firstRound(state, { base, programme = 0, themeGroups = [], dissidentPoints = 0 }) {
+export function firstRound(state, { base, programme = 0, themeGroups = [], dissidentPoints = 0, stuffing = 0 }) {
   const groups = groupOpinions(state);
   const p = state.politics;
   const lists = opposingLists(state, groups);
@@ -221,6 +221,12 @@ export function firstRound(state, { base, programme = 0, themeGroups = [], dissi
     for (const [id, v] of Object.entries(shares)) votes[id] += (voters * v) / norm;
     byGroup.push({ id: g.id, label: g.label, share: g.share, turnout: g.turnout, approval: g.approval, mayor: round1((shares.mayor / norm) * 100) });
   });
+  // v1.6 : faux bulletins glissés dans les urnes (part des suffrages exprimés), tous pour la liste du maire
+  if (stuffing > 0 && expressed > 0) {
+    const fake = expressed * stuffing;
+    votes.mayor += fake;
+    expressed += fake;
+  }
   const results = [{ id: 'mayor', label: 'Votre liste', leader: null }, ...lists].map((l) => ({ id: l.id, label: l.label, leader: l.leader ?? null, theme: l.theme ?? null, share: expressed > 0 ? round1((votes[l.id] / expressed) * 100) : 0, votes: votes[l.id] }));
   return { lists: results, expressed, registered, turnout: registered > 0 ? round1((expressed / registered) * 100) : 0, byGroup };
 }
@@ -253,7 +259,8 @@ export function mergeAccepted(state, r1, listId) {
 }
 
 /**
- * Second tour : fusions, reports de voix, résultat.
+ * Second tour : fusions, reports de voix, résultat. Les voix du premier tour servent de base : de faux bulletins
+ * glissés au premier tour (v1.6) se retrouvent donc aussi au second (mêmes urnes, mêmes complices).
  * @param {{mergeWith?:string|null}} opts liste fusionnée avec celle du maire (acceptée), sinon null
  */
 export function secondRound(state, r1, { mergeWith = null, seed = 0 } = {}) {

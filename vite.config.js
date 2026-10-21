@@ -15,7 +15,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     target: 'es2022',
-    sourcemap: mode !== 'single',
+    // v1.6 : pas de cartes de sources publiées (le code d'origine n'est pas exposé avec le jeu)
+    sourcemap: false,
     chunkSizeWarningLimit: 1500
   },
   test: {

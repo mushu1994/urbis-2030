@@ -12,6 +12,7 @@ import './styles/hud.css';
 import './styles/panels.css';
 import './styles/mobile.css';
 import './styles/features.css';
+import './styles/v16.css';
 import { createDefaultCatalog } from './data/defaultData.js';
 import { GameApp } from './app/GameApp.js';
 

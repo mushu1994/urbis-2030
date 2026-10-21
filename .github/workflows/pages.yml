@@ -28,6 +28,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # v1.6 : sauvegarde Google Drive et partage par lien (variables du dépôt, voir README)
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ vars.GOOGLE_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

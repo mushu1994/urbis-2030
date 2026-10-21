@@ -93,6 +93,7 @@ test('fiches du menu, améliorations, échanges régionaux, train et notificatio
   await page.keyboard.press('Escape');
 
   // 5. Notifications : un clic ferme, « Tout effacer » vide la pile, jamais au-dessus des menus
+  // (v1.6 : deux notifications ordinaires à la fois, la plus ancienne part dans le déroulé)
   await page.evaluate(() => {
     const n = window.__urbis.notifications;
     n.clear();
@@ -103,9 +104,10 @@ test('fiches du menu, améliorations, échanges régionaux, train et notificatio
     n.push({ level: 'warning', message: 'Essai C' });
   });
   await expect(page.locator('.toast', { hasText: 'Essai C' })).toContainText('×2');
-  await expect(page.locator('.toast:not(.leaving)')).toHaveCount(3);
-  await page.locator('.toast', { hasText: 'Essai A' }).click();
-  await expect(page.locator('.toast', { hasText: 'Essai A' })).toHaveCount(0);
+  await expect(page.locator('.toast:not(.leaving)')).toHaveCount(2);
+  await page.locator('.toast', { hasText: 'Essai B' }).click();
+  await expect(page.locator('.toast', { hasText: 'Essai B' })).toHaveCount(0);
+  await page.evaluate(() => window.__urbis.notifications.push({ level: 'info', message: 'Essai D' }));
   await page.getByRole('button', { name: 'Tout effacer' }).click();
   await expect(page.locator('.toast')).toHaveCount(0);
   const z = await page.evaluate(() => {

@@ -296,6 +296,16 @@ export class AudioEngine {
         this.#tone(d, { freq: 98, start: t, dur: 1.6, gain: 0.16, type: 'sawtooth', attack: 0.12, reverb: 0.6 });
         this.#tone(d, { freq: 147, start: t, dur: 1.6, gain: 0.08, type: 'sawtooth', attack: 0.12, reverb: 0.6 });
         break;
+      case 'tick':
+        // v1.6 : dépouillement — battement sourd à chaque étape
+        this.#tone(d, { freq: 120, endFreq: 70, start: t, dur: 0.18, gain: 0.3 });
+        this.#burst(d, { start: t, dur: 0.05, gain: 0.08, type: 'highpass', freq: 3000 });
+        break;
+      case 'drum':
+        // v1.6 : roulement de tambour avant le verdict
+        for (let k = 0; k < 14; k++) this.#burst(d, { start: t + k * 0.075, dur: 0.07, gain: 0.08 + k * 0.012, type: 'bandpass', freq: 220, q: 1.4 });
+        this.#tone(d, { freq: 80, endFreq: 50, start: t + 1.05, dur: 0.35, gain: 0.4 });
+        break;
       case 'fail':
         [[0, 0], [-3, 0.3], [-7, 0.6]].forEach(([s, dt]) => this.#tone(d, { freq: NOTE(64 + s), start: t + dt, dur: 0.6, gain: 0.1, type: 'triangle', reverb: 0.5 }));
         break;

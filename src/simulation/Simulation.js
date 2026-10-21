@@ -74,6 +74,8 @@ export class Simulation {
     // v1.5 : cambriolages et braquages (tirages déterministes indépendants du générateur de la partie)
     this.crime = new CrimeSystem({ catalog, bus });
     this.politics.controversies = this.controversies;
+    // v1.6 : un scandale électoral déclenche manifestation et grève
+    this.politics.crises = this.crises;
     /** Temps de calcul par sous-système (ms, moyenne glissante) — affiché dans le panneau de performance. */
     this.timings = {};
   }

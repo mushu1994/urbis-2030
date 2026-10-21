@@ -55,6 +55,7 @@ export const CATEGORY_LABELS = {
   council: 'Enveloppes des délégations',
   controversies: 'Gestion des polémiques',
   events: 'Fêtes et événements',
+  fraud: 'Prestations diverses et frais de justice',
   grant: 'Dotations de l\'État',
   fleet: 'Flotte des lignes de bus et de tramway'
 };

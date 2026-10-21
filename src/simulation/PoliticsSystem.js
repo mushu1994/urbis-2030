@@ -6,6 +6,8 @@ import { factorWeight, THEME_AXIS, shareOf, defaultAgenda, defaultCouncil } from
 import { controversyEdge } from './ControversySystem.js';
 import { localLifeFactor, clientelismEdge } from './CivicEventSystem.js';
 import { rankFor } from './Milestones.js';
+import { toCents } from '../util/money.js';
+import { FRAUD_LEVELS, FRAUD_ANNUL_MONTHS, fraudCost, stuffingOf, caughtAtCount, discoveredThisMonth, fraudScandalFactor, fraudEdge } from './ElectionFraud.js';
 import { firstRound, secondRound, decidedInFirstRound, mergeCandidates, mergeAccepted, allocateSeats, THEME_GROUPS } from './ElectorateSystem.js';
 
 /**
@@ -246,6 +248,9 @@ export class PoliticsSystem {
     const local = localLifeFactor(state);
     if (local) add('local', 'Vie locale', local, 'fêtes et événements des six derniers mois');
     if (state.civicEvents?.legacy) add('legacy', 'Héritage du grand événement', state.civicEvents.legacy.approval, 'jusqu\'à deux ans après');
+    // v1.6 : fraude électorale révélée
+    const scandal = fraudScandalFactor(state);
+    if (scandal) add(scandal.id, scandal.label, scandal.value, scandal.detail);
     if (p.career?.president !== undefined) add('career', 'Présidence de la métropole', 1, 'rayonnement régional');
     // v1.1 : priorités changeantes (plus de 30 points déplacés sur 12 mois)
     if (p.agenda && this.council && this.council.movedLastYear(state) > 30) add('agenda', 'Priorités changeantes', -1, `${Math.round(this.council.movedLastYear(state))} points déplacés sur un an`);
@@ -304,6 +309,11 @@ export class PoliticsSystem {
     p.memory.flipflops = p.memory.flipflops.filter((tk) => state.time.tick - tk < 360);
 
     if (p.enabled && !p.defeated) this.#trackPromises(state, false);
+    // v1.6 : une fraude électorale non découverte peut l'être à tout moment du mandat qu'elle a permis de gagner
+    if (p.fraudPending) {
+      if (!p.enabled || p.defeated || p.fraudPending.mandate !== p.mandate) p.fraudPending = null;
+      else if (discoveredThisMonth(state, p.fraudPending)) this.#fraudScandal(state, p.fraudPending, { atCount: false });
+    }
     const { target, factors } = this.target(state);
     p.target = round1(target);
     p.factors = factors;
@@ -444,7 +454,7 @@ export class PoliticsSystem {
       dissident: null
     };
     const attack = weak.length ? ` La liste « ${p.rival.list} » (${p.rival.leader}) attaque votre bilan : ${weak.map((f) => f.label.toLowerCase()).join(', ')}.` : ` Face à vous : « ${p.rival.list} », menée par ${p.rival.leader}.`;
-    this.#notify(state, 'warning', `🗳 La campagne des municipales est ouverte : scrutin dans ${p.nextElection - monthOf(state)} mois. Composez votre programme (Mairie → Campagne).${attack}`, { panel: 'politics' });
+    this.#notify(state, 'warning', `🗳 La campagne des municipales est ouverte : scrutin dans ${p.nextElection - monthOf(state)} mois. Composez votre programme (Mairie → Campagne).${attack}`, { panel: 'politics', tab: 'campaign', decision: true, action: 'Programme' });
   }
 
   /** Choix du programme (jusqu'à 3 engagements, un par thème) et du thème de campagne. */
@@ -506,7 +516,7 @@ export class PoliticsSystem {
   rivalEdge(state) {
     const worst = Math.min(0, ...(state.politics?.factors ?? []).map((f) => f.value));
     // v1.2 : l'adversaire exploite aussi les polémiques et affaires du mandat, et dénonce le clientélisme
-    return Math.min(3, -worst * 0.2) + (state.politics?.campaign ? controversyEdge(state) + clientelismEdge(state) : 0);
+    return Math.min(3, -worst * 0.2) + (state.politics?.campaign ? controversyEdge(state) + clientelismEdge(state) + fraudEdge(state) : 0);
   }
 
   /** Score projeté de la liste du maire au scrutin (%). */
@@ -527,21 +537,27 @@ export class PoliticsSystem {
     const dissident = this.dissidentPenalty(state);
     // v1.3 : premier tour par groupes d'électeurs ; la formule de la v0.7 donne le score moyen du maire
     const base = this.projectedShare(state) + dissident;
-    const r1 = firstRound(state, { base, programme: this.programmeBonus(state), themeGroups: THEME_GROUPS[c?.theme] ?? [], dissidentPoints: dissident });
+    const r1Opts = { base, programme: this.programmeBonus(state), themeGroups: THEME_GROUPS[c?.theme] ?? [], dissidentPoints: dissident };
+    // v1.6 : faux bulletins, sauf si les assesseurs les repèrent au dépouillement
+    const fraud = c?.fraud ? { ...c.fraud, caught: caughtAtCount(state, c.fraud.level) } : null;
+    const stuffing = fraud && !fraud.caught ? stuffingOf(state) : 0;
+    const r1 = firstRound(state, { ...r1Opts, stuffing });
+    const r1Honest = stuffing ? firstRound(state, r1Opts) : null;
+    if (fraud) fraud.honest = r1Honest ? { share: r1Honest.lists.find((l) => l.id === 'mayor')?.share ?? 0, winner: decidedInFirstRound(r1Honest) } : null;
     if (!r1.registered) {
       // Ville sans habitants : scrutin à liste unique (formule historique)
-      return this.#finalize(state, { r1: null, r2: null, winner: base - dissident >= 50 ? 'mayor' : 'rival', share: round1(base - dissident), turnout: 50 });
+      return this.#finalize(state, { r1: null, r2: null, winner: base - dissident >= 50 ? 'mayor' : 'rival', share: round1(base - dissident), turnout: 50, fraud });
     }
     const decided = decidedInFirstRound(r1);
     if (decided) {
       const mine = r1.lists.find((l) => l.id === 'mayor');
-      return this.#finalize(state, { r1, r2: null, winner: decided, share: mine.share, turnout: r1.turnout });
+      return this.#finalize(state, { r1, r2: null, winner: decided, share: mine.share, turnout: r1.turnout, fraud });
     }
     // Entre-deux-tours : une semaine pour négocier une fusion (sinon, second tour sans alliance)
     const candidates = mergeCandidates(r1).map((l) => ({ id: l.id, label: l.label, leader: l.leader, share: l.share, accepts: mergeAccepted(state, r1, l.id) }));
-    p.secondRound = { month: m, deadline: state.time.tick + 7, r1, candidates };
+    p.secondRound = { month: m, deadline: state.time.tick + 7, r1, candidates, ...(fraud ? { fraud, r1Honest } : {}) };
     const mine = r1.lists.find((l) => l.id === 'mayor');
-    this.#notify(state, 'warning', `🗳 Premier tour : votre liste obtient ${String(mine.share).replace('.', ',')} %. Second tour dans une semaine : négociez une fusion (Mairie → Élections).`, { panel: 'politics' });
+    this.#notify(state, 'warning', `🗳 Premier tour : votre liste obtient ${String(mine.share).replace('.', ',')} %. Second tour dans une semaine : négociez une fusion (Mairie → Élections).`, { panel: 'politics', tab: 'results', decision: true, action: 'Négocier', election: true });
     this.bus?.emit('politics:secondRound', { secondRound: structuredClone(p.secondRound) });
   }
 
@@ -579,10 +595,17 @@ export class PoliticsSystem {
       if (!mergeAccepted(state, sr.r1, mergeWith)) return { ok: false, reason: `« ${cand.label} » refuse la fusion` };
       concession = this.#concession(state, cand);
     }
-    const r2 = secondRound(state, sr.r1, { mergeWith, seed: (state.meta.seed ?? 2030) * 31 + sr.month });
+    const opts = { mergeWith, seed: (state.meta.seed ?? 2030) * 31 + sr.month };
+    const r2 = secondRound(state, sr.r1, opts);
     const mine = r2.lists.find((l) => l.id === 'mayor');
+    // v1.6 : résultat qu'aurait donné un scrutin honnête (bilan de la soirée électorale)
+    let fraud = sr.fraud ?? null;
+    if (fraud && sr.r1Honest) {
+      const honest = secondRound(state, sr.r1Honest, opts);
+      fraud = { ...fraud, honest: { share: honest.lists.find((l) => l.id === 'mayor')?.share ?? 0, winner: honest.winner } };
+    }
     p.secondRound = null;
-    this.#finalize(state, { r1: sr.r1, r2, winner: r2.winner, share: mine?.share ?? 0, turnout: r2.turnout, mergeWith, concession });
+    this.#finalize(state, { r1: sr.r1, r2, winner: r2.winner, share: mine?.share ?? 0, turnout: r2.turnout, mergeWith, concession, fraud });
     return { ok: true, winner: r2.winner };
   }
 
@@ -600,7 +623,7 @@ export class PoliticsSystem {
     if (sr && state.time.tick >= sr.deadline) this.resolveSecondRound(state, {});
   }
 
-  #finalize(state, { r1, r2, winner, share, turnout, mergeWith = null, concession = null }) {
+  #finalize(state, { r1, r2, winner, share, turnout, mergeWith = null, concession = null, fraud = null }) {
     const p = state.politics;
     const m = monthOf(state);
     const won = winner === 'mayor';
@@ -644,7 +667,9 @@ export class PoliticsSystem {
       merged: r2?.merged ?? null,
       mergeWith,
       seats: seats ? { total: seats.total, byList: seats.seats, majority: round1(seats.majority * 100) } : null,
-      districts
+      districts,
+      // v1.6 : bourrage des urnes (niveau, repéré au dépouillement, score qu'aurait donné un scrutin honnête)
+      fraud: fraud ? { level: fraud.level, caught: !!fraud.caught, honestShare: fraud.honest?.share ?? null, decisive: !!(fraud.honest && fraud.honest.winner !== 'mayor' && winner === 'mayor') } : null
     };
     p.elections.push(result);
     if (p.elections.length > 12) p.elections.shift();
@@ -661,13 +686,81 @@ export class PoliticsSystem {
       p.approval = round1(Math.min(97, p.approval + 4));
       // Fusion : la tête de liste partenaire entre au conseil avec une délégation
       if (concession?.leader && this.council) this.council.welcomePartner(state, concession);
-      this.#notify(state, 'success', `🗳 Réélu(e) avec ${String(share).replace('.', ',')} % des voix (participation ${Math.round(turnout)} %)${r2 ? ' au second tour' : ' dès le premier tour'}. Début de votre ${p.mandate}e mandat.`, { panel: 'politics' });
+      // v1.6 : une fraude non repérée reste une bombe à retardement pendant tout le mandat
+      if (fraud && !fraud.caught) p.fraudPending = { level: fraud.level, month: m, mandate: p.mandate, cost: fraud.cost };
+      this.#notify(state, 'success', `🗳 Réélu(e) avec ${String(share).replace('.', ',')} % des voix (participation ${Math.round(turnout)} %)${r2 ? ' au second tour' : ' dès le premier tour'}. Début de votre ${p.mandate}e mandat.`, { panel: 'politics', election: true });
     } else {
       p.defeated = true;
       p.majority = null;
-      this.#notify(state, 'danger', `🗳 Défaite aux municipales : ${String(share).replace('.', ',')} % des voix face à « ${result.rival.list} » (${String(rivalShare).replace('.', ',')} %).`, { panel: 'politics' });
+      this.#notify(state, 'danger', `🗳 Défaite aux municipales : ${String(share).replace('.', ',')} % des voix face à « ${result.rival.list} » (${String(rivalShare).replace('.', ',')} %).`, { panel: 'politics', election: true });
     }
+    // v1.6 : fraude repérée au dépouillement : les faux bulletins sont annulés et le scandale éclate le soir même
+    if (fraud?.caught) this.#fraudScandal(state, { level: fraud.level, month: m, mandate: p.mandate, cost: fraud.cost }, { atCount: true });
     this.bus?.emit('politics:election', { result: structuredClone(result) });
+  }
+
+  // ───────────────────────────── Bourrage des urnes (v1.6) ─────────────────────────────
+
+  /** Aperçu : est-il possible de bourrer les urnes, et à quel prix ? */
+  fraudPreview(state, { level }) {
+    const p = this.ensure(state);
+    const L = FRAUD_LEVELS[level];
+    if (!L) return { ok: false, reason: 'Option inconnue' };
+    const cost = fraudCost(state, level);
+    const reasons = [];
+    if (!p.enabled || p.defeated) reasons.push('Les élections sont désactivées');
+    else if (!p.campaign) reasons.push('Possible seulement pendant la campagne');
+    else if (p.campaign.fraud) reasons.push('Les urnes sont déjà « préparées » pour ce scrutin');
+    if (state.economy.treasury < toCents(cost)) reasons.push('Budget insuffisant');
+    return { ok: !reasons.length, reason: reasons[0], cost, level: L };
+  }
+
+  /** Commande : payer pour bourrer les urnes du prochain scrutin. */
+  stuffBallots(state, { level }) {
+    const pv = this.fraudPreview(state, { level });
+    if (!pv.ok) return { ok: false, reason: pv.reason, messages: [pv.reason] };
+    this.economy.payOpex(state, { amount: toCents(pv.cost), category: 'fraud', label: 'Prestations diverses non justifiées' });
+    state.politics.campaign.fraud = { level, cost: pv.cost, month: monthOf(state) };
+    return { ok: true, cost: pv.cost };
+  }
+
+  /** Le scandale éclate : popularité, affaire, presse, adjoints, manifestation et grève, amende, annulation. */
+  #fraudScandal(state, f, { atCount }) {
+    const p = state.politics;
+    const m = monthOf(state);
+    const L = FRAUD_LEVELS[f.level] ?? FRAUD_LEVELS.discreet;
+    p.fraudPending = null;
+    p.memory.fraud = { level: L.id, month: m, atCount };
+    p.memory.fraudCount = (p.memory.fraudCount ?? 0) + 1;
+    p.approval = round1(clamp(p.approval - L.penalty * 0.5, 0, 100));
+    const C = state.controversies;
+    if (C) {
+      C.affairs.push({ kind: 'fraud', title: 'Urnes bourrées', tick: state.time.tick, month: m });
+      if (C.affairs.length > 20) C.affairs.shift();
+      C.press = clamp(C.press - 25, 0, 100);
+    }
+    for (const mem of p.council?.members ?? []) mem.loyalty = clamp(mem.loyalty - 15, 0, 100);
+    const fine = Math.round((f.cost ?? fraudCost(state, L.id)) * L.fine);
+    this.economy.payOpex(state, { amount: toCents(fine), category: 'fraud', label: 'Amende et frais de justice (fraude électorale)' });
+    const annul = !atCount && p.enabled && !p.defeated && m - p.termStart < FRAUD_ANNUL_MONTHS;
+    if (annul) {
+      p.nextElection = m + CAMPAIGN_MONTHS;
+      p.early = true;
+      p.campaign = null;
+    }
+    const fmtFine = fine.toLocaleString('fr-FR');
+    const msg = atCount
+      ? `🗳 Fraude découverte au dépouillement : des assesseurs ont repéré les faux bulletins, annulés sur-le-champ. Scandale : popularité en chute, amende de ${fmtFine} €, adjoints et presse se détournent de vous.`
+      : annul
+        ? `⚖️ Scandale des urnes : l'enquête révèle le bourrage des urnes. Le tribunal administratif annule votre élection — nouvelles élections dans ${CAMPAIGN_MONTHS} mois. Amende de ${fmtFine} €, popularité en chute.`
+        : `⚖️ Scandale des urnes : l'enquête révèle le bourrage des urnes aux dernières municipales. Popularité en chute, amende de ${fmtFine} €, manifestations et grève dans la ville.`;
+    this.#notify(state, 'danger', msg, { panel: 'politics', tab: 'opinion', decision: true });
+    this.bus?.emit('politics:fraud', { atCount, annul, level: L.id, fine });
+    // Colère dans la rue et grève (si aucune crise du même type n'est déjà en cours)
+    if (!atCount && this.crises) {
+      this.crises.trigger(state, 'protest');
+      this.crises.trigger(state, 'strike');
+    }
   }
 
   /**

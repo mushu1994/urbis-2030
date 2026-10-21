@@ -310,7 +310,15 @@ export class SaveService {
     } catch {
       throw new Error('Fichier illisible');
     }
+    return this.importRecordObject(rec);
+  }
+
+  /**
+   * v1.6 : importe un enregistrement déjà lu (fichier .urbis, Google Drive, lien de partage). Validé avant toute
+   * écriture ; la partie devient une sauvegarde de ce navigateur. @returns {Promise<{id:string,name:string}>}
+   */
+  async importRecordObject(rec, { suffix = ' (importée)', id } = {}) {
     const state = SaveService.parseRecord(rec);
-    return this.save(state, { id: `import-${Date.now().toString(36)}`, name: `${state.meta.name} (importée)`, kind: 'manual' });
+    return this.save(state, { id: id ?? `import-${Date.now().toString(36)}`, name: `${state.meta.name}${suffix}`, kind: 'manual' });
   }
 }

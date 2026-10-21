@@ -1,3 +1,4 @@
+import { decodeToText } from '../persistence/SaveCodec.js';
 import { h } from './dom.js';
 
 /**
@@ -93,7 +94,17 @@ export function pasteDialog(title) {
   return new Promise((resolve) => {
     let answered = false;
     const area = h('textarea.dialog-text', { rows: 8, placeholder: 'Collez ici le contenu d\'une partie exportée', 'aria-label': title });
-    const file = h('input', { type: 'file', accept: '.json,application/json', 'aria-label': 'Choisir un fichier', on: { change: async (e) => { const f = e.target.files?.[0]; if (f) area.value = await f.text(); } } });
+    // v1.6 : fichiers .urbis (compressés) et anciens exports .json
+    const file = h('input', { type: 'file', accept: '.urbis,.json,application/json,application/octet-stream', 'aria-label': 'Choisir un fichier', on: { change: async (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      try {
+        area.value = await decodeToText(await f.arrayBuffer());
+      } catch (err) {
+        area.value = '';
+        area.placeholder = err.message;
+      }
+    } } });
     const done = (v) => {
       answered = true;
       resolve(v);

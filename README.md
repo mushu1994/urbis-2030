@@ -5,7 +5,80 @@ Le joueur, maire d'une ville de 2030, construit sur une grille,
 finance ses équipements, gère sa population et déploie des technologies autonomes (feux prédictifs, robots et drones
 de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs besoins en calcul et leurs effets secondaires.
 
-Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte, aucune clé d'API.
+Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte obligatoire. Le compte Google
+ne sert qu'à copier ses parties sur son propre Google Drive et à les partager (facultatif, v1.6).
+
+## Nouveautés de la version 1.6 — parties en ligne, partage, notifications, soirée électorale
+
+### Sauvegarde Google Drive (Sauvegardes, ou « Mes villes en ligne » sur l'écran d'accueil)
+- **Se connecter avec Google** : chaque sauvegarde (manuelle, et automatique au plus toutes les quatre minutes) est
+  aussi copiée dans un dossier « URBIS 2030 » du Google Drive du joueur. Une ville = un fichier, remplacé par la
+  sauvegarde la plus récente (Google Drive garde les versions précédentes quelques semaines).
+- On retrouve ses villes sur un autre appareil, ou si le navigateur efface ses données : « Charger » les rapatrie.
+- Le jeu ne demande que le droit `drive.file` : il ne voit **que les fichiers qu'il a créés**, jamais le reste du
+  Drive. Le jeton de connexion vaut une heure ; à l'expiration, une notification propose de se reconnecter (un clic).
+- Le navigateur est aussi prié de garder les sauvegardes locales (stockage persistant).
+
+### Partager une ville à un ami (Sauvegardes → « Partager la ville », ou « Partager » sur une sauvegarde)
+- **Par lien** (compte Google connecté) : une copie est déposée dans « URBIS 2030/Partages », lisible avec le lien.
+  Le lien ouvre le jeu (`?partie=…`), montre la ville (nom, habitants, date) et la reprend dans le navigateur de
+  l'ami, **sans compte**. La partie de celui qui partage ne change pas.
+- **Par fichier** : un fichier `.urbis` compressé (environ trente fois plus petit que l'ancien export : 2,8 Mo → 80 Ko pour un bourg sur 128 × 128), envoyé par la
+  feuille de partage du téléphone (messagerie, e-mail, AirDrop) ou téléchargé. L'ami l'ouvre par « Ouvrir une
+  partie reçue » (panneau Sauvegardes ou écran d'accueil). Les anciens exports `.urbis.json` restent lisibles.
+
+### Notifications
+- Rangées **en haut à droite** (à gauche de l'inspecteur quand il est ouvert ; sur téléphone, sous la rangée du
+  bouton des couches), plus grandes, affichées 7 à 14 secondes selon leur niveau.
+- **Importantes** (décision à prendre : demande d'un adjoint, polémique, campagne, entre-deux-tours, scandale ; ou
+  danger localisé) : badge « À traiter », elles restent affichées tant qu'elles ne sont pas traitées — **deux au
+  plus** ; la plus ancienne retourne dans le déroulé. Elles se règlent en suivant leur action (« Répondre »,
+  « Voir »…), en les fermant, ou quand la question est réglée depuis le panneau.
+- **Déroulé** : bouton cloche en haut à droite (badge des non lues, point rouge s'il reste des décisions), avec la
+  date de jeu, les filtres Toutes / À traiter / Alertes et les actions de chaque notification.
+
+### Soirée électorale animée
+- Le dépouillement s'affiche bureau par bureau : barres des listes qui se rapprochent (le futur vainqueur part
+  derrière), compteur des bureaux dépouillés, commentaires, battements et roulement de tambour, puis le verdict.
+  « Passer » saute l'animation ; elle est raccourcie si le système demande de réduire les animations. Les
+  notifications qui donneraient le résultat attendent la fin du comptage. Le premier tour a aussi son dépouillement.
+
+### Bourrage des urnes (Mairie → Campagne → « Dans les coulisses »)
+- Pendant la campagne, une fois par scrutin : **quelques urnes complaisantes** (20 000 € + 2 € par habitant, environ
+  +2 points) ou **bourrage massif** (60 000 € + 5 € par habitant, +4 à 5 points). Les faux bulletins comptent aux deux
+  tours : de quoi gagner de justesse, pas de renverser un rejet massif.
+- **Découverte au dépouillement** (5 % ou 12 %) : les faux bulletins sont annulés, le scandale éclate le soir même.
+- **Enquête pendant le mandat** : chaque mois, 2,5 % ou 5 % de risque (+30 % si la presse est hostile). Découverte
+  dans les 18 premiers mois : le tribunal administratif **annule l'élection** (élections anticipées dans six mois).
+- **Scandale** : popularité −4,5 ou −7 points tout de suite, puis facteur « Scandale des urnes » de −9 ou −14 points
+  qui s'estompe sur trois ans ; une affaire et +2 points pour l'adversaire pendant six ans ; relations presse −25 ;
+  loyauté des adjoints −15 ; manifestation et grève ; amende de 1,5 ou 2 fois la somme engagée.
+- La soirée électorale indique le score qu'aurait donné un scrutin honnête (et si la fraude a fait la différence).
+
+### Sauvegarde Google et partage : configuration (une fois, gratuite)
+1. [console.cloud.google.com](https://console.cloud.google.com) → nouveau projet « URBIS 2030 ».
+2. API et services → Bibliothèque → activer **Google Drive API**.
+3. Google Auth Platform → Branding : nom de l'application, e-mail d'assistance. Accès aux données : ajouter le
+   champ d'application `https://www.googleapis.com/auth/drive.file` (non sensible : pas de validation Google).
+   Audience : « Externe », puis **Publier l'application** (en mode Test, seuls les comptes ajoutés comme testeurs
+   peuvent se connecter, et doivent se reconnecter chaque semaine).
+4. Clients → Créer un client → « Application Web ». Origines JavaScript autorisées : `https://mushu1994.github.io`
+   (et `http://localhost:5173` pour le développement). Copier l'**identifiant client**.
+5. Identifiants → Créer une **clé API**. Restrictions : API « Google Drive API » ; sites web
+   `https://mushu1994.github.io/*`. Elle sert seulement à télécharger les parties partagées par lien.
+6. Dépôt GitHub → Settings → Secrets and variables → Actions → onglet **Variables** : `GOOGLE_CLIENT_ID` et
+   `GOOGLE_API_KEY`. Le workflow de publication les passe au build (`VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_API_KEY`).
+   En local : fichier `.env.local` avec ces deux variables.
+
+Sans ces variables, le jeu fonctionne comme avant : l'encart Google l'indique, le partage par fichier reste disponible.
+
+### Divers
+- Le build de production ne publie plus les cartes de sources (`sourcemap: false`) : le code d'origine n'est pas
+  servi avec le jeu.
+- Tests : `tests/unit/v16.test.js` (bourrage des urnes : coût, points, scrutin honnête conservé, découverte au
+  dépouillement et pendant le mandat, annulation, estompement ; fichiers `.urbis` ; Google Drive simulé : un
+  fichier par ville, partage lisible sans compte, jeton expiré) et `tests/e2e/v16.spec.js` (notifications et
+  déroulé, coulisses et dépouillement animé, partage par fichier puis réouverture, téléphone).
 
 ## Nouveautés de la version 1.5 — la ville en 3D
 
@@ -1083,7 +1156,7 @@ Plusieurs sauvegardes, export et import de fichiers. Aucun objet graphique n'est
 
 ## Tests
 
-`npm test` : 427 tests Vitest (39 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
+`npm test` : 445 tests Vitest (40 fichiers, dont le chargement de chacun des modules) — grille et sélection (projection, zoom, déplacement), construction et
 finances, simulation, mobilité (itinéraires, cache, trajets impossibles), ponts, transports, déchets, progression et
 niveaux, train (régression « gare sans voyageurs »), améliorations, échanges régionaux, fiches des bâtiments,
 catalogue des 113 bâtiments, dessin de chaque bâtiment, sauvegardes et migrations, boucle de jeu (aucune
@@ -1124,7 +1197,7 @@ modèles dans les quatre orientations sans déborder de leur emprise (sauf ponto
 délinquance (risque et police, interpellations et améliorations, déterminisme sans consommer le générateur, aucun
 effet sur la croissance ni les finances, bilans, sauvegarde et ancienne partie, synchronisation du Web Worker) ; remise
 en état après une crue (selon la réponse), bâtiment abandonné incendié puis calciné.
-`npm run test:e2e` : 25 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
+`npm run test:e2e` : 29 parcours Playwright (adaptés en v0.6 : menus de services séparés, coûts, extinction d'un incendie) — iPad : chaque menu de construction tient à l'écran et défile jusqu'en bas
 (paysage, portrait, petite hauteur) ; besoins de la ville, emprunt Max et note, pose validée, déplacement,
 terrassement et démolition des routes depuis l'interface (v0.4) ; scénario lancé depuis l'accueil, crise déclenchée depuis le tableau de
 bord puis gérée (réponse payante grisée faute de trésorerie), météo, son, Web Worker et sauvegarde synchronisée ; fiches du menu, amélioration depuis l'inspecteur, échanges régionaux,

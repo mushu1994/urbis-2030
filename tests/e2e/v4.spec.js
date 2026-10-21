@@ -131,7 +131,7 @@ test('besoins, alertes, emprunt max, pose validée, déplacement, terrassement e
     await expect(page.locator('#inspector')).toBeVisible();
   }
 
-  // 8. Notifications rangées dans le coin inférieur droit
+  // 8. Notifications rangées sur le bord droit (v1.6 : en haut à droite)
   const box = await page.locator('#toasts').boundingBox();
   const vp = page.viewportSize();
   expect(box.x + box.width).toBeGreaterThan(vp.width - 40);

@@ -1,0 +1,605 @@
+/* ═══════════════════════════ v1.6 ═══════════════════════════
+   Notifications en haut à droite (plus grandes, importantes permanentes), déroulé des notifications,
+   coulisses de la campagne, soirée électorale animée, sauvegarde en ligne et partage. */
+
+/* ── Notifications : coin supérieur droit ── */
+#toasts {
+  top: 12px;
+  right: 12px;
+  bottom: auto;
+  width: min(380px, calc(100% - 24px));
+  gap: 6px;
+}
+
+/* L'inspecteur occupe le coin supérieur droit : les notifications se rangent à sa gauche */
+#stage:has(#inspector.open) #toasts {
+  right: 344px;
+  width: min(380px, calc(100% - 368px));
+}
+
+.toast-sticky,
+.toast-flow {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  justify-items: end;
+}
+
+.toast-sticky:empty,
+.toast-flow:empty {
+  display: none;
+}
+
+#toasts .toast {
+  position: relative;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 10px 40px 10px 14px;
+  font-size: 14px;
+  line-height: 1.38;
+  opacity: 0.97;
+  border-left-width: 4px;
+  border-radius: var(--radius-m);
+}
+
+#toasts .toast-msg {
+  flex: 1 1 200px;
+  -webkit-line-clamp: 3;
+}
+
+#toasts .toast .link {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toast-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.toast-actions:empty {
+  display: none;
+}
+
+#toasts .toast-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+}
+
+/* Notification importante : reste affichée tant qu'elle n'est pas traitée */
+#toasts .toast.important {
+  background: var(--panel-raised);
+  box-shadow: var(--shadow), 0 0 0 1px rgba(242, 194, 48, 0.55);
+  opacity: 1;
+}
+
+.toast-flag {
+  flex: none;
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sign);
+  color: var(--sign-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.toast.important .toast-flag {
+  flex-basis: 100%;
+  width: max-content;
+  max-width: max-content;
+}
+
+#toasts .toast-clear {
+  padding: 4px 10px;
+  font-size: 12px !important;
+}
+
+@media (max-width: 760px), (max-height: 500px) {
+  /* Sous la rangée du bouton des couches, au-dessus de la carte d'objectifs (qui reste repliable) */
+  #toasts {
+    top: 52px;
+    bottom: auto;
+    right: calc(8px + var(--safe-right, 0px));
+    width: min(360px, calc(100% - 16px));
+    z-index: 5;
+  }
+
+  #stage:has(#inspector.open) #toasts {
+    right: calc(8px + var(--safe-right, 0px));
+    width: min(360px, calc(100% - 16px));
+  }
+
+  #toasts .toast {
+    padding: 9px 38px 9px 12px;
+    font-size: 13.5px;
+  }
+
+  /* Téléphone : les deux importantes, et une seule ordinaire à la fois */
+  #toasts .toast:nth-of-type(n + 3) {
+    display: flex;
+  }
+
+  #toasts .toast-flow .toast:nth-of-type(n + 2) {
+    display: none;
+  }
+
+  #toasts .toast-clear {
+    display: none;
+  }
+}
+
+/* Paysage sur téléphone : l'inspecteur est à droite, en haut */
+@media (max-height: 500px) {
+  #stage:has(#inspector.open) #toasts {
+    right: calc(min(330px, 46vw) + 16px + var(--safe-right, 0px));
+    width: min(320px, calc(100% - min(330px, 46vw) - 32px));
+  }
+}
+
+/* ── Bouton cloche et déroulé ── */
+.hud-bell {
+  position: relative;
+}
+
+.hud-bell.active {
+  background: var(--sign);
+  color: var(--sign-ink);
+  border-color: transparent;
+}
+
+.hud-bell-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--panel-hover);
+  color: var(--ink);
+  font: 700 11px/17px var(--font-num);
+  text-align: center;
+  pointer-events: none;
+}
+
+.hud-bell-badge.pending {
+  background: var(--bad);
+  color: #fff;
+}
+
+.hud-bell-badge.pending:empty {
+  min-width: 11px;
+  height: 11px;
+  top: -3px;
+  right: -3px;
+}
+
+#notif-history {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  border-radius: var(--radius-m);
+  background: var(--slate);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+#notif-history[hidden] {
+  display: none;
+}
+
+.nh-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 6px 16px;
+}
+
+.nh-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 17px;
+}
+
+.nh-head .toast-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.nh-filters {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.nh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-raised);
+  color: var(--ink-dim);
+  font: 600 13px var(--font);
+  cursor: pointer;
+}
+
+.nh-tab.active {
+  background: var(--sign);
+  color: var(--sign-ink);
+  border-color: transparent;
+}
+
+.nh-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #fff;
+  font: 700 11px/18px var(--font-num);
+  text-align: center;
+}
+
+.nh-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.nh-list .empty {
+  padding: 18px 6px;
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+.nh-item {
+  padding: 9px 12px 9px 13px;
+  border-radius: var(--radius-s);
+  background: var(--panel);
+  border-left: 4px solid var(--ink-faint);
+}
+
+.nh-item.success {
+  border-left-color: var(--ok);
+}
+
+.nh-item.warning {
+  border-left-color: var(--warn);
+}
+
+.nh-item.danger {
+  border-left-color: var(--bad);
+}
+
+.nh-item.pending {
+  box-shadow: inset 0 0 0 1px rgba(242, 194, 48, 0.45);
+}
+
+.nh-item p {
+  margin: 4px 0 2px;
+  font-size: 14px;
+  line-height: 1.38;
+}
+
+.nh-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-faint);
+}
+
+.nh-meta small {
+  font-size: 12px;
+}
+
+.nh-times {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.nh-item .toast-actions .link {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px), (max-height: 500px) {
+  #notif-history {
+    top: 6px;
+    right: calc(8px + var(--safe-right, 0px));
+    width: calc(100% - 16px - var(--safe-left, 0px) - var(--safe-right, 0px));
+    max-height: calc(100% - 12px);
+  }
+}
+
+/* ── Coulisses de la campagne (bourrage des urnes) ── */
+.backroom {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  border: 1px dashed rgba(224, 85, 58, 0.55);
+  background: rgba(224, 85, 58, 0.07);
+}
+
+.backroom h3 {
+  margin-top: 0;
+}
+
+/* ── Soirée électorale : dépouillement animé ── */
+.election-count {
+  display: grid;
+  gap: 12px;
+  min-width: min(460px, 82vw);
+}
+
+.en-kicker {
+  margin: 0;
+  color: var(--sign);
+  font: 800 12px var(--font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.election-count h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.en-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.en-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 30%) 1fr 64px;
+  align-items: center;
+  gap: 10px;
+}
+
+.en-name {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.en-row.mine .en-name {
+  font-weight: 800;
+  color: var(--sign);
+}
+
+.en-bar {
+  position: relative;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-raised);
+}
+
+.en-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+}
+
+.en-half {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.en-val {
+  font: 700 17px var(--font-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.en-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ink-dim);
+  font-size: 14px;
+}
+
+.en-counted {
+  color: var(--ink);
+  font: 700 16px var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.en-comment {
+  min-height: 2.6em;
+  margin: 0;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink-dim);
+  animation: en-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes en-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.election-night.revealed,
+.round-one.revealed {
+  animation: en-reveal 0.5s ease-out;
+}
+
+.election-night.revealed .scenario-medal {
+  animation: en-medal 0.8s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes en-reveal {
+  from {
+    transform: scale(0.96);
+    opacity: 0.4;
+  }
+}
+
+@keyframes en-medal {
+  from {
+    transform: scale(0.2) rotate(-40deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .en-comment,
+  .election-night.revealed,
+  .round-one.revealed,
+  .election-night.revealed .scenario-medal {
+    animation: none;
+  }
+}
+
+/* ── Sauvegarde en ligne (Google Drive) et partage ── */
+.cloud-box {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line);
+  background: var(--panel-raised);
+}
+
+.cloud-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.cloud-box h4 {
+  margin: 14px 0 6px;
+}
+
+.cloud-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
+.cloud-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.g-logo {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  color: #4285f4;
+  font: 800 13px/1 Arial, sans-serif;
+}
+
+.save-actions .btn,
+.dialog-actions .btn {
+  gap: 6px;
+}
+
+.share-dialog {
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.share-dialog h3 {
+  margin: 0;
+}
+
+.share-options {
+  display: grid;
+  gap: 10px;
+}
+
+.share-option {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line);
+  background: var(--panel-raised);
+}
+
+.share-option .btn {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-url {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line);
+  background: var(--slate);
+  color: var(--ink);
+  font: 14px var(--font-num);
+}
+
+.menu-cloud {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.menu-cloud .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.menu-cloud-error:empty {
+  display: none;
+}
+
+.cloud-dialog {
+  min-width: min(520px, 86vw);
+}

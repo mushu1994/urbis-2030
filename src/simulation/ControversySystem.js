@@ -397,7 +397,7 @@ export class ControversySystem {
         const c = { id: C.nextId++, kind, title: def.title, axis: def.axis ?? ctx.delegation ?? null, intensity: def.intensity, since: m, response: null, ctx, summary: def.summary(ctx), newThisMonth: true };
         C.active.push(c);
         C.lastNew = m;
-        this.#notify(state, 'warning', `📰 Polémique : ${def.title}. ${c.summary} (Mairie → Polémiques)`);
+        this.#notify(state, 'warning', `📰 Polémique : ${def.title}. ${c.summary} (Mairie → Polémiques)`, { tab: 'press', decision: true, action: 'Répondre' });
         break;
       }
     }

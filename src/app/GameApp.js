@@ -26,6 +26,11 @@ import { defaultPolitics } from '../simulation/PoliticsSystem.js';
 import { applyDifficulty, MILESTONES } from '../simulation/Milestones.js';
 import { DemandPanel } from '../ui/DemandPanel.js';
 import { Notifications } from '../ui/Notifications.js';
+import { NotificationHistory } from '../ui/NotificationHistory.js';
+import { GoogleDriveSaves } from '../cloud/GoogleDrive.js';
+import { CloudSync } from '../cloud/CloudSync.js';
+import { shareDialog, receivedGameDialog, cloudSection } from '../ui/CloudPanel.js';
+import { formatDate } from '../simulation/config.js';
 import { HelpPanel, SavesPanel, SettingsPanel, SoundPanel, StartMenu } from '../ui/MenuPanels.js';
 import { ObjectivesCard } from '../ui/ObjectivesCard.js';
 import { DebugPanel } from '../ui/DebugPanel.js';
@@ -57,6 +62,9 @@ export class GameApp {
     this.clock = new SimulationClock();
     this.settings = new SettingsService();
     this.saves = new SaveService();
+    // v1.6 : copie des parties sur Google Drive et partage (la notification n'existe qu'après init)
+    this.cloud = new GoogleDriveSaves({ settings: this.settings });
+    this.cloudSync = new CloudSync({ cloud: this.cloud, saves: this.saves, settings: this.settings, notify: (n) => this.notifications?.push(n) });
     /** Vue isométrique 2D (PixiJS) et vue 3D (Three.js, chargée à la demande) : une seule est active. */
     this.renderer2d = new Renderer({ catalog });
     this.renderer3d = null;
@@ -89,7 +97,13 @@ export class GameApp {
         return typeof v === 'function' ? v.bind(r) : v;
       }
     });
-    this.notifications = new Notifications(this.$('#toasts'), { onLocate: (x, y) => this.focus(x, y), onPanel: (id, tab) => this.openPanel(id, tab) });
+    this.notifications = new Notifications(this.$('#toasts'), {
+      onLocate: (x, y) => this.focus(x, y),
+      onPanel: (id, tab) => this.openPanel(id, tab),
+      // v1.6 : date de jeu dans le déroulé, badge de la cloche
+      getDate: () => (this.session ? formatDate(this.session.state.time.tick) : ''),
+      onChange: () => this.#notifBadge()
+    });
     this.hud = new HUD(this.$('#hud'), {
       onSpeed: (i) => this.setSpeed(i),
       onMenu: () => this.showMenu(),
@@ -100,8 +114,11 @@ export class GameApp {
       onMute: () => this.togglePanel('sound'),
       onAlert: (kind) => this.locateAlert(kind),
       onDemand: (k) => (this.panelHost.openId === 'demand' && this.panelHost.tab === k ? this.panelHost.close() : this.openPanel('demand', k)),
-      onWeather: () => this.openPanel('city', 'risks')
+      onWeather: () => this.openPanel('city', 'risks'),
+      onHistory: () => this.notifHistory?.toggle()
     });
+    // v1.6 : déroulé des notifications
+    this.notifHistory = new NotificationHistory(this.$('#stage'), this.notifications, { onToggle: () => this.#notifBadge() });
     // Navigation (v0.9) : faire tourner la carte d'un quart de tour, boussole, vue de dessus
     const needle = h('span.nav-needle', { 'aria-hidden': 'true' }, h('i'), h('b', 'N'));
     const compass = h('button.nav-btn.nav-compass', { type: 'button', 'aria-label': 'Boussole : revenir à l\'orientation d\'origine', on: { click: () => this.resetNorth() } }, needle);
@@ -157,7 +174,18 @@ export class GameApp {
       finance: new FinancePanel({ execute, notify, onPanel: (id, tab) => this.openPanel(id, tab) }),
       ai: new TechPanel({ execute, notify }),
       city: new CityPanel({ onFocus: (x, y) => this.focus(x, y), onPanel: (id, tab) => this.openPanel(id, tab), getRenderStats: () => this.renderer.stats, getHostStats: () => this.host?.stats, execute, notify }),
-      saves: new SavesPanel({ saves: this.saves, settings: this.settings, onSave: (o) => this.save(o), onLoad: (id) => this.load(id), notify }),
+      saves: new SavesPanel({
+        saves: this.saves,
+        settings: this.settings,
+        onSave: (o) => this.save(o),
+        onLoad: (id) => this.load(id),
+        notify,
+        // v1.6 : sauvegarde en ligne et partage
+        cloud: this.cloud,
+        cloudSync: this.cloudSync,
+        onShare: (source) => this.share(source),
+        onImported: (id) => this.load(id)
+      }),
       settings: new SettingsPanel({
         settings: this.settings,
         apply: () => this.applySettings(),
@@ -218,7 +246,11 @@ export class GameApp {
       onNew: (o) => this.newGame(o),
       onContinue: (id) => this.load(id),
       onLoad: (id) => this.load(id),
-      onClose: () => {}
+      onClose: () => {},
+      // v1.6 : villes en ligne et partie reçue (fichier) depuis l'écran d'accueil
+      onCloud: () => this.cloudGames(),
+      onImported: (id) => this.load(id),
+      cloudConfigured: this.cloud.configured
     });
 
     const tooltip = this.$('#cursor-tip');
@@ -279,6 +311,90 @@ export class GameApp {
     if (this.settings.get('view3d') !== false) await this.setView3d(true, { persist: false, quiet: true });
     else this.#showCanvas();
     await this.showMenu();
+    // v1.6 : stockage persistant (le navigateur évite d'effacer les sauvegardes), service Google préchargé,
+    // ville reçue par lien (?partie=…)
+    navigator.storage?.persist?.().catch(() => {});
+    this.cloud.preload();
+    await this.#openSharedLink();
+  }
+
+  /** v1.6 : une ville partagée par lien (?partie=identifiant) : résumé, puis reprise dans ce navigateur. */
+  async #openSharedLink() {
+    let id = null;
+    try {
+      const url = new URL(location.href);
+      id = url.searchParams.get('partie');
+      if (!id) return;
+      url.searchParams.delete('partie');
+      history.replaceState(null, '', url.toString());
+    } catch {
+      return;
+    }
+    if (!/^[\w-]{10,200}$/.test(id)) return this.notifications.push({ level: 'warning', message: 'Lien de partage invalide.' });
+    this.#busy('Récupération de la ville partagée…');
+    let rec;
+    try {
+      rec = await this.cloud.downloadShared(id);
+    } catch (err) {
+      this.#busy(null);
+      return this.notifications.push({ level: 'danger', message: `Ville partagée introuvable : ${err.message}` });
+    }
+    this.#busy(null);
+    if (!(await receivedGameDialog(rec))) return;
+    try {
+      const saved = await this.saves.importRecordObject(rec, { suffix: ' (partagée)' });
+      await this.load(saved.id);
+    } catch (err) {
+      this.notifications.push({ level: 'danger', message: `Impossible de reprendre cette ville : ${err.message}` });
+    }
+  }
+
+  /**
+   * v1.6 : partager une ville. `source` : la partie en cours ({ current: true }), une sauvegarde de ce navigateur
+   * ({ localId, name }) ou une partie en ligne ({ cloudFileId, name }).
+   */
+  share(source = { current: true }) {
+    const notify = (level, message) => this.notifications.push({ level, message });
+    let getRecord;
+    let name = source.name;
+    if (source.localId) {
+      getRecord = async () => {
+        const rec = await this.saves.get(source.localId);
+        if (!rec) throw new Error('Sauvegarde introuvable');
+        return rec;
+      };
+    } else if (source.cloudFileId) {
+      getRecord = () => this.cloud.download(source.cloudFileId);
+    } else {
+      if (!this.session) return;
+      name = this.session.state.meta.name;
+      getRecord = async () => {
+        await this.host?.flush();
+        return this.saves.buildRecord(this.session.state, { id: 'share', name, kind: 'manual' });
+      };
+    }
+    return shareDialog({ getRecord, name: name ?? 'Ma ville', cloud: this.cloud, notify });
+  }
+
+  /** v1.6 : villes en ligne depuis l'écran d'accueil (nouvel appareil, navigateur effacé). */
+  cloudGames() {
+    let dlg = null;
+    const box = h('div.cloud-dialog');
+    const render = () => setChildren(box, cloudSection({
+      cloud: this.cloud,
+      sync: this.cloudSync,
+      getSession: () => null,
+      onLoad: (id) => {
+        dlg?.close();
+        this.menu.hide();
+        this.load(id);
+      },
+      onShare: (src) => this.share(src),
+      notify: (level, message) => this.notifications.push({ level, message }),
+      rerender: render
+    }), h('div.dialog-actions', h('button.btn', { type: 'button', on: { click: () => dlg?.close() } }, 'Fermer')));
+    render();
+    dlg = contentDialog(box);
   }
 
   #shortcuts() {
@@ -533,9 +649,13 @@ export class GameApp {
     this.select(null);
     this.panelHost.close();
     this.toolbar.select({ id: 'select', kind: 'select', label: 'Sélection' });
+    this.notifications.reset();
+    this.notifHistory?.close();
     this.bus.on('notify', (n) => {
       // Les crises ont leur propre carte (avec « Voir ») : pas de notification en double
       if (n.kind === 'crisis') return;
+      // v1.6 : le résultat d'un scrutin n'est annoncé qu'à la fin du dépouillement animé
+      if (n.election) this.notifications.hold();
       this.notifications.push(n);
       if (n.kind !== 'crisis') this.audio.play(n.level === 'danger' ? 'danger' : n.level === 'warning' ? 'warning' : n.level === 'success' ? 'success' : 'info');
     });
@@ -551,6 +671,12 @@ export class GameApp {
       this.notifications.push({ level: 'info', message: 'Premier mandat ? Le guide du maire explique tout le jeu, chapitre par chapitre (touche G).', panel: 'guide' });
     }
     this.bus.on('command:done', ({ cmd }) => {
+      // v1.6 : une décision réglée depuis un panneau retire la notification « à traiter » correspondante
+      const settled = cmd.type === 'council' && cmd.op === 'answer' ? 'council'
+        : cmd.type === 'controversy' ? 'press'
+          : cmd.type === 'politics' && cmd.op === 'programme' ? 'campaign'
+            : cmd.type === 'politics' && cmd.op === 'secondRound' ? 'results' : null;
+      if (settled) this.notifications.resolve((e) => e.panel === 'politics' && e.tab === settled);
       const sfx = { road: 'road', rail: 'road', buyParcel: 'money', building: 'build', zone: 'zone', deliveryZone: 'zone', demolish: 'demolish', upgrade: 'money', loan: 'money', research: 'tech', undo: 'undo', crisisResponse: 'money' }[cmd.type];
       if (sfx) this.audio.play(sfx);
     });
@@ -577,6 +703,8 @@ export class GameApp {
       this.setSpeed(0);
       this.closeRoundOne?.();
       this.closeRoundOne = secondRoundDialog(secondRound, {
+        onBeat: (k) => this.audio.play(k === 'drum' ? 'drum' : 'tick'),
+        onReveal: () => this.notifications.release(),
         onChoose: (mergeWith) => {
           this.closeRoundOne = null;
           const r = this.execute({ type: 'politics', op: 'secondRound', mergeWith });
@@ -587,9 +715,14 @@ export class GameApp {
     this.bus.on('politics:election', ({ result }) => {
       this.closeRoundOne?.();
       this.closeRoundOne = null;
-      this.audio.play(result.won ? 'fanfare' : 'fail');
       this.setSpeed(0);
+      // v1.6 : dépouillement animé, puis fanfare (ou échec) au moment du verdict
       electionDialog(result, {
+        onBeat: (k) => this.audio.play(k === 'drum' ? 'drum' : 'tick'),
+        onReveal: () => {
+          this.audio.play(result.won ? 'fanfare' : 'fail');
+          this.notifications.release();
+        },
         onContinue: () => this.setSpeed(1),
         onFree: () => {
           this.execute({ type: 'politics', op: 'continue' });
@@ -619,6 +752,17 @@ export class GameApp {
   #resumeAfterCrisis() {
     if (this.speedBeforeCrisis && this.clock.paused) this.setSpeed(this.speedBeforeCrisis);
     this.speedBeforeCrisis = 0;
+  }
+
+  /** v1.6 : badge de la cloche et rafraîchissement du déroulé ouvert. */
+  #notifBadge() {
+    if (!this.hud || !this.notifications) return;
+    if (this.notifHistory?.isOpen && !this.notifRefreshing) {
+      this.notifRefreshing = true;
+      this.notifHistory.refresh();
+      this.notifRefreshing = false;
+    }
+    this.hud.setNotifications({ unread: this.notifications.unread, pending: this.notifications.pending, open: !!this.notifHistory?.isOpen });
   }
 
   toggleMute() {
@@ -787,7 +931,11 @@ export class GameApp {
       await this.host?.flush();
       const r = await this.saves.save(this.session.state, { id, name: name ?? this.session.state.meta.name });
       this.settings.set('lastSaveId', r.id);
-      this.notifications.push({ level: 'success', message: `Partie sauvegardée : ${r.name}` });
+      this.notifications.push({ level: 'success', message: `Partie sauvegardée : ${r.name}${this.cloud.connected && this.cloudSync.auto ? ' (copie en ligne en cours)' : ''}` });
+      // v1.6 : copie sur Google Drive si le joueur est connecté
+      this.cloudSync.afterSave(this.session.state, r, { kind: 'manual' }).then((f) => {
+        if (f) this.notifications.push({ level: 'success', message: `Copie en ligne à jour : ${f.name}`, key: 'cloud-ok' });
+      });
     } catch (err) {
       this.notifications.push({ level: 'danger', message: `Échec de la sauvegarde : ${err.message}` });
     }
@@ -858,8 +1006,9 @@ export class GameApp {
     if (!this.session) return;
     try {
       await this.host?.flush();
-      await this.saves.autosave(this.session.state);
+      const r = await this.saves.autosave(this.session.state);
       this.notifications.push({ level: 'info', message: 'Sauvegarde automatique effectuée', key: 'autosave' });
+      this.cloudSync.afterSave(this.session.state, r, { kind: 'auto' });
     } catch (err) {
       this.notifications.push({ level: 'danger', message: `Sauvegarde automatique impossible : ${err.message}` });
     }
