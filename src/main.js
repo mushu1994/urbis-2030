@@ -43,7 +43,7 @@ const framed = (() => {
   }
 })();
 // Pas de service worker dans une page intégrée (aperçu, portail de jeux) : il ne s'y enregistre pas.
-if ('serviceWorker' in navigator && import.meta.env.PROD && import.meta.env.MODE !== 'android' && !framed && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+if ('serviceWorker' in navigator && import.meta.env.PROD && import.meta.env.MODE !== 'android' && import.meta.env.MODE !== 'ios' && !framed && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Service worker non enregistré :', err));
   });

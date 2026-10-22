@@ -8,6 +8,27 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte obligatoire. Le compte Google
 ne sert qu'à copier ses parties sur son propre Google Drive et à les partager (facultatif, v1.6).
 
+## Version 1.8 — application iPhone et iPad (Capacitor)
+
+Même projet Capacitor que l'application Android (dossier `ios/`, Swift Package Manager, aucune dépendance
+CocoaPods). Il faut un Mac avec **Xcode** (gratuit, App Store).
+
+**Installer sur son propre iPhone ou iPad, gratuitement (compte Apple ordinaire)**
+1. `npm ci`, puis `npm run ios` : construit le jeu, le copie dans `ios/` et ouvre Xcode.
+2. Xcode → Settings → Accounts → **+** → Apple ID (le compte Apple habituel).
+3. Projet **App** → onglet *Signing & Capabilities* → cocher *Automatically manage signing* → Team : « (Personal
+   Team) ». Si l'identifiant est refusé, changer *Bundle Identifier* (par exemple `io.github.mushu1994.urbis2030.maud`).
+4. Brancher l'iPhone ou l'iPad (câble), le choisir en haut de Xcode, ▶ Run.
+5. Première fois sur l'appareil : Réglages → Confidentialité et sécurité → **Mode développeur** (activer, redémarrer),
+   puis Réglages → Général → VPN et gestion de l'appareil → faire confiance au profil de développeur.
+
+Limites d'Apple pour un compte gratuit : l'application doit être réinstallée depuis Xcode **tous les 7 jours**, et
+seulement sur les appareils branchés à ce Mac. La distribution à d'autres personnes (TestFlight, App Store) demande
+le programme développeur Apple (99 $/an). L'alternative gratuite et sans limite reste la version web installée sur
+l'écran d'accueil (Safari → Partager → « Sur l'écran d'accueil »), qui garde ses sauvegardes et fonctionne hors ligne.
+
+Après une modification du jeu : `npm run build:ios`, puis ▶ dans Xcode.
+
 ## Version 1.7.1 — corrections iPad (et écrans tactiles)
 
 - **Lignes de bus et de tramway** : pincer pour zoomer ou dézoomer pendant le tracé ne retire plus d'arrêt (un

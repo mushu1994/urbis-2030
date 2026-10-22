@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
 /**
- * v1.7 — application Android (Capacitor).
+ * v1.7 — application Android (Capacitor) ; v1.8 — iPhone et iPad (même code, le bouton Retour n'existe que sur Android).
  *
  * Le même jeu que la version web, emballé dans une application : la WebView affiche le build `dist/`. Ce module
  * ajoute ce qu'une application attend et qu'une page web ne fait pas :

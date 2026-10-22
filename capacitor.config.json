@@ -14,5 +14,11 @@
       "style": "DARK",
       "backgroundColor": "#1d2730"
     }
+  },
+  "ios": {
+    "backgroundColor": "#1d2730",
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false
   }
 }

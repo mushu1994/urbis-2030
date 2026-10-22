@@ -10,9 +10,9 @@ import { serviceWorker } from './scripts/sw-plugin.js';
  */
 export default defineConfig(({ mode }) => ({
   base: './',
-  // Application Android (Capacitor, v1.7) : pas de service worker, le jeu est déjà dans l'application
+  // Applications Android et iOS (Capacitor, v1.7–1.8) : pas de service worker, le jeu est déjà dans l'application
   // (un cache hors ligne risquerait de servir l'ancienne version après une mise à jour)
-  plugins: mode === 'single' ? [viteSingleFile()] : mode === 'android' ? [] : [serviceWorker()],
+  plugins: mode === 'single' ? [viteSingleFile()] : mode === 'android' || mode === 'ios' ? [] : [serviceWorker()],
   worker: { format: 'es' },
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',

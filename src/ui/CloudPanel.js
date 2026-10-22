@@ -19,7 +19,7 @@ export function cloudSection({ cloud, sync, getSession, onLoad, onShare, notify,
   const head = h('h3.cloud-title', icon('cloud', 18), 'Sauvegarde en ligne (Google Drive)');
   if (!cloud.configured && cloud.nativeApp) {
     return h('section.cloud-box', head,
-      h('p.hint', 'Dans l\'application Android, vos parties sont gardées dans l\'application (elles ne disparaissent qu\'en la désinstallant ou en effaçant ses données). Pour une copie de secours, utilisez « Partager la ville » → « Envoyer le fichier » et choisissez Google Drive dans la liste. La connexion Google directe reste disponible dans la version web du jeu.'));
+      h('p.hint', 'Dans l\'application (Android, iPhone, iPad), vos parties sont gardées dans l\'application (elles ne disparaissent qu\'en la désinstallant ou en effaçant ses données). Pour une copie de secours, utilisez « Partager la ville » → « Envoyer le fichier » et choisissez Google Drive dans la liste. La connexion Google directe reste disponible dans la version web du jeu.'));
   }
   if (!cloud.configured) {
     return h('section.cloud-box', head,
