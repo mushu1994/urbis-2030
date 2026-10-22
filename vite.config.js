@@ -10,7 +10,9 @@ import { serviceWorker } from './scripts/sw-plugin.js';
  */
 export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: mode === 'single' ? [viteSingleFile()] : [serviceWorker()],
+  // Application Android (Capacitor, v1.7) : pas de service worker, le jeu est déjà dans l'application
+  // (un cache hors ligne risquerait de servir l'ancienne version après une mise à jour)
+  plugins: mode === 'single' ? [viteSingleFile()] : mode === 'android' ? [] : [serviceWorker()],
   worker: { format: 'es' },
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',

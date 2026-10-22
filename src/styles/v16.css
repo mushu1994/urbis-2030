@@ -603,3 +603,30 @@
 .cloud-dialog {
   min-width: min(520px, 86vw);
 }
+
+/* ═══════════════════════════ v1.7 : application Android ═══════════════════════════ */
+/* Plein écran géré par l'application (barre d'état masquée) : pas de bouton plein écran du navigateur */
+.native-app .hud-fullscreen {
+  display: none;
+}
+
+/* Capacitor publie les marges système en variables CSS (WebView où env() vaut 0) */
+.native-app {
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --safe-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+}
+
+/* Pas de sélection de texte ni de menu contextuel au doigt (appui long sur la carte) */
+.native-app body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.native-app input,
+.native-app textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

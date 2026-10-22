@@ -28,6 +28,7 @@ import { DemandPanel } from '../ui/DemandPanel.js';
 import { Notifications } from '../ui/Notifications.js';
 import { NotificationHistory } from '../ui/NotificationHistory.js';
 import { GoogleDriveSaves } from '../cloud/GoogleDrive.js';
+import { isNative, setupNative } from '../native/NativeApp.js';
 import { CloudSync } from '../cloud/CloudSync.js';
 import { shareDialog, receivedGameDialog, cloudSection } from '../ui/CloudPanel.js';
 import { formatDate } from '../simulation/config.js';
@@ -63,7 +64,9 @@ export class GameApp {
     this.settings = new SettingsService();
     this.saves = new SaveService();
     // v1.6 : copie des parties sur Google Drive et partage (la notification n'existe qu'après init)
-    this.cloud = new GoogleDriveSaves({ settings: this.settings });
+    // Application Android : la connexion Google par fenêtre n'est pas permise dans une WebView (Google la bloque)
+    this.cloud = new GoogleDriveSaves({ settings: this.settings, ...(isNative ? { clientId: '', apiKey: '' } : {}) });
+    this.cloud.nativeApp = isNative;
     this.cloudSync = new CloudSync({ cloud: this.cloud, saves: this.saves, settings: this.settings, notify: (n) => this.notifications?.push(n) });
     /** Vue isométrique 2D (PixiJS) et vue 3D (Three.js, chargée à la demande) : une seule est active. */
     this.renderer2d = new Renderer({ catalog });
@@ -316,6 +319,68 @@ export class GameApp {
     navigator.storage?.persist?.().catch(() => {});
     this.cloud.preload();
     await this.#openSharedLink();
+    // v1.7 : application Android (bouton Retour, arrière-plan, plein écran)
+    await setupNative(this).catch((err) => console.warn('Intégration Android :', err));
+  }
+
+  /**
+   * v1.7 : bouton Retour d'Android. Ferme ce qui est ouvert, du plus récent au plus ancien.
+   * @returns {boolean} true si l'appui a servi ; false s'il n'y a plus rien à fermer (proposer de quitter)
+   */
+  handleBack() {
+    if (document.querySelector('.dialog-backdrop')) {
+      // Les fenêtres se ferment avec Échap ; la soirée électorale attend un choix (l'appui est ignoré)
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      return true;
+    }
+    if (this.notifHistory?.isOpen) {
+      this.notifHistory.close();
+      return true;
+    }
+    if (this.menu.visible) {
+      if (!this.session) return false;
+      this.menu.hide();
+      this.menu.onClose?.();
+      return true;
+    }
+    if (!this.session) return false;
+    if (this.tools.cancel()) return true;
+    if (this.toolbar.openCat) {
+      this.toolbar.closeFlyout();
+      return true;
+    }
+    if (this.panelHost.openId) {
+      this.panelHost.close();
+      return true;
+    }
+    if (this.inspector.open) {
+      this.select(null);
+      return true;
+    }
+    if (this.overlays.expanded) {
+      this.overlays.toggleExpanded(false);
+      return true;
+    }
+    return false;
+  }
+
+  /** v1.7 : sauvegarde automatique avant de quitter l'application. */
+  async saveBeforeExit() {
+    if (!this.session) return;
+    try {
+      await this.host?.flush();
+      const r = await this.saves.autosave(this.session.state);
+      await this.cloudSync.afterSave(this.session.state, r, { kind: 'auto' });
+    } catch {
+      /* on quitte quand même */
+    }
+  }
+
+  /** v1.7 : l'application passe en arrière-plan (appel, autre application) : pause et sauvegarde. */
+  onBackground() {
+    if (!this.session) return;
+    if (!this.clock.paused) this.setSpeed(0);
+    this.saveBeforeExit();
   }
 
   /** v1.6 : une ville partagée par lien (?partie=identifiant) : résumé, puis reprise dans ce navigateur. */

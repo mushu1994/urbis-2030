@@ -81,6 +81,8 @@ export function textDialog(title, text, filename) {
   // Le téléchargement n'est proposé que hors cadre intégré (les cadres d'intégration bloquent souvent les téléchargements).
   const standalone = (() => {
     try {
+      // v1.7 : pas de téléchargement dans l'application Android (« Partager la ville » envoie un fichier)
+      if (document.documentElement.classList.contains('native-app')) return false;
       return window.self === window.top;
     } catch {
       return false;

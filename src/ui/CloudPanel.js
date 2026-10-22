@@ -3,6 +3,7 @@ import { formatNumber } from '../util/money.js';
 import { confirmDialog, contentDialog } from './Dialog.js';
 import { encodeRecord, fileNameFor } from '../persistence/SaveCodec.js';
 import { CloudAuthError } from '../cloud/GoogleDrive.js';
+import { shareFileNative } from '../native/NativeApp.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -16,6 +17,10 @@ export const gameUrl = () => `${location.origin}${location.pathname}`;
 export function cloudSection({ cloud, sync, getSession, onLoad, onShare, notify, rerender }) {
   const session = getSession?.();
   const head = h('h3.cloud-title', icon('cloud', 18), 'Sauvegarde en ligne (Google Drive)');
+  if (!cloud.configured && cloud.nativeApp) {
+    return h('section.cloud-box', head,
+      h('p.hint', 'Dans l\'application Android, vos parties sont gardées dans l\'application (elles ne disparaissent qu\'en la désinstallant ou en effaçant ses données). Pour une copie de secours, utilisez « Partager la ville » → « Envoyer le fichier » et choisissez Google Drive dans la liste. La connexion Google directe reste disponible dans la version web du jeu.'));
+  }
   if (!cloud.configured) {
     return h('section.cloud-box', head,
       h('p.hint', 'La sauvegarde Google n\'est pas encore activée sur cette version du jeu. En attendant, « Partager » et « Exporter » gardent une copie de vos parties hors du navigateur.'));
@@ -139,7 +144,10 @@ export function shareDialog({ getRecord, name, cloud, notify }) {
   const fileBtn = h('button.btn', { type: 'button', on: { click: (e) => withRecord(e.currentTarget, async (rec) => {
     const bytes = await encodeRecord(rec);
     const file = new File([bytes], fileNameFor(name), { type: 'application/octet-stream' });
-    if (navigator.canShare?.({ files: [file] })) {
+    // v1.7 : application Android — feuille de partage du téléphone
+    if (await shareFileNative(bytes, file.name, { title: `URBIS 2030 — ${name}`, text })) {
+      status.textContent = 'Votre ami ouvre le fichier dans URBIS 2030 : Sauvegardes → « Ouvrir une partie reçue ». Choisir Google Drive dans la liste en garde une copie de secours.';
+    } else if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: `URBIS 2030 — ${name}`, text });
       status.textContent = 'Fichier envoyé. Votre ami l\'ouvre dans URBIS 2030 : Sauvegardes → « Ouvrir une partie reçue ».';
     } else {

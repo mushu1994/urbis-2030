@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.mushu1994.urbis2030",
+  "appName": "URBIS 2030",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#1d2730",
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DARK",
+      "backgroundColor": "#1d2730"
+    }
+  }
+}

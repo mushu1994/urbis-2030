@@ -8,6 +8,37 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte obligatoire. Le compte Google
 ne sert qu'à copier ses parties sur son propre Google Drive et à les partager (facultatif, v1.6).
 
+## Version 1.7 — application Android (Capacitor)
+
+Le même jeu, emballé en application Android : la WebView de Capacitor affiche le build `dist/` (mode `android` :
+sans service worker, pour qu'une mise à jour de l'application ne serve jamais l'ancienne version en cache).
+
+**Ce que l'application ajoute** (`src/native/NativeApp.js`, chargé seulement dans l'application) :
+- **bouton Retour** : ferme la fenêtre, le déroulé, l'outil en cours, le menu, le panneau ou l'inspecteur ; à l'écran
+  de jeu, un second appui dans les deux secondes sauvegarde puis quitte ;
+- **arrière-plan** (appel, autre application) : pause et sauvegarde automatique ;
+- **plein écran** : barre d'état masquée, écran maintenu allumé, taille de police du système ignorée (l'interface a
+  sa propre échelle dans les Paramètres) ;
+- **partage** : « Partager la ville » → « Envoyer le fichier » ouvre la feuille de partage d'Android (messagerie,
+  e-mail, Google Drive pour une copie de secours) ;
+- icône adaptative et écran de démarrage (`assets/`, régénérés par `node scripts/make-android-assets.mjs` puis
+  `npx @capacitor/assets generate --android`).
+
+La connexion Google directe n'existe que dans la version web : Google interdit sa fenêtre de connexion dans les
+WebView d'application. Dans l'application, les parties restent dans l'application (effacées seulement à la
+désinstallation ou en effaçant ses données) ; le partage par fichier sert de copie de secours.
+
+**Construire et lancer (Android Studio, JDK 21 inclus)**
+1. `git pull`, puis `npm ci`.
+2. `npm run android` : construit le jeu, le copie dans `android/` (`cap sync`) et ouvre Android Studio. Sous Windows,
+   si Android Studio ne s'ouvre pas : File → Open → dossier `android` du projet.
+3. Premier lancement : laisser Gradle terminer la synchronisation (barre du bas), puis ▶ Run sur un téléphone branché
+   (Options pour les développeurs → Débogage USB) ou un émulateur.
+4. Après chaque modification du jeu : `npm run build:android`, puis ▶ Run.
+
+Identifiant de l'application : `io.github.mushu1994.urbis2030` (`capacitor.config.json`). Pour une publication sur le
+Play Store : Build → Generate Signed App Bundle (garder précieusement le fichier de clé, il signe toutes les mises à jour).
+
 ## Nouveautés de la version 1.6 — parties en ligne, partage, notifications, soirée électorale
 
 ### Sauvegarde Google Drive (Sauvegardes, ou « Mes villes en ligne » sur l'écran d'accueil)
