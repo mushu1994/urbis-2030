@@ -3512,7 +3512,9 @@ kind('alarm', (g) => {
 /* ---------- 6. scène : terrain, eau, routes, rails, forêts, bâtiments par tronçons ---------- */
 const CHUNK = 20;
 const TERR_COL = { 0: '#7fae5a', 1: '#e0cf96', 2: '#5f8f45', 3: '#9a948a', 4: '#3b5f6e' };
-const ZONE_TINT = { 1: '#9cc477', 2: '#93bd74', 3: '#a9bccb', 4: '#adb7cc', 5: '#b4ad98', 6: '#c7c27c', 7: '#b3ab98', 8: '#6f9a50', 9: '#a3b6c9' };
+// v1.7.1 : parcelles zonées encore vides bien visibles (couleur de la zone, comme en 2D et dans la légende),
+// au lieu d'un vert presque identique à l'herbe
+const ZONE_TINT = { 1: '#b4e08c', 2: '#6cc48c', 3: '#8fbfe8', 4: '#bba6ea', 5: '#ecca62', 6: '#cbe07a', 7: '#cf9468', 8: '#9cbc62', 9: '#77a3dc' };
 const SNOW = new THREE.Color('#f4f7fb'), LOCKED = new THREE.Color('#8f948c');
 const DIR4 = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // sud, est, nord, ouest
 const BED_Y = -0.72;
@@ -3646,7 +3648,10 @@ function buildWorld(map, catalog, mats, scene) {
       if (map.occ[i] < 0 && !map.road[i] && !water && ZONE_TINT[map.zone[i]] && map.terr[i] !== T_FOREST) col = ZONE_TINT[map.zone[i]];
       if (water) col = '#4c5e52';
       tmp.set(col).multiplyScalar(0.93 + hash2(x, z, 11) * 0.12);
-      if (map.snow && !water) tmp.lerp(SNOW, map.snow > 1 ? 0.78 : 0.42);
+      // parcelles zonées : damier léger qui dessine les lots ; la neige ne les efface pas
+      const zoned = col === ZONE_TINT[map.zone[i]];
+      if (zoned) tmp.multiplyScalar((x + z) % 2 ? 0.94 : 1.03);
+      if (map.snow && !water) tmp.lerp(SNOW, zoned ? (map.snow > 1 ? 0.3 : 0.18) : map.snow > 1 ? 0.78 : 0.42);
       if (map.locked && map.locked[i]) tmp.lerp(LOCKED, 0.45).multiplyScalar(0.78); // parcelle hors du territoire communal
       L.body.quad(x, z, x + 1, z + 1, y, tmp.clone());
       for (let d = 0; d < 4; d++) {

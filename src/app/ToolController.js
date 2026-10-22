@@ -96,6 +96,21 @@ export class ToolController {
     return false;
   }
 
+  /**
+   * v1.7.1 : interrompt seulement le geste en cours (rectangle de zonage, tracé de route qu'on était en train de
+   * glisser), sans toucher à ce qui a déjà été choisi : arrêts d'une ligne, bâtiment en attente de validation,
+   * équipement à déplacer. Appelé quand un deuxième doigt se pose (pincer pour zoomer) ou quand le navigateur
+   * reprend la main sur le geste (Safari sur iPad).
+   */
+  abortStroke() {
+    if (!this.dragStart) return false;
+    this.dragStart = null;
+    if (!this.pending && !this.lineStops.length) this.renderer.setPreview(null);
+    this.lastKey = '';
+    this.#refresh();
+    return true;
+  }
+
   /** Aperçu de la pose en attente (coût, validité), ou null. */
   get pendingPreview() {
     if (!this.pending) return null;
@@ -338,12 +353,26 @@ export class ToolController {
   #refreshLine(session) {
     const tip = this.tooltip;
     const n = this.lineStops.length;
+    if (!n && !this.hoverTile) {
+      this.renderer.setPreview(null);
+      tip.hidden = true;
+      this.lastKey = '';
+      return;
+    }
     const key = `line:${this.lineStops.join(',')}`;
     if (key === this.lastKey) return;
     this.lastKey = key;
     const pv = n >= 2 ? session.preview(this.#lineCommand()) : null;
     const w = session.state.grid.width;
-    this.renderer.setPreview(pv?.path ? { kind: 'road', ok: pv.ok, tiles: pv.path.map((i) => ({ x: i % w, y: Math.floor(i / w) })) } : null);
+    // v1.7.1 : les arrêts déjà choisis restent marqués, même avec un seul arrêt (avant, rien ne s'affichait)
+    const stopTiles = [];
+    for (const id of this.lineStops) {
+      const b = session.state.buildings.get(id);
+      if (b) for (let dy = 0; dy < (b.h ?? 1); dy++) for (let dx = 0; dx < (b.w ?? 1); dx++) stopTiles.push({ x: b.x + dx, y: b.y + dy });
+    }
+    const pathTiles = pv?.path ? pv.path.map((i) => ({ x: i % w, y: Math.floor(i / w) })) : [];
+    const tiles = [...pathTiles, ...stopTiles];
+    this.renderer.setPreview(tiles.length ? { kind: 'road', ok: pv ? pv.ok : true, tiles } : null);
     tip.innerHTML = '';
     const b = document.createElement('strong');
     b.textContent = this.tool.label ?? 'Tracer une ligne';
@@ -373,6 +402,8 @@ export class ToolController {
     const session = this.getSession();
     const tip = this.tooltip;
     const at = this.pending?.tile ?? this.hoverTile;
+    // Tracé de ligne : l'aperçu (arrêts choisis, parcours) ne dépend pas du survol — au doigt il n'y en a pas
+    if (session && this.tool.kind === 'line') return this.#refreshLine(session);
     if (!session || !at) {
       tip.hidden = true;
       return;

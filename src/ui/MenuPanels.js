@@ -148,15 +148,32 @@ export class SavesPanel {
         h('div.save-actions',
           h('button.btn.primary', { on: { click: () => this.onLoad(it.id) } }, 'Charger'),
           this.onShare ? h('button.btn', { title: 'Envoyer cette ville à un ami', on: { click: () => this.onShare({ localId: it.id, name: it.name }) } }, 'Partager') : null,
-          session ? h('button.btn', { title: 'Remplacer par la partie en cours', on: { click: async () => { await this.onSave({ id: it.id, name: it.name }); rerender(); } } }, 'Écraser') : null,
+          session ? h('button.btn', { title: 'Remplacer par la partie en cours', on: { click: async () => { this.lastResult = await this.onSave({ id: it.id, name: it.name }); rerender(); } } }, 'Écraser') : null,
           h('button.btn.danger', { on: { click: async () => { if (await confirmDialog(`Supprimer « ${it.name} » ?`, { confirmLabel: 'Supprimer', danger: true })) { await this.saves.remove(it.id); rerender(); } } } }, 'Supprimer')
         )
       )));
     }).catch((err) => setChildren(list, h('p.empty.neg', `Sauvegardes indisponibles : ${err.message}`)));
 
+    // v1.7.1 : résultat de la dernière sauvegarde, visible dans le panneau (la notification passe sous le panneau)
+    const res = this.lastResult;
+    this.lastResult = null;
+    const status = res
+      ? h('p.save-status', { class: res.ok ? 'ok' : 'bad', role: 'status' }, res.ok ? `✓ Partie « ${res.name} » sauvegardée à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.` : `✕ La sauvegarde a échoué : ${res.error}`)
+      : null;
     return [
+      status,
+      safariStorageHint(),
       session
-        ? h('form.save-form', { on: { submit: async (e) => { e.preventDefault(); await this.onSave({ name: name.value.trim() || 'Ma ville' }); rerender(); } } },
+        ? h('form.save-form', { on: { submit: async (e) => {
+          e.preventDefault();
+          const btn = e.currentTarget.querySelector('button[type=submit]');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Sauvegarde…';
+          }
+          this.lastResult = await this.onSave({ name: name.value.trim() || 'Ma ville' });
+          rerender();
+        } } },
           h('label', 'Nom', name), h('button.btn.primary', { type: 'submit' }, 'Sauvegarder la partie'),
           h('button.btn', { type: 'button', on: { click: () => {
             textDialog('Exporter la partie', this.saves.exportRecord(session.state), `${session.state.meta.name.replace(/[^\w-]+/g, '_')}.urbis.json`);
@@ -170,6 +187,23 @@ export class SavesPanel {
       list
     ];
   }
+}
+
+/**
+ * v1.7.1 : Safari (iPad, iPhone) efface les données d'un site qu'on n'a pas ouvert depuis sept jours, et une
+ * navigation privée les oublie à la fermeture de l'onglet. Installé sur l'écran d'accueil, le jeu garde ses
+ * sauvegardes : on le signale tant que ce n'est pas fait.
+ */
+function safariStorageHint() {
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (!ios || standalone || document.documentElement.classList.contains('native-app')) return null;
+  return h('p.hint.save-warning',
+    h('strong', 'Sur iPad et iPhone : '),
+    'Safari efface les parties d\'un site non ouvert depuis 7 jours (et dès la fermeture en navigation privée). Pour les garder, installez le jeu : bouton Partager ',
+    h('span.ios-share', { 'aria-hidden': 'true' }, '⬆'),
+    ' → « Sur l\'écran d\'accueil », puis jouez depuis l\'icône. Pensez aussi à « Exporter » de temps en temps.');
 }
 
 export class SettingsPanel {

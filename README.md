@@ -8,6 +8,21 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte obligatoire. Le compte Google
 ne sert qu'à copier ses parties sur son propre Google Drive et à les partager (facultatif, v1.6).
 
+## Version 1.7.1 — corrections iPad (et écrans tactiles)
+
+- **Lignes de bus et de tramway** : pincer pour zoomer ou dézoomer pendant le tracé ne retire plus d'arrêt (un
+  deuxième doigt retirait le dernier arrêt choisi, comme Échap). Seul un glissé en cours est abandonné ; les arrêts
+  choisis, un bâtiment en attente de « Valider » et l'équipement à déplacer sont conservés. Les arrêts choisis
+  restent marqués sur la carte, dès le premier.
+- **Zonage en 3D** : les parcelles zonées encore vides prennent la couleur de leur zone (vert clair résidentiel,
+  bleu commerce, violet bureaux, jaune industrie…) avec un damier qui dessine les lots, et la neige ne les efface plus.
+  Avant, elles étaient d'un vert presque identique à l'herbe, et invisibles sous la neige du début de partie.
+- **Sauvegardes sur iPad** : Safari coupe la connexion à la base de sauvegarde quand l'onglet passe en arrière-plan ;
+  toutes les sauvegardes échouaient ensuite jusqu'au rechargement. La connexion est maintenant rouverte (nouvelle
+  tentative automatique, délai maximal). Le résultat de la sauvegarde s'affiche dans le panneau (la notification
+  passait sous le panneau), et un échec reste affiché. Sur iPad et iPhone, le panneau rappelle d'installer le jeu
+  sur l'écran d'accueil : Safari efface les données d'un site non ouvert depuis sept jours.
+
 ## Version 1.7 — application Android (Capacitor)
 
 Le même jeu, emballé en application Android : la WebView de Capacitor affiche le build `dist/` (mode `android` :

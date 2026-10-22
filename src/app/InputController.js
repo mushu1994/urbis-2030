@@ -68,9 +68,10 @@ export class InputController {
     this.pointers.set(e.pointerId, { x: p.x, y: p.y, type: e.pointerType });
 
     if (this.pointers.size >= 2) {
-      // Début d'un geste à deux doigts : on abandonne l'action d'outil en cours.
-      this.tools.cancel();
-      this.tools.hover(null, { shift: false });
+      // Début d'un geste à deux doigts (zoom, déplacement) : seul le glissé en cours est abandonné ; les arrêts
+      // d'une ligne en cours de tracé et une pose en attente de validation sont conservés (v1.7.1)
+      this.tools.abortStroke();
+      if (!this.tools.pending) this.tools.hover(null, { shift: false });
       this.drag = null;
       this.gesture = null;
       this.suppress = true;
@@ -186,7 +187,8 @@ export class InputController {
     this.canvas.style.cursor = '';
     if (d.anchored) this.renderer.camera.dragEnd?.();
     if (cancelled) {
-      this.tools.cancel();
+      // Le navigateur a repris le geste (Safari) : on n'efface que le glissé, jamais les choix déjà faits
+      this.tools.abortStroke();
       return;
     }
     if (d.pan || d.button !== 0) return;

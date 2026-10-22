@@ -189,17 +189,69 @@ export class SaveService {
           const db = req.result;
           if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
         };
-        req.onsuccess = () => resolve(req.result);
+        req.onsuccess = () => {
+          const db = req.result;
+          // v1.7.1 : Safari (iPad, iPhone) coupe la connexion quand l'onglet reste en arrière-plan ; la suivante
+          // sera rouverte au lieu d'échouer jusqu'au rechargement de la page
+          db.onclose = () => {
+            if (this.dbPromise === p) this.dbPromise = null;
+          };
+          db.onversionchange = () => {
+            db.close();
+            if (this.dbPromise === p) this.dbPromise = null;
+          };
+          resolve(db);
+        };
         req.onerror = () => reject(req.error ?? new Error('Ouverture de la base impossible'));
+        req.onblocked = () => reject(new Error('Base de sauvegarde bloquée par un autre onglet du jeu : fermez-le'));
+      });
+      const p = this.dbPromise;
+      p.catch(() => {
+        if (this.dbPromise === p) this.dbPromise = null;
       });
     }
     return this.dbPromise;
   }
 
+  /**
+   * Transaction, avec une nouvelle tentative sur une connexion neuve si la première échoue : sur iPad, Safari perd
+   * la connexion à IndexedDB après un passage en arrière-plan (« Connection to Indexed Database server lost »), et
+   * toutes les sauvegardes échouaient ensuite jusqu'au rechargement de la page.
+   */
   async #tx(mode, fn) {
+    try {
+      return await this.#txOnce(mode, fn);
+    } catch (err) {
+      if (/quota/i.test(`${err?.name} ${err?.message}`)) throw new Error('Espace de stockage plein : supprimez d\'anciennes sauvegardes');
+      this.#reset();
+      return this.#txOnce(mode, fn);
+    }
+  }
+
+  #reset() {
+    const p = this.dbPromise;
+    this.dbPromise = null;
+    p?.then((db) => db.close()).catch(() => {});
+  }
+
+  async #txOnce(mode, fn) {
     const db = await this.#open();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, mode);
+      // Une transaction qui ne répond plus (connexion morte) est abandonnée au bout de 15 secondes
+      const timer = setTimeout(() => reject(new Error('La base de sauvegarde ne répond pas')), 15_000);
+      const done = (fnc) => (v) => {
+        clearTimeout(timer);
+        fnc(v);
+      };
+      resolve = done(resolve);
+      reject = done(reject);
+      let tx;
+      try {
+        tx = db.transaction(STORE, mode);
+      } catch (err) {
+        reject(err);
+        return;
+      }
       const store = tx.objectStore(STORE);
       let result;
       const req = fn(store);

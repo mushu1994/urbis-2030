@@ -368,7 +368,7 @@ export class GameApp {
   async saveBeforeExit() {
     if (!this.session) return;
     try {
-      await this.host?.flush();
+      await this.#flushForSave();
       const r = await this.saves.autosave(this.session.state);
       await this.cloudSync.afterSave(this.session.state, r, { kind: 'auto' });
     } catch {
@@ -990,10 +990,15 @@ export class GameApp {
     if (panel && this.session) this.panelHost.open(panel, this.session, tab);
   }
 
+  /** v1.7.1 : synchronise la simulation avant d'écrire, sans jamais bloquer la sauvegarde plus de 5 secondes. */
+  async #flushForSave() {
+    await Promise.race([this.host?.flush(), new Promise((r) => setTimeout(r, 5000))]);
+  }
+
   async save({ id, name } = {}) {
-    if (!this.session) return;
+    if (!this.session) return null;
     try {
-      await this.host?.flush();
+      await this.#flushForSave();
       const r = await this.saves.save(this.session.state, { id, name: name ?? this.session.state.meta.name });
       this.settings.set('lastSaveId', r.id);
       this.notifications.push({ level: 'success', message: `Partie sauvegardée : ${r.name}${this.cloud.connected && this.cloudSync.auto ? ' (copie en ligne en cours)' : ''}` });
@@ -1001,8 +1006,10 @@ export class GameApp {
       this.cloudSync.afterSave(this.session.state, r, { kind: 'manual' }).then((f) => {
         if (f) this.notifications.push({ level: 'success', message: `Copie en ligne à jour : ${f.name}`, key: 'cloud-ok' });
       });
+      return { ok: true, ...r };
     } catch (err) {
-      this.notifications.push({ level: 'danger', message: `Échec de la sauvegarde : ${err.message}` });
+      this.notifications.push({ level: 'danger', message: `Échec de la sauvegarde : ${err.message}`, panel: 'saves', sticky: true });
+      return { ok: false, error: err.message };
     }
   }
 
@@ -1070,7 +1077,7 @@ export class GameApp {
   async #autosave() {
     if (!this.session) return;
     try {
-      await this.host?.flush();
+      await this.#flushForSave();
       const r = await this.saves.autosave(this.session.state);
       this.notifications.push({ level: 'info', message: 'Sauvegarde automatique effectuée', key: 'autosave' });
       this.cloudSync.afterSave(this.session.state, r, { kind: 'auto' });
