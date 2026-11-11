@@ -14,6 +14,7 @@ test('électorat par groupes et scrutin à deux tours avec fusion', async ({ pag
     localStorage.setItem('urbis2030.settings', JSON.stringify({ muted: true, dayNight: false, weatherFx: false, effects: false, simWorker: false }));
   });
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Départ').selectOption('town');
   await page.getByLabel('Graine du terrain').fill('2030');
   await page.getByRole('button', { name: 'Fonder la ville' }).click();

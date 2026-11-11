@@ -8,6 +8,22 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte obligatoire. Le compte Google
 ne sert qu'à copier ses parties sur son propre Google Drive et à les partager (facultatif, v1.6).
 
+## Version 1.9 — écran d'accueil « de 2030 à 2045 », interface animée
+
+- **Écran d'accueil** : une scène animée (canvas 2D, `src/ui/HomeScene.js`, aucune image ni dépendance) montre la
+  ville qui grandit de 2030 à 2045, de la nuit à l'aube — hameau, grues, tours, toits végétalisés, viaduc et train,
+  drones, taxis aériens, reflet dans l'eau. Elle se joue une fois à l'ouverture ; le curseur des années permet de la
+  parcourir à la main. La scène s'arrête dès que la partie commence.
+- **Menu principal** : cinq entrées (reprendre, nouvelle partie, scénarios et défis, parties enregistrées, guide),
+  chacune ouvre un volet qui glisse depuis la droite (du bas sur téléphone). Échap ou le bouton Retour d'Android
+  referme le volet. « Fonder la ville » reste visible en bas du volet, même carte personnalisée dépliée.
+- **Interface en jeu** : ouverture animée des menus de construction, des fenêtres, de l'inspecteur, des dialogues
+  et des notifications ; soulignement glissant des onglets ; nom de l'outil au survol dans la barre d'outils ;
+  éclat vert ou rouge quand la trésorerie affichée change ; boutons avec retour à l'appui ; verre dépoli sur les
+  petites surfaces (ordinateur uniquement, pour ne rien coûter sur téléphone).
+- Tout respecte « réduire les animations » du système : la scène devient une image fixe de 2045.
+- Styles regroupés dans `src/styles/v19.css`. Aucune règle de simulation n'est modifiée.
+
 ## Version 1.8 — application iPhone et iPad (Capacitor)
 
 Même projet Capacitor que l'application Android (dossier `ios/`, Swift Package Manager, aucune dépendance

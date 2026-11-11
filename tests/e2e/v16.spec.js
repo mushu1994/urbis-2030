@@ -9,6 +9,7 @@ async function startTown(page, settings = {}) {
     localStorage.setItem('urbis2030.settings', JSON.stringify({ muted: true, dayNight: false, weatherFx: false, effects: false, view3d: false, simWorker: false, ...s }));
   }, settings);
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Départ').selectOption('town');
   await page.getByLabel('Graine du terrain').fill('2030');
   await page.getByRole('button', { name: 'Fonder la ville' }).click();

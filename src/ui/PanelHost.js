@@ -43,6 +43,15 @@ export class PanelHost {
     this.titleEl.textContent = panel.title;
     this.#renderTabs();
     this.refresh(true);
+    this.#swap();
+  }
+
+  /** v1.9 : le contenu « se pose » à l'ouverture et au changement d'onglet (jamais pendant un rafraîchissement). */
+  #swap() {
+    this.body.classList.remove('swap');
+    void this.body.offsetWidth;
+    this.body.classList.add('swap');
+    this.body.scrollTop = 0;
   }
 
   #renderTabs() {
@@ -58,6 +67,7 @@ export class PanelHost {
               this.tab = t.id;
               this.#renderTabs();
               this.refresh(true);
+              this.#swap();
             }
           }
         }, t.label)

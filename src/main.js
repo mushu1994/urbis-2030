@@ -13,6 +13,7 @@ import './styles/panels.css';
 import './styles/mobile.css';
 import './styles/features.css';
 import './styles/v16.css';
+import './styles/v19.css';
 import { createDefaultCatalog } from './data/defaultData.js';
 import { GameApp } from './app/GameApp.js';
 
@@ -28,6 +29,7 @@ async function boot() {
     console.error(err);
     const busy = document.getElementById('busy');
     busy.hidden = false;
+    busy.classList.add('error');
     busy.textContent = `Impossible de démarrer URBIS 2030 : ${err.message}`;
   }
 }

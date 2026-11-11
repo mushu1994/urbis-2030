@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 async function newTown(page) {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Graine du terrain').fill('2030');
   await page.getByLabel('Départ').selectOption('town');
   await page.getByRole('button', { name: 'Fonder la ville' }).click();
@@ -126,6 +127,7 @@ test.describe('au doigt', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/');
+    await page.getByRole('button', { name: 'Nouvelle partie' }).click();
     await page.getByLabel('Départ').selectOption('town');
     await page.getByRole('button', { name: 'Fonder la ville' }).tap();
     await page.waitForFunction(() => window.__urbis.session && document.getElementById('busy').hidden, null, { timeout: 120_000 });

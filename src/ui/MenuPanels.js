@@ -6,6 +6,7 @@ import { DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
 import { DIFFICULTIES, balancePhase } from '../simulation/Milestones.js';
 import { openGuideDialog } from './GuidePanel.js';
 import { cloudSection } from './CloudPanel.js';
+import { HomeScene, YEAR_START, YEAR_END } from './HomeScene.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -342,7 +343,8 @@ export class SoundPanel {
 }
 
 /**
- * Écran d'accueil : nouvelle partie, reprise, chargement.
+ * Écran d'accueil (v1.9) : la ville de 2045 en toile de fond, cinq entrées, un volet par entrée.
+ * Les volets (nouvelle partie, scénarios, parties enregistrées) glissent par-dessus la scène sans la recharger.
  */
 export class StartMenu {
   constructor(root, { onNew, onContinue, onLoad, onClose, saves, install, onCloud, onImported, cloudConfigured = false }) {
@@ -351,18 +353,163 @@ export class StartMenu {
     this.cloudConfigured = cloudConfigured;
     this.root = root;
     this.install = install;
-    this.tab = 'new';
+    this.view = 'home';
     this.onNew = onNew;
     this.onContinue = onContinue;
     this.onLoad = onLoad;
     this.onClose = onClose;
     this.saves = saves;
+    this.seenIntro = false;
+    // Échap referme d'abord le volet ouvert (avant le retour à la partie, géré par l'application)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !this.visible || document.querySelector('.dialog-backdrop')) return;
+      if (this.view === 'home' && !this.canResume) return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (this.closeSheet()) return;
+      // À l'accueil pendant une partie : Échap y retourne
+      this.hide();
+      this.onClose();
+    }, true);
   }
 
   async show({ canResume = false } = {}) {
+    clearTimeout(this.leaveTimer);
+    this.root.classList.remove('leaving');
     this.root.classList.add('open');
+    this.canResume = canResume;
+    let items = [];
+    try {
+      items = await this.saves.list();
+    } catch {
+      /* IndexedDB indisponible : on propose seulement une nouvelle partie */
+    }
+    const latest = items[0] ?? null;
+    this.view = 'home';
+
+    // ── Volets ──
+    const sheets = {
+      new: { title: 'Nouvelle partie', body: this.#newGameForm() },
+      scenarios: { title: 'Scénarios et défis', body: this.#scenarioList() },
+      load: { title: 'Parties enregistrées', body: this.#saveList(items) }
+    };
+    this.sheetTitle = h('h2');
+    this.sheetBody = h('div.home-sheet-body');
+    this.sheet = h('section.home-sheet', { 'aria-label': 'Volet', hidden: true },
+      h('header.home-sheet-head',
+        h('button.home-back', { type: 'button', 'aria-label': 'Revenir à l\'accueil', on: { click: () => this.#go('home') } }, icon('undo', 18)),
+        this.sheetTitle,
+        h('button.panel-close', { type: 'button', 'aria-label': 'Fermer le volet', on: { click: () => this.#go('home') } }, icon('close', 16))),
+      this.sheetBody);
+    this.sheets = sheets;
+
+    // ── Entrées ──
+    const action = (id, label, sub, { onClick, primary = false, ic } = {}) => {
+      const b = h('button.home-action', { type: 'button', class: primary ? 'primary' : '', dataset: { view: id }, on: { click: onClick ?? (() => this.#go(this.view === id ? 'home' : id)) } },
+        icon(ic, 22), h('span.home-action-text', h('b', label), sub ? h('small', sub) : null));
+      if (sheets[id]) b.setAttribute('aria-expanded', 'false');
+      return b;
+    };
+    const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+    this.actions = h('nav.home-rail', { 'aria-label': 'Menu principal' },
+      canResume
+        ? action('resume', 'Retour à la partie en cours', 'Reprendre là où vous en étiez', { primary: true, ic: 'play', onClick: () => { this.hide(); this.onClose(); } })
+        : null,
+      latest
+        ? action('continue', `Continuer « ${latest.name} »`, `${latest.summary.date}, ${formatNumber(latest.summary.population)} habitants`, { primary: !canResume, ic: canResume ? 'save' : 'play', onClick: () => { this.hide(); this.onContinue(latest.id); } })
+        : null,
+      action('new', 'Nouvelle partie', 'Terrain vierge ou bourg déjà construit', { primary: !canResume && !latest, ic: 'city' }),
+      action('scenarios', 'Scénarios et défis', `${plural(CHALLENGES.length, 'ville', 'villes')} à redresser, objectifs chiffrés`, { ic: 'scenario' }),
+      action('load', 'Parties enregistrées', items.length ? `${plural(items.length, 'partie', 'parties')} sur cet appareil` : 'Ouvrir une partie reçue ou en ligne', { ic: 'save' }),
+      action('guide', 'Comment jouer ?', 'Le guide du maire, 13 chapitres', { ic: 'guide', onClick: () => openGuideDialog() })
+    );
+
+    // ── Curseur des années : la ville de 2030 à 2045 ──
+    const yearOut = h('output.home-year-value', { for: 'home-year' }, String(YEAR_START));
+    const yearInput = h('input', { type: 'range', id: 'home-year', min: YEAR_START, max: YEAR_END, step: 0.05, value: YEAR_START, 'aria-label': 'Année affichée : faites glisser pour voir la ville grandir',
+      on: { input: (e) => { this.scene?.scrubTo(Number(e.target.value)); syncYear(Number(e.target.value)); } } });
+    const syncYear = (y) => {
+      yearOut.textContent = String(Math.floor(y + 0.001));
+      yearInput.style.setProperty('--fill', `${((y - YEAR_START) / (YEAR_END - YEAR_START)) * 100}%`);
+      this.root.classList.toggle('dawn', y >= YEAR_END - 0.05);
+    };
+    const yearBox = h('div.home-year',
+      h('label', { for: 'home-year' }, 'Votre ville, année après année'),
+      h('div.home-year-row', h('span', String(YEAR_START)), yearInput, h('span', String(YEAR_END))),
+      yearOut);
+
+    const canvas = h('canvas.home-scene', { 'aria-hidden': 'true' });
+    setChildren(this.root,
+      canvas,
+      h('div.home-shade', { 'aria-hidden': 'true' }),
+      h('div.home',
+        h('header.menu-brand.home-brand',
+          h('h1', 'URBIS', h('span', '2030')),
+          h('p', 'Vous prenez la mairie en 2030.', h('br'), 'En 2045, la ville ressemblera à vos décisions.')),
+        this.actions,
+        yearBox,
+        h('footer.home-foot',
+          this.#installBox(),
+          h('p.menu-foot', this.cloudConfigured ? 'Vos parties restent sur cet appareil, et sur votre Google Drive si vous vous connectez. Aucun autre service distant.' : 'Toutes les données restent sur cet appareil. Aucun compte, aucun service distant.'))),
+      this.sheet
+    );
+
+    // La construction de 2030 à 2045 se joue une fois ; ensuite la ville est déjà là
+    this.scene?.stop();
+    this.scene = new HomeScene(canvas);
+    this.scene.onYear = (y) => {
+      yearInput.value = String(y);
+      syncYear(y);
+    };
+    this.scene.start({ intro: !this.seenIntro });
+    this.seenIntro = true;
+
+    this.offInstall?.();
+    this.offInstall = this.install?.onChange(() => {
+      const box = this.#installBox();
+      this.root.querySelector('.install-box')?.replaceWith(box ?? h('span.install-box'));
+    });
+  }
+
+  /** Referme le volet ouvert. @returns {boolean} true s'il y en avait un */
+  closeSheet() {
+    if (!this.visible || this.view === 'home') return false;
+    this.#go('home');
+    return true;
+  }
+
+  /** Ouvre un volet ('new', 'scenarios', 'load') ou revient à l'accueil ('home'). */
+  #go(view) {
+    this.view = this.sheets?.[view] ? view : 'home';
+    const open = this.view !== 'home';
+    this.root.classList.toggle('sheet-open', open);
+    for (const b of this.actions.querySelectorAll('[aria-expanded]')) {
+      const on = b.dataset.view === this.view;
+      b.setAttribute('aria-expanded', String(on));
+      b.classList.toggle('current', on);
+    }
+    if (!open) {
+      const from = this.sheet.dataset.view;
+      this.sheet.hidden = true;
+      this.actions.querySelector(`[data-view="${from}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    const s = this.sheets[this.view];
+    this.sheetTitle.textContent = s.title;
+    this.sheet.setAttribute('aria-label', s.title);
+    this.sheet.dataset.view = this.view;
+    setChildren(this.sheetBody, s.body);
+    this.sheetBody.scrollTop = 0;
+    // Rejoue l'animation d'entrée à chaque changement de volet
+    this.sheet.hidden = true;
+    void this.sheet.offsetWidth;
+    this.sheet.hidden = false;
+  }
+
+  #newGameForm() {
     const name = h('input', { type: 'text', value: 'Nouvelle-Rive', maxLength: 40, 'aria-label': 'Nom de la ville' });
     const seed = h('input', { type: 'number', value: Math.floor(Math.random() * 9000) + 1000, min: 1, 'aria-label': 'Graine du terrain' });
+    this.seedInput = seed;
     const size = h('select', { 'aria-label': 'Taille de la carte' }, [64, 96, 128].map((n) => h('option', { value: n, selected: n === 64 }, `${n} × ${n}`)));
     const mode = h('select', { 'aria-label': 'Départ' },
       h('option', { value: 'empty' }, 'Terrain vierge'),
@@ -374,28 +521,6 @@ export class StartMenu {
     const elections = h('select', { 'aria-label': 'Élections municipales' },
       h('option', { value: 'on', selected: true }, 'Activées (mandat de 6 ans)'),
       h('option', { value: 'off' }, 'Désactivées (partie libre)'));
-    let latest = null;
-    let items = [];
-    try {
-      items = await this.saves.list();
-      latest = items[0] ?? null;
-    } catch {
-      /* IndexedDB indisponible : on propose seulement une nouvelle partie */
-    }
-    const stars = (n) => h('span.stars', { 'aria-label': `Difficulté ${n} sur 4` }, '★'.repeat(n), h('span.off', '★'.repeat(4 - n)));
-    const scenarios = h('div.scenario-list',
-      CHALLENGES.map((c) => h('article.scenario-card',
-        h('header', h('h3', c.name), stars(c.difficulty)),
-        h('p', c.pitch),
-        h('ul', c.goalsText.map((g) => h('li', g))),
-        h('p.hint', `${c.years} ans · ${c.size} × ${c.size}${c.failText ? ` · ${c.failText}` : ''}`),
-        h('button.btn.primary', { type: 'button', on: { click: () => { this.hide(); this.onNew({ mode: 'scenario', scenarioId: c.id, name: c.name, seed: c.seed ?? (Number(seed.value) || 2030), size: c.size, disasters: c.disasters }); } } }, 'Relever le défi')
-      ))
-    );
-    const installBox = this.#installBox();
-    const tabs = h('nav.menu-tabs', { role: 'tablist' },
-      [['new', 'Nouvelle partie'], ['scenarios', 'Scénarios et défis']].map(([id, label]) =>
-        h('button.menu-tab', { type: 'button', role: 'tab', 'aria-selected': String(this.tab === id), class: this.tab === id ? 'active' : '', on: { click: () => { this.tab = id; this.show({ canResume }); } } }, label)));
     // Éditeur de carte (v0.6) : proportions d'eau, de relief, de roche et de forêt, en pourcentage (50 = équilibré)
     const MAP_SLIDERS = [['water', 'Eau'], ['relief', 'Relief'], ['rock', 'Roche (gisements)'], ['forest', 'Forêt']];
     const mapInputs = {};
@@ -412,57 +537,55 @@ export class StartMenu {
       const p = Object.fromEntries(Object.entries(mapInputs).map(([k, el]) => [k, Number(el.value)]));
       return Object.values(p).every((v) => v === 50) ? null : p;
     };
-    const newForm = h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, elections: elections.value, difficulty: difficulty.value, mapParams: mapParams() }); } } },
-      h('h2', 'Nouvelle partie'),
+    return h('form.menu-new', { on: { submit: (e) => { e.preventDefault(); this.hide(); this.onNew({ name: name.value.trim() || 'Nouvelle-Rive', seed: Number(seed.value) || 2030, size: Number(size.value), mode: mode.value, disasters: disasters.value, elections: elections.value, difficulty: difficulty.value, mapParams: mapParams() }); } } },
       h('label', 'Nom de la ville', name),
-      h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
       h('label', 'Départ', mode),
-      h('div.row2', h('label', 'Catastrophes', disasters), h('label', 'Élections', elections)),
+      h('div.row2', h('label', 'Carte', size), h('label', 'Graine', seed)),
       h('label', 'Difficulté', difficulty),
+      h('div.row2', h('label', 'Catastrophes', disasters), h('label', 'Élections', elections)),
       mapEditor,
-      h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville')
+      h('div.home-sheet-cta', h('button.btn.primary.big', { type: 'submit' }, 'Fonder la ville'))
     );
-    setChildren(this.root,
-      h('div.menu-card',
-        h('div.menu-brand', h('h1', 'URBIS', h('span', '2030')), h('p', 'Bâtissez, financez et administrez une ville transformée par l\'intelligence artificielle.')),
-        tabs,
-        this.tab === 'scenarios' ? scenarios : null,
-        h('div.menu-cols', { hidden: this.tab === 'scenarios' },
-          newForm,
-          h('div.menu-load',
-            h('div.menu-guide',
-              h('button.btn.big.guide-open', { type: 'button', on: { click: () => openGuideDialog() } }, 'Comment jouer ?', h('small', 'Le guide du maire : 13 chapitres pour tout comprendre'))),
-            h('h2', 'Reprendre'),
-            canResume ? h('button.btn.big', { on: { click: () => { this.hide(); this.onClose(); } } }, 'Retour à la partie en cours') : null,
-            latest ? h('button.btn.big', { on: { click: () => { this.hide(); this.onContinue(latest.id); } } }, `Continuer « ${latest.name} »`, h('small', `${latest.summary.date} · ${formatNumber(latest.summary.population)} hab.`)) : h('p.hint', 'Aucune partie sauvegardée dans ce navigateur.'),
-            items.slice(1, 5).map((it) => h('button.btn.ghost', { on: { click: () => { this.hide(); this.onLoad(it.id); } } }, it.name, h('small', ` ${it.summary.date}`))),
-            // v1.6 : villes sauvegardées sur Google Drive, ville reçue d'un ami
-            h('div.menu-cloud',
-              this.cloudConfigured && this.onCloud ? h('button.btn', { type: 'button', on: { click: () => this.onCloud() } }, icon('cloud', 16), 'Mes villes en ligne (Google)') : null,
-              this.onImported ? h('button.btn', { type: 'button', on: { click: async () => {
-                const text = await pasteDialog('Ouvrir une partie reçue');
-                if (!text) return;
-                try {
-                  const saved = await this.saves.importRecord(text);
-                  this.hide();
-                  this.onImported(saved.id);
-                } catch (err) {
-                  const p = this.root.querySelector('.menu-cloud-error');
-                  if (p) p.textContent = err.message;
-                }
-              } } }, 'Ouvrir une partie reçue') : null,
-              h('p.hint.neg.menu-cloud-error'))
-          )
-        ),
-        installBox,
-        h('p.menu-foot', this.cloudConfigured ? 'Vos parties restent dans votre navigateur, et sur votre Google Drive si vous vous connectez (Sauvegardes). Aucun autre service distant.' : 'Toutes les données restent dans votre navigateur. Aucun compte, aucun service distant.')
-      )
+  }
+
+  #scenarioList() {
+    const stars = (n) => h('span.stars', { 'aria-label': `Difficulté ${n} sur 4` }, '★'.repeat(n), h('span.off', '★'.repeat(4 - n)));
+    return h('div.scenario-list',
+      CHALLENGES.map((c) => h('article.scenario-card',
+        h('header', h('h3', c.name), stars(c.difficulty)),
+        h('p', c.pitch),
+        h('ul', c.goalsText.map((g) => h('li', g))),
+        h('p.hint', `${c.years} ans · ${c.size} × ${c.size}${c.failText ? ` · ${c.failText}` : ''}`),
+        h('button.btn.primary', { type: 'button', on: { click: () => { this.hide(); this.onNew({ mode: 'scenario', scenarioId: c.id, name: c.name, seed: c.seed ?? (Number(this.seedInput?.value) || 2030), size: c.size, disasters: c.disasters }); } } }, 'Relever le défi')
+      ))
     );
-    this.offInstall?.();
-    this.offInstall = this.install?.onChange(() => {
-      const box = this.#installBox();
-      this.root.querySelector('.install-box')?.replaceWith(box ?? h('span.install-box'));
-    });
+  }
+
+  #saveList(items) {
+    return h('div.menu-load',
+      items.length
+        ? h('div.home-saves', items.slice(0, 12).map((it) => h('button.home-save', { type: 'button', on: { click: () => { this.hide(); this.onLoad(it.id); } } },
+          h('b', it.name),
+          h('small', `${it.kind === 'auto' ? 'Sauvegarde automatique, ' : ''}${it.summary.date}, ${formatNumber(it.summary.population)} habitants`),
+          h('small.home-save-when', `Enregistrée le ${dateFmt.format(it.updatedAt)}`))))
+        : h('p.empty', 'Aucune partie sur cet appareil pour le moment. Fondez une ville : elle sera sauvegardée automatiquement.'),
+      // v1.6 : villes sauvegardées sur Google Drive, ville reçue d'un ami
+      h('div.menu-cloud',
+        this.cloudConfigured && this.onCloud ? h('button.btn', { type: 'button', on: { click: () => this.onCloud() } }, icon('cloud', 16), 'Mes villes en ligne (Google)') : null,
+        this.onImported ? h('button.btn', { type: 'button', on: { click: async () => {
+          const text = await pasteDialog('Ouvrir une partie reçue');
+          if (!text) return;
+          try {
+            const saved = await this.saves.importRecord(text);
+            this.hide();
+            this.onImported(saved.id);
+          } catch (err) {
+            const p = this.root.querySelector('.menu-cloud-error');
+            if (p) p.textContent = err.message;
+          }
+        } } }, 'Ouvrir une partie reçue') : null,
+        h('p.hint.neg.menu-cloud-error'))
+    );
   }
 
   /** Encart d'installation de l'application (Android / ordinateur : bouton ; iPhone : marche à suivre). */
@@ -481,7 +604,16 @@ export class StartMenu {
   }
 
   hide() {
-    this.root.classList.remove('open');
+    if (!this.visible) return;
+    this.root.classList.remove('open', 'sheet-open', 'dawn');
+    this.scene?.stop();
+    // Fondu de sortie : l'écran n'est plus « ouvert » pour le jeu, il s'efface seulement à l'image
+    this.root.classList.add('leaving');
+    clearTimeout(this.leaveTimer);
+    this.leaveTimer = setTimeout(() => {
+      this.root.classList.remove('leaving');
+      if (!this.visible) setChildren(this.root);
+    }, 420);
   }
 
   get visible() {

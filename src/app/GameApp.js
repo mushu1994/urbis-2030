@@ -338,6 +338,8 @@ export class GameApp {
       return true;
     }
     if (this.menu.visible) {
+      // v1.9 : le bouton Retour referme d'abord le volet ouvert de l'écran d'accueil
+      if (this.menu.closeSheet()) return true;
       if (!this.session) return false;
       this.menu.hide();
       this.menu.onClose?.();
@@ -1322,6 +1324,7 @@ export class GameApp {
     console.error(err);
     const el = this.$('#busy');
     el.hidden = false;
+    el.classList.add('error');
     el.textContent = `Erreur interne de la simulation : ${err.message}. Vos sauvegardes ne sont pas affectées ; rechargez la page.`;
   }
 }

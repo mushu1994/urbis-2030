@@ -13,6 +13,7 @@ test('emprunt visible, niveaux d\'améliorations, pose sur des maisons, sorties 
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Départ').selectOption('town');
   await page.getByLabel('Graine du terrain').fill('2030');
   await page.getByRole('button', { name: 'Fonder la ville' }).click();

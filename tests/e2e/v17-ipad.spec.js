@@ -25,6 +25,7 @@ test('iPad : zoomer pendant le tracé d\'une ligne de bus garde les arrêts ; zo
     localStorage.setItem('urbis2030.settings', JSON.stringify({ muted: true, dayNight: false, weatherFx: false, effects: false, view3d: true }));
   });
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Départ').selectOption('town');
   await page.getByRole('button', { name: 'Fonder la ville' }).tap();
   await page.waitForFunction(() => window.__urbis.session && document.getElementById('busy').hidden, null, { timeout: 240_000 });

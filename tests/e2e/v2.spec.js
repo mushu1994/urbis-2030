@@ -7,7 +7,7 @@ test('scénario depuis l\'accueil, crise déclenchée et gérée, météo, son, 
   await page.goto('/');
 
   // 1. Scénario choisi dans l'onglet « Scénarios et défis »
-  await page.getByRole('tab', { name: 'Scénarios et défis' }).click();
+  await page.getByRole('button', { name: 'Scénarios et défis' }).click();
   const card = page.locator('.scenario-card', { hasText: 'Valmont-sur-Dette' });
   await expect(card).toContainText('Diviser la dette par deux');
   await card.getByRole('button', { name: 'Relever le défi' }).click();

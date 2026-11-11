@@ -120,7 +120,7 @@ export class Toolbar {
     const tools = h(
       'div.toolbar-group',
       this.categories.map((c) => {
-        const b = h('button.tool-btn', { title: `${c.label}${c.key ? ` (${c.key})` : ''}`, 'aria-label': c.label, on: { click: () => this.#clickCategory(c) } }, icon(c.icon, 22));
+        const b = h('button.tool-btn', { dataset: { tip: `${c.label}${c.key ? ` (${c.key})` : ''}` }, 'aria-label': c.label, on: { click: () => this.#clickCategory(c) } }, icon(c.icon, 22));
         this.catButtons.set(c.id, b);
         return b;
       })
@@ -137,7 +137,7 @@ export class Toolbar {
         ['saves', 'Sauvegardes (Ctrl+S)', 'save'],
         ['settings', 'Paramètres', 'settings'],
         ['help', 'Aide et raccourcis (H)', 'help']
-      ].map(([id, title, ic]) => h('button.tool-btn.panel-btn', { title, 'aria-label': title, dataset: { panel: id }, on: { click: () => onPanel(id) } }, icon(ic, 20)))
+      ].map(([id, title, ic]) => h('button.tool-btn.panel-btn', { 'aria-label': title, dataset: { panel: id, tip: title }, on: { click: () => onPanel(id) } }, icon(ic, 20)))
     );
     this.flyout = h('div.flyout', { role: 'menu' });
     root.append(tools, panels);

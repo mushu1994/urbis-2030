@@ -11,6 +11,7 @@ test('iPhone : mise en page, gestes tactiles, pose validée par bouton, mode imm
     Element.prototype.requestFullscreen = undefined;
   });
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Départ').selectOption('town');
   await page.getByRole('button', { name: 'Fonder la ville' }).tap();
   await page.waitForFunction(() => window.__urbis.session && document.getElementById('busy').hidden, null, { timeout: 120_000 });

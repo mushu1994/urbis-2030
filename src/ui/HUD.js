@@ -135,7 +135,18 @@ export class HUD {
     }
     this.speedBtns.forEach((b, i) => b.classList.toggle('active', i === speedIndex));
     const eco = state.economy;
-    this.treasury.textContent = formatMoney(eco.treasury, { compact: true });
+    const money = formatMoney(eco.treasury, { compact: true });
+    if (this.treasury.textContent !== money) {
+      // v1.9 : bref éclat vert ou rouge quand le montant affiché change (pas au premier affichage)
+      if (this.lastTreasury !== undefined && this.treasury.textContent) {
+        const cls = eco.treasury >= this.lastTreasury ? 'flash-pos' : 'flash-neg';
+        this.treasury.classList.remove('flash-pos', 'flash-neg');
+        void this.treasury.offsetWidth;
+        this.treasury.classList.add(cls);
+      }
+      this.treasury.textContent = money;
+    }
+    this.lastTreasury = eco.treasury;
     this.treasury.classList.toggle('neg', eco.treasury < 0);
     const last = EconomySystem.summarize(eco.periods.at(-1));
     if (last) {

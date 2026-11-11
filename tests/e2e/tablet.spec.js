@@ -8,6 +8,7 @@ test('iPad : chaque menu de construction tient à l\'écran et défile jusqu\'en
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByRole('button', { name: 'Fonder la ville' }).tap();
   await page.waitForFunction(() => window.__urbis.session && document.getElementById('busy').hidden, null, { timeout: 180_000 });
   await page.evaluate(() => {

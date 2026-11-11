@@ -26,6 +26,7 @@ async function chooseTool(page, category, item) {
 
 async function newTown(page) {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Graine du terrain').fill('2030');
   await page.getByLabel('Départ').selectOption('town');
   await page.getByRole('button', { name: 'Fonder la ville' }).click();

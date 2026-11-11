@@ -21,6 +21,7 @@ test('guide du maire et conseiller circulation et pollution', async ({ page }) =
   await page.locator('.dialog').getByRole('button', { name: 'Fermer' }).click();
   await expect(page.locator('.dialog')).toHaveCount(0);
 
+  await page.getByRole('button', { name: 'Nouvelle partie' }).click();
   await page.getByLabel('Départ').selectOption('town');
   await page.getByLabel('Graine du terrain').fill('2030');
   await page.getByRole('button', { name: 'Fonder la ville' }).click();
