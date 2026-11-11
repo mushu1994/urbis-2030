@@ -6,7 +6,8 @@ import { DISASTER_LEVEL_LABELS } from '../simulation/CrisisSystem.js';
 import { DIFFICULTIES, balancePhase } from '../simulation/Milestones.js';
 import { openGuideDialog } from './GuidePanel.js';
 import { cloudSection } from './CloudPanel.js';
-import { HomeScene, YEAR_START, YEAR_END } from './HomeScene.js';
+import { HomeScene, YEAR_START, YEAR_END, CHAPTERS, chapterAt, populationAt } from './HomeScene.js';
+import { MILESTONES, rankFor } from '../simulation/Milestones.js';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -424,19 +425,36 @@ export class StartMenu {
       action('guide', 'Comment jouer ?', 'Le guide du maire, 13 chapitres', { ic: 'guide', onClick: () => openGuideDialog() })
     );
 
-    // ── Curseur des années : la ville de 2030 à 2045 ──
+    // ── Bande-annonce : chapitre en cours, statut de la ville, curseur des années (2025 → 2045) ──
     const yearOut = h('output.home-year-value', { for: 'home-year' }, String(YEAR_START));
     const yearInput = h('input', { type: 'range', id: 'home-year', min: YEAR_START, max: YEAR_END, step: 0.05, value: YEAR_START, 'aria-label': 'Année affichée : faites glisser pour voir la ville grandir',
       on: { input: (e) => { this.scene?.scrubTo(Number(e.target.value)); syncYear(Number(e.target.value)); } } });
+    const caption = h('div.home-caption');
+    const statTier = h('b');
+    const statPop = h('span');
+    let chapter = -1;
     const syncYear = (y) => {
       yearOut.textContent = String(Math.floor(y + 0.001));
       yearInput.style.setProperty('--fill', `${((y - YEAR_START) / (YEAR_END - YEAR_START)) * 100}%`);
       this.root.classList.toggle('dawn', y >= YEAR_END - 0.05);
+      const pop = populationAt(y);
+      statTier.textContent = pop > 0 ? MILESTONES[rankFor(pop)].name : 'Terrain vierge';
+      statPop.textContent = pop > 0 ? `${formatNumber(pop)} habitants` : 'aucun habitant';
+      const c = chapterAt(y);
+      if (c === chapter) return;
+      chapter = c;
+      // Le titre arrive mot par mot ; le recréer rejoue l'animation à chaque chapitre
+      setChildren(caption,
+        h('h2', CHAPTERS[c].title.split(' ').map((w, i, all) => h('span', { style: { animationDelay: `${i * 70}ms` } }, i < all.length - 1 ? `${w} ` : w))),
+        h('p', CHAPTERS[c].text));
     };
     const yearBox = h('div.home-year',
-      h('label', { for: 'home-year' }, 'Votre ville, année après année'),
-      h('div.home-year-row', h('span', String(YEAR_START)), yearInput, h('span', String(YEAR_END))),
+      h('div.home-stat', statTier, statPop),
+      h('div.home-year-row',
+        h('button.home-replay', { type: 'button', 'aria-label': 'Revoir la bande-annonce depuis 2025', title: 'Revoir depuis 2025', on: { click: () => this.scene?.replay() } }, icon('rotl', 15)),
+        h('span', String(YEAR_START)), yearInput, h('span', String(YEAR_END))),
       yearOut);
+    const reel = h('div.home-reel', caption, yearBox);
 
     const canvas = h('canvas.home-scene', { 'aria-hidden': 'true' });
     setChildren(this.root,
@@ -445,16 +463,16 @@ export class StartMenu {
       h('div.home',
         h('header.menu-brand.home-brand',
           h('h1', 'URBIS', h('span', '2030')),
-          h('p', 'Vous prenez la mairie en 2030.', h('br'), 'En 2045, la ville ressemblera à vos décisions.')),
+          h('p', 'Bâtissez, financez et administrez', h('br'), 'la ville de demain.')),
         this.actions,
-        yearBox,
+        reel,
         h('footer.home-foot',
           this.#installBox(),
           h('p.menu-foot', this.cloudConfigured ? 'Vos parties restent sur cet appareil, et sur votre Google Drive si vous vous connectez. Aucun autre service distant.' : 'Toutes les données restent sur cet appareil. Aucun compte, aucun service distant.'))),
       this.sheet
     );
 
-    // La construction de 2030 à 2045 se joue une fois ; ensuite la ville est déjà là
+    // La bande-annonce (2025 → 2045) se joue une fois ; ensuite la ville est déjà là, et le bouton la rejoue
     this.scene?.stop();
     this.scene = new HomeScene(canvas);
     this.scene.onYear = (y) => {

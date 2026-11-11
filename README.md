@@ -8,12 +8,15 @@ de livraison, véhicules autonomes, IA municipale) — avec leurs coûts, leurs 
 Toute la simulation tourne localement dans le navigateur : aucun serveur, aucun compte obligatoire. Le compte Google
 ne sert qu'à copier ses parties sur son propre Google Drive et à les partager (facultatif, v1.6).
 
-## Version 1.9 — écran d'accueil « de 2030 à 2045 », interface animée
+## Version 1.9 — écran d'accueil « de 2025 à 2045 », interface animée
 
-- **Écran d'accueil** : une scène animée (canvas 2D, `src/ui/HomeScene.js`, aucune image ni dépendance) montre la
-  ville qui grandit de 2030 à 2045, de la nuit à l'aube — hameau, grues, tours, toits végétalisés, viaduc et train,
-  drones, taxis aériens, reflet dans l'eau. Elle se joue une fois à l'ouverture ; le curseur des années permet de la
-  parcourir à la main. La scène s'arrête dès que la partie commence.
+- **Écran d'accueil** : une bande-annonce animée (canvas 2D, `src/ui/HomeScene.js`, aucune image ni dépendance)
+  montre la ville qui grandit de 2025 à 2045, de la nuit à l'aube. Neuf chapitres présentent le jeu, chacun avec son
+  titre et sa mise en scène : première route et maisons, parcelles zonées, réseaux et éoliennes, recettes du budget,
+  viaduc et train, orage, feux d'artifice du soir d'élection, drones et liaisons de l'IA urbaine. Le statut de la
+  ville (du hameau à la capitale régionale) et sa population suivent l'année. Elle se joue une fois à l'ouverture ;
+  un bouton la rejoue et le curseur des années permet de la parcourir à la main. Elle s'arrête dès que la partie
+  commence.
 - **Menu principal** : cinq entrées (reprendre, nouvelle partie, scénarios et défis, parties enregistrées, guide),
   chacune ouvre un volet qui glisse depuis la droite (du bas sur téléphone). Échap ou le bouton Retour d'Android
   referme le volet. « Fonder la ville » reste visible en bas du volet, même carte personnalisée dépliée.
