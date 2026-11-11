@@ -145,6 +145,13 @@ export class Toolbar {
     window.addEventListener('resize', () => {
       if (this.openCat) this.#placeFlyout(this.catButtons.get(this.openCat));
     });
+    // v1.9 : le menu se replace aussi quand sa hauteur change après l'ouverture (fiche descriptive plus longue),
+    // pour ne jamais dépasser le bas de l'écran
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(() => {
+        if (this.openCat) this.#placeFlyout(this.catButtons.get(this.openCat));
+      }).observe(this.flyout);
+    }
     this.#highlight();
   }
 
